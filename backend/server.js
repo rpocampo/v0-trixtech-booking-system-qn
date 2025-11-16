@@ -6,6 +6,8 @@ const authRoutes = require('./routes/authRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const userRoutes = require('./routes/userRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const { initializeEmailService } = require('./utils/emailService');
 const { errorHandler } = require('./middleware/errorHandler');
 
 dotenv.config();
@@ -14,6 +16,8 @@ const app = express();
 
 // Connect to MongoDB
 connectDB();
+
+initializeEmailService();
 
 // Middleware
 app.use(cors());
@@ -24,6 +28,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/services', serviceRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

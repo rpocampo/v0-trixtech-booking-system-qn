@@ -56,16 +56,35 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center p-4">
-      <div className="card w-full max-w-md p-8">
-        <h1 className="text-3xl font-bold text-center mb-2 text-[var(--primary)]">TRIXTECH</h1>
-        <p className="text-center text-[var(--muted)] mb-6">Welcome back</p>
+    <div className="min-h-screen bg-gradient-to-br from-[var(--primary)] via-[var(--primary-light)] to-[var(--accent)] flex items-center justify-center p-4">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
+      </div>
 
-        {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">{error}</div>}
+      {/* Card */}
+      <div className="card w-full max-w-md p-8 relative z-10 shadow-xl">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="inline-block p-3 bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] rounded-lg mb-4">
+            <div className="text-white text-2xl font-bold">TT</div>
+          </div>
+          <h1 className="text-3xl font-bold text-[var(--foreground)]">TRIXTECH</h1>
+          <p className="text-[var(--muted)] mt-2">Booking & Reservation System</p>
+        </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-4 bg-[var(--danger)]/10 border border-[var(--danger)]/30 text-[var(--danger)] rounded-lg text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Email</label>
+            <label className="block text-sm font-semibold text-[var(--foreground)] mb-2">Email Address</label>
             <input
               type="email"
               name="email"
@@ -73,12 +92,12 @@ export default function Login() {
               onChange={handleChange}
               required
               className="input-field"
-              placeholder="john@example.com"
+              placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-2">Password</label>
+            <label className="block text-sm font-semibold text-[var(--foreground)] mb-2">Password</label>
             <input
               type="password"
               name="password"
@@ -90,25 +109,41 @@ export default function Login() {
             />
           </div>
 
-          <button type="submit" disabled={loading} className="btn-primary w-full">
+          <button type="submit" disabled={loading} className="btn-primary w-full mt-6">
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
-        <p className="text-center mt-6 text-[var(--muted)]">
-          Don't have an account?{' '}
-          <Link href="/register" className="text-[var(--primary)] font-semibold hover:underline">
-            Register
-          </Link>
-        </p>
-
-        <div className="mt-6 pt-6 border-t border-[var(--border)]">
-          <p className="text-sm text-[var(--muted)] text-center mb-3">Demo Credentials (Admin)</p>
-          <div className="bg-gray-50 p-3 rounded text-sm space-y-1">
-            <p>Email: admin@trixtech.com</p>
-            <p>Password: admin123</p>
+        <div className="my-6 relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-[var(--border)]"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-2 bg-white text-[var(--muted)]">Demo Credentials</span>
           </div>
         </div>
+
+        {/* Demo Credentials */}
+        <div className="space-y-3 mb-6">
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <p className="text-xs text-[var(--muted)] font-semibold">ADMIN</p>
+            <p className="text-sm text-[var(--foreground)] font-mono">admin@trixtech.com</p>
+            <p className="text-sm text-[var(--foreground)] font-mono">admin123</p>
+          </div>
+          <div className="p-3 bg-gray-50 rounded-lg">
+            <p className="text-xs text-[var(--muted)] font-semibold">CUSTOMER</p>
+            <p className="text-sm text-[var(--foreground)] font-mono">customer@trixtech.com</p>
+            <p className="text-sm text-[var(--foreground)] font-mono">customer123</p>
+          </div>
+        </div>
+
+        {/* Register Link */}
+        <p className="text-center text-[var(--muted)] text-sm">
+          Don't have an account?{' '}
+          <Link href="/register" className="text-[var(--primary)] font-semibold hover:text-[var(--primary-dark)] transition-colors">
+            Create one
+          </Link>
+        </p>
       </div>
     </div>
   );
