@@ -89,15 +89,6 @@ npm run dev
 - **Backend API:** http://localhost:5000/api
 - **Health Check:** http://localhost:5000/api/health
 
-## Demo Credentials
-
-**Admin Account:**
-- Email: admin@trixtech.com
-- Password: admin123
-
-**Customer Account:**
-- Email: customer@trixtech.com
-- Password: customer123
 
 ## Troubleshooting
 

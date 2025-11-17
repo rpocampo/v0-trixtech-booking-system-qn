@@ -16,29 +16,7 @@ async function seedDatabase() {
     await Service.deleteMany({});
     console.log('Cleared existing data');
 
-    // Create admin user
-    const adminUser = new User({
-      name: 'Admin User',
-      email: 'admin@trixtech.com',
-      password: 'admin123',
-      role: 'admin',
-      phone: '+1 (555) 000-0001',
-      address: '123 Admin Street, Admin City',
-    });
-    await adminUser.save();
-    console.log('Admin user created: admin@trixtech.com');
-
-    // Create sample customer
-    const customerUser = new User({
-      name: 'Sample Customer',
-      email: 'customer@trixtech.com',
-      password: 'customer123',
-      role: 'customer',
-      phone: '+1 (555) 000-0002',
-      address: '456 Customer Ave, Customer Town',
-    });
-    await customerUser.save();
-    console.log('Customer user created: customer@trixtech.com');
+    // Demo users removed for security
 
     // Create sample services
     const services = [
@@ -102,9 +80,6 @@ async function seedDatabase() {
     console.log('Sample services created');
 
     console.log('\n✓ Database seeded successfully!');
-    console.log('\nDemo Credentials:');
-    console.log('Admin - Email: admin@trixtech.com, Password: admin123');
-    console.log('Customer - Email: customer@trixtech.com, Password: customer123');
 
     process.exit(0);
   } catch (error) {

@@ -114,31 +114,8 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="my-6 relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-[var(--border)]"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-[var(--muted)]">Demo Credentials</span>
-          </div>
-        </div>
-
-        {/* Demo Credentials */}
-        <div className="space-y-3 mb-6">
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-[var(--muted)] font-semibold">ADMIN</p>
-            <p className="text-sm text-[var(--foreground)] font-mono">admin@trixtech.com</p>
-            <p className="text-sm text-[var(--foreground)] font-mono">admin123</p>
-          </div>
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-[var(--muted)] font-semibold">CUSTOMER</p>
-            <p className="text-sm text-[var(--foreground)] font-mono">customer@trixtech.com</p>
-            <p className="text-sm text-[var(--foreground)] font-mono">customer123</p>
-          </div>
-        </div>
-
         {/* Register Link */}
-        <p className="text-center text-[var(--muted)] text-sm">
+        <p className="text-center text-[var(--muted)] text-sm mt-6">
           Don't have an account?{' '}
           <Link href="/register" className="text-[var(--primary)] font-semibold hover:text-[var(--primary-dark)] transition-colors">
             Create one

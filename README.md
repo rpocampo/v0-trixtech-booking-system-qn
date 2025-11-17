@@ -153,15 +153,6 @@ The frontend will run on `http://localhost:3000`
 3. **Start Frontend**: In `/frontend` directory, run `npm run dev`
 4. **Open Browser**: Visit `http://localhost:3000`
 
-## Demo Credentials
-
-### Admin Account
-- Email: `admin@trixtech.com`
-- Password: `admin123`
-
-### Sample Customer Account
-- Email: `customer@trixtech.com`
-- Password: `customer123`
 
 ## API Endpoints
 
