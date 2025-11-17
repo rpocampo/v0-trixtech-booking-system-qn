@@ -1,124 +1,246 @@
-# TRIXTECH Booking System - Setup Guide
+# 🚀 TRIXTECH Booking System - Complete Setup Guide
 
-## Quick Start (One Command)
+Welcome to TRIXTECH! This guide will help you get the booking system running on your computer in just a few minutes.
 
-### On Windows:
-\`\`\`bash
+## 📋 Before You Start - Prerequisites
+
+Make sure you have these installed on your computer:
+
+### Required Software
+- **Node.js** (version 16 or higher) - [Download here](https://nodejs.org/)
+- **MongoDB Community Edition** - [Download here](https://www.mongodb.com/try/download/community)
+- **Git** (optional, for cloning the repository)
+
+### Verify Installation
+Open a terminal/command prompt and run:
+```bash
+node --version    # Should show v16.x.x or higher
+npm --version     # Should show a version number
+```
+
+---
+
+## ⚡ Quick Start (Recommended)
+
+### Option 1: One-Click Setup (Windows)
+```bash
+# Double-click setup.bat or run in terminal
 setup.bat
-\`\`\`
+```
 
-### On Mac/Linux:
-\`\`\`bash
+### Option 2: One-Command Setup (Mac/Linux)
+```bash
+# Make script executable and run
 chmod +x setup.sh
 ./setup.sh
-\`\`\`
+```
 
-This will automatically install all dependencies for both frontend and backend.
+**What this does:** Automatically installs all required packages for both frontend and backend.
 
-## Manual Setup (If scripts don't work)
+---
 
-### Step 1: Install Dependencies
-\`\`\`bash
-# Install backend dependencies
+## 🔧 Manual Setup (Step-by-Step)
+
+If the automated scripts don't work, follow these steps:
+
+### Step 1: Download the Project
+```bash
+# Clone or download the project files
+git clone <your-repository-url>
+cd trixtech-booking-system
+```
+
+### Step 2: Install Dependencies
+
+#### Backend Setup
+```bash
+# Navigate to backend folder
 cd backend
-npm install
-cd ..
 
-# Install frontend dependencies
+# Install backend packages
+npm install
+
+# Go back to root folder
+cd ..
+```
+
+#### Frontend Setup
+```bash
+# Navigate to frontend folder
 cd frontend
+
+# Install frontend packages
 npm install
+
+# Go back to root folder
 cd ..
-\`\`\`
+```
 
-### Step 2: Configure Environment Variables
+### Step 3: Configure Environment Variables
 
-**Backend Configuration:**
+#### Backend Configuration
 1. Go to the `backend` folder
-2. Copy `.env.example` to `.env`
-3. Update the following values:
+2. Copy the example file: `cp .env.example .env`
+3. Open `.env` in a text editor and update these values:
 
-\`\`\`env
+```env
+# Database connection
 MONGODB_URI=mongodb://localhost:27017/trixtech
-JWT_SECRET=your_secure_secret_key_here
-EMAIL_USER=your_email@gmail.com  # Optional
-EMAIL_PASSWORD=your_app_password  # Optional
-\`\`\`
 
-**Frontend Configuration:**
+# Security (generate a random string for production)
+JWT_SECRET=your_super_secret_key_here_change_this
+
+# Email settings (optional - leave blank to disable)
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASSWORD=your-gmail-app-password
+```
+
+#### Frontend Configuration
 1. Go to the `frontend` folder
-2. Copy `.env.example` to `.env.local`
-3. Ensure API_URL points to your backend
+2. Copy the example file: `cp .env.example .env.local`
+3. Open `.env.local` and verify:
 
-\`\`\`env
+```env
+# API connection (points to your backend)
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
-\`\`\`
+```
 
-### Step 3: Start MongoDB
+### Step 4: Start MongoDB Database
 
-**On Mac (using Homebrew):**
-\`\`\`bash
+#### Windows Users:
+1. Download and install [MongoDB Compass](https://www.mongodb.com/products/tools/compass)
+2. Open MongoDB Compass
+3. Click "Connect" to start the local database
+
+#### Mac Users (with Homebrew):
+```bash
+# Start MongoDB service
 brew services start mongodb-community
-\`\`\`
+```
 
-**On Windows (using MongoDB Compass):**
-- Download MongoDB Compass from https://www.mongodb.com/products/tools/compass
-- Click "Connect" to start a local MongoDB instance
-
-**On Linux:**
-\`\`\`bash
+#### Linux Users:
+```bash
+# Start MongoDB service
 sudo systemctl start mongod
-\`\`\`
+```
 
-### Step 4: Start the Application
+### Step 5: Start the Application
 
-**Terminal 1 - Backend:**
-\`\`\`bash
+#### Terminal 1: Start Backend Server
+```bash
+# Navigate to backend folder
 cd backend
-npm run dev
-\`\`\`
 
-**Terminal 2 - Frontend:**
-\`\`\`bash
+# Start development server
+npm run dev
+```
+✅ **Success:** You'll see "Server running on port 5000"
+
+#### Terminal 2: Start Frontend Server
+```bash
+# Navigate to frontend folder
 cd frontend
+
+# Start development server
 npm run dev
-\`\`\`
+```
+✅ **Success:** You'll see "Ready - started server on 0.0.0.0:3000"
 
-## Access the Application
+---
 
-- **Frontend:** http://localhost:3000
-- **Backend API:** http://localhost:5000/api
-- **Health Check:** http://localhost:5000/api/health
+## 🌐 Access Your Application
 
+Once both servers are running, open your browser and visit:
 
-## Troubleshooting
+- **📱 Main Application:** http://localhost:3000
+- **🔧 Backend API:** http://localhost:5000/api
+- **💚 Health Check:** http://localhost:5000/api/health
 
-### MongoDB Connection Error
-- Ensure MongoDB is running on your system
-- Check MONGODB_URI in backend/.env is correct
-- Default: `mongodb://localhost:27017/trixtech`
+---
 
-### Port Already in Use
-- Backend: Change PORT in backend/.env (default: 5000)
-- Frontend: Run `npm run dev -- -p 3001` in frontend folder
+## 🔍 Troubleshooting Common Issues
 
-### Module Not Found Error
-- Delete `node_modules` folder and `package-lock.json`
-- Run `npm install` again in that folder
+### ❌ "MongoDB Connection Error"
+**Symptoms:** Application won't start, shows database connection errors
 
-### Email Notifications Not Working
-- Email is optional. Leave EMAIL_* variables blank to skip
-- To enable: Get an App Password from your Gmail account
-- Update EMAIL_USER and EMAIL_PASSWORD in .env
+**Solutions:**
+- Make sure MongoDB is running (check step 4 above)
+- Verify `MONGODB_URI` in `backend/.env` is correct
+- Default should be: `mongodb://localhost:27017/trixtech`
 
-## Production Deployment
+### ❌ "Port Already in Use"
+**Symptoms:** Error saying port 3000 or 5000 is busy
 
-When deploying to production:
-1. Change JWT_SECRET to a secure random string
-2. Update FRONTEND_URL and NEXT_PUBLIC_API_URL to production URLs
-3. Set NODE_ENV=production
-4. Use a managed MongoDB service (MongoDB Atlas, etc.)
-5. Update email configuration if using notifications
+**Solutions:**
+- **For Backend:** Change PORT in `backend/.env` to something else (like 5001)
+- **For Frontend:** Run `npm run dev -- -p 3001` in frontend folder
 
-## Support
+### ❌ "Module Not Found" or "Cannot find package"
+**Symptoms:** npm install fails or app won't start
 
-For issues, check the logs in both terminals for error messages.
+**Solutions:**
+```bash
+# In the problematic folder (backend or frontend):
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### ❌ "Email Notifications Not Working"
+**Symptoms:** No emails being sent
+
+**Solutions:**
+- Email is **optional** - the app works fine without it
+- To enable: Get an "App Password" from your Gmail account
+- Update `EMAIL_USER` and `EMAIL_PASSWORD` in `backend/.env`
+
+### ❌ "Command not found" errors
+**Symptoms:** Terminal doesn't recognize commands
+
+**Solutions:**
+- Make sure Node.js and npm are installed (check prerequisites)
+- Try restarting your terminal/command prompt
+- On Windows, use Command Prompt or PowerShell as Administrator
+
+---
+
+## 🚀 Going Live - Production Deployment
+
+When you're ready to deploy to the internet:
+
+### 1. Security First
+- Change `JWT_SECRET` to a long random string
+- Never use the default MongoDB connection in production
+
+### 2. Database
+- Use [MongoDB Atlas](https://www.mongodb.com/atlas) instead of local MongoDB
+- Update `MONGODB_URI` with your Atlas connection string
+
+### 3. Environment Variables
+- Set `NODE_ENV=production`
+- Update all URLs to your production domain
+- Configure proper email settings
+
+### 4. Hosting Recommendations
+- **Frontend:** Vercel, Netlify, or Heroku
+- **Backend:** Railway, Render, or DigitalOcean
+- **Database:** MongoDB Atlas
+
+---
+
+## 📞 Need Help?
+
+1. **Check the logs** in both terminal windows for error messages
+2. **Verify all steps** above were completed correctly
+3. **Test each component** individually:
+   - MongoDB: Try connecting with MongoDB Compass
+   - Backend: Visit http://localhost:5000/api/health
+   - Frontend: Check if npm run dev works
+
+### Still stuck?
+- Check the main README.md for more details
+- Look at QUICK_START.md for alternative instructions
+- Search for your specific error message online
+
+---
+
+**🎉 Congratulations!** Your TRIXTECH booking system should now be running smoothly. Happy coding! 🚀
