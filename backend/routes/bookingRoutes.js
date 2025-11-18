@@ -2,9 +2,11 @@ const express = require('express');
 const Booking = require('../models/Booking');
 const Service = require('../models/Service');
 const User = require('../models/User');
+const ReservationQueue = require('../models/ReservationQueue');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { sendBookingConfirmation, sendAdminBookingNotification, sendLowStockAlert } = require('../utils/emailService');
 const { sendTemplateNotification } = require('../utils/notificationService');
+const { findAlternativeServices, processReservationQueue } = require('../utils/recommendationService');
 
 const router = express.Router();
 
@@ -32,7 +34,10 @@ router.post('/', authMiddleware, async (req, res, next) => {
       });
     }
 
-    // For equipment, check total booked quantity on this date
+    // Check availability
+    let isAvailable = true;
+    let availableQuantity = service.quantity || 1;
+
     if (service.category === 'equipment') {
       const existingBookings = await Booking.find({
         serviceId,
@@ -41,13 +46,10 @@ router.post('/', authMiddleware, async (req, res, next) => {
       });
 
       const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+      availableQuantity = service.quantity - totalBooked;
 
       if (totalBooked + requestedQuantity > service.quantity) {
-        const available = service.quantity - totalBooked;
-        return res.status(409).json({
-          success: false,
-          message: `Only ${available} items available for this date. Requested: ${requestedQuantity}`
-        });
+        isAvailable = false;
       }
     } else {
       // For non-equipment services, check for existing booking
@@ -58,122 +60,198 @@ router.post('/', authMiddleware, async (req, res, next) => {
       });
 
       if (existingBooking) {
-        return res.status(409).json({ success: false, message: 'Service already booked for this date' });
+        isAvailable = false;
+        availableQuantity = 0;
       }
     }
 
-    const booking = new Booking({
-      customerId: req.user.id,
-      serviceId,
-      quantity: requestedQuantity,
-      bookingDate: new Date(bookingDate),
-      totalPrice: service.price * requestedQuantity,
-      notes,
-    });
-
-    await booking.save();
-    await booking.populate('serviceId');
-    await booking.populate('customerId', 'name email');
-
-    // Send confirmation emails
-    const customer = await User.findById(req.user.id);
-    if (customer) {
-      await sendBookingConfirmation(customer.email, {
-        serviceName: service.name,
+    if (isAvailable) {
+      // Create booking immediately
+      const booking = new Booking({
+        customerId: req.user.id,
+        serviceId,
         quantity: requestedQuantity,
-        date: booking.bookingDate,
-        time: new Date(booking.bookingDate).toLocaleTimeString(),
-        totalPrice: booking.totalPrice,
+        bookingDate: new Date(bookingDate),
+        totalPrice: service.price * requestedQuantity,
+        status: 'confirmed', // Auto-confirm available bookings
+        notes,
       });
 
-      await sendAdminBookingNotification({
-        serviceName: service.name,
-        quantity: requestedQuantity,
-        date: booking.bookingDate,
-        totalPrice: booking.totalPrice,
-      }, {
-        name: customer.name,
-        email: customer.email,
-      });
-    }
+      await booking.save();
+      await booking.populate('serviceId');
+      await booking.populate('customerId', 'name email');
 
-    // Check for low stock alert
-    if (service.category === 'equipment' && service.quantity <= 5) {
-      await sendLowStockAlert(service.name, service.quantity);
-    }
+      // Send notifications and emit real-time events
+      try {
+        console.log('Creating notifications for booking:', booking._id);
 
-    // Create notifications and emit real-time events
-    try {
-      console.log('Creating notifications for booking:', booking._id);
-
-      // Customer notification
-      const customerNotification = await sendTemplateNotification(req.user.id, 'BOOKING_CONFIRMED', {
-        message: `Your booking for ${service.name} has been confirmed.`,
-        metadata: {
-          bookingId: booking._id,
-          serviceId: service._id,
-          amount: booking.totalPrice,
-        },
-      });
-      console.log('Customer notification created:', customerNotification?._id);
-
-      // Admin notification
-      const adminUsers = await User.find({ role: 'admin' });
-      console.log('Found admin users:', adminUsers.length);
-
-      for (const admin of adminUsers) {
-        const adminNotification = await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
-          message: `New booking received from customer for ${service.name}.`,
+        // Customer notification
+        const customerNotification = await sendTemplateNotification(req.user.id, 'BOOKING_CONFIRMED', {
+          message: `Your booking for ${service.name} has been confirmed.`,
           metadata: {
             bookingId: booking._id,
             serviceId: service._id,
             amount: booking.totalPrice,
           },
         });
-        console.log('Admin notification created for', admin._id, ':', adminNotification?._id);
+        console.log('Customer notification created:', customerNotification?._id);
+
+        // Admin notification
+        const adminUsers = await User.find({ role: 'admin' });
+        console.log('Found admin users:', adminUsers.length);
+
+        for (const admin of adminUsers) {
+          const adminNotification = await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
+            message: `New booking received from customer for ${service.name}.`,
+            metadata: {
+              bookingId: booking._id,
+              serviceId: service._id,
+              amount: booking.totalPrice,
+            },
+          });
+          console.log('Admin notification created for', admin._id, ':', adminNotification?._id);
+        }
+
+        // Send email confirmations
+        const customer = await User.findById(req.user.id);
+        if (customer) {
+          await sendBookingConfirmation(customer.email, {
+            serviceName: service.name,
+            quantity: requestedQuantity,
+            date: booking.bookingDate,
+            time: new Date(booking.bookingDate).toLocaleTimeString(),
+            totalPrice: booking.totalPrice,
+          });
+
+          await sendAdminBookingNotification({
+            serviceName: service.name,
+            quantity: requestedQuantity,
+            date: booking.bookingDate,
+            totalPrice: booking.totalPrice,
+          }, {
+            name: customer.name,
+            email: customer.email,
+          });
+        }
+
+        // Check for low stock alert
+        if (service.category === 'equipment' && service.quantity <= 5) {
+          await sendLowStockAlert(service.name, service.quantity);
+        }
+
+        // Emit real-time events
+        const io = global.io;
+        if (io) {
+          io.to(`user_${req.user.id}`).emit('booking-created', {
+            booking: {
+              id: booking._id,
+              serviceName: service.name,
+              quantity: requestedQuantity,
+              date: booking.bookingDate,
+              totalPrice: booking.totalPrice,
+            }
+          });
+
+          io.to('admin').emit('new-booking', {
+            booking: {
+              id: booking._id,
+              serviceName: service.name,
+              quantity: requestedQuantity,
+              date: booking.bookingDate,
+              totalPrice: booking.totalPrice,
+            }
+          });
+        }
+      } catch (notificationError) {
+        console.error('Error sending booking notifications:', notificationError);
       }
 
-      // Emit real-time events
-      const io = global.io;
-      if (io) {
-        // Notify customer
-        io.to(`user_${req.user.id}`).emit('booking-created', {
-          booking: {
-            id: booking._id,
-            serviceName: service.name,
-            quantity: requestedQuantity,
-            date: booking.bookingDate,
-            totalPrice: booking.totalPrice,
-            status: booking.status,
-          }
-        });
+      res.status(201).json({
+        success: true,
+        booking,
+        message: 'Booking confirmed successfully!'
+      });
+    } else {
+      // Add to reservation queue
+      const alternatives = await findAlternativeServices(serviceId, new Date(bookingDate), requestedQuantity);
 
-        // Notify admins
-        io.to('admin').emit('new-booking', {
-          booking: {
-            id: booking._id,
-            customerId: req.user.id,
-            serviceName: service.name,
-            quantity: requestedQuantity,
-            date: booking.bookingDate,
-            totalPrice: booking.totalPrice,
-            status: booking.status,
-          }
-        });
+      const queueEntry = new ReservationQueue({
+        customerId: req.user.id,
+        serviceId,
+        requestedQuantity,
+        bookingDate: new Date(bookingDate),
+        notes,
+        alternativeSuggestions: alternatives.map(alt => ({
+          serviceId: alt.serviceId,
+          reason: alt.reason,
+          availability: alt.availableQuantity,
+        })),
+      });
 
-        // Notify all clients about inventory change
-        io.emit('inventory-updated', {
+      await queueEntry.save();
+
+      // Send notification about queue placement
+      await sendTemplateNotification(req.user.id, 'BOOKING_QUEUED', {
+        message: `Your requested ${service.name} is currently unavailable. You've been added to the reservation queue.`,
+        metadata: {
           serviceId: service._id,
-          serviceName: service.name,
-          availableQuantity: service.quantity - requestedQuantity,
-        });
-      }
-    } catch (notificationError) {
-      console.error('Error creating notifications:', notificationError);
-      // Don't fail the booking if notifications fail
-    }
+          requestedQuantity,
+          alternativesCount: alternatives.length,
+        },
+      });
 
-    res.status(201).json({ success: true, booking });
+      // Send email with alternatives
+      const customer = await User.findById(req.user.id);
+      if (customer) {
+        // Custom email for queued reservations
+        const mailOptions = {
+          from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
+          to: customer.email,
+          subject: 'Reservation Queued - TRIXTECH',
+          html: `
+            <h2>Your Reservation Has Been Queued</h2>
+            <p>Dear ${customer.name},</p>
+            <p>Your requested booking for <strong>${service.name}</strong> is currently unavailable for the selected date.</p>
+            <p>You've been added to our reservation queue with first-come, first-served priority.</p>
+            <p><strong>Requested:</strong> ${requestedQuantity} ${service.category === 'equipment' ? 'items' : 'service'}</p>
+            <p><strong>Date:</strong> ${new Date(bookingDate).toLocaleDateString()}</p>
+
+            ${alternatives.length > 0 ? `
+            <h3>Alternative Options Available:</h3>
+            <ul>
+              ${alternatives.map(alt => `
+                <li>
+                  <strong>${alt.name}</strong> - ₱${alt.price}
+                  ${alt.isAvailable ? '<span style="color: green;">(Available)</span>' : '<span style="color: red;">(Limited)</span>'}
+                  <br><small>${alt.reason}</small>
+                </li>
+              `).join('')}
+            </ul>
+            ` : ''}
+
+            <p>We'll notify you immediately when your reservation becomes available!</p>
+            <p>Thank you for your patience.</p>
+          `,
+        };
+
+        try {
+          const transporter = require('../utils/emailService').transporter;
+          if (transporter) {
+            await transporter.sendMail(mailOptions);
+          }
+        } catch (emailError) {
+          console.error('Error sending queue email:', emailError);
+        }
+      }
+
+      res.status(202).json({
+        success: true,
+        queued: true,
+        queueId: queueEntry._id,
+        alternatives: alternatives.slice(0, 3),
+        message: 'Item currently unavailable. Added to reservation queue with first-come, first-served priority.'
+      });
+    }
   } catch (error) {
     next(error);
   }

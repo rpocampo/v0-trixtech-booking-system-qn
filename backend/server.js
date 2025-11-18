@@ -11,6 +11,7 @@ const userRoutes = require('./routes/userRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const { initializeEmailService } = require('./utils/emailService');
+const { processReservationQueue, cleanupExpiredReservations } = require('./utils/recommendationService');
 const { errorHandler } = require('./middleware/errorHandler');
 
 dotenv.config();
@@ -81,7 +82,32 @@ app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Route not found' });
 });
 
+// Process reservation queue every 5 minutes
+setInterval(async () => {
+  try {
+    const processed = await processReservationQueue();
+    if (processed > 0) {
+      console.log(`Processed ${processed} queued reservations`);
+    }
+  } catch (error) {
+    console.error('Error processing reservation queue:', error);
+  }
+}, 5 * 60 * 1000); // 5 minutes
+
+// Clean up expired reservations daily
+setInterval(async () => {
+  try {
+    const cleaned = await cleanupExpiredReservations();
+    if (cleaned > 0) {
+      console.log(`Cleaned up ${cleaned} expired reservations`);
+    }
+  } catch (error) {
+    console.error('Error cleaning up expired reservations:', error);
+  }
+}, 24 * 60 * 60 * 1000); // 24 hours
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`TRIXTECH Backend running on port ${PORT}`);
+  console.log('Reservation queue processing enabled');
 });

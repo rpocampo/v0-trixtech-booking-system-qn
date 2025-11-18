@@ -131,6 +131,14 @@ const NOTIFICATION_TEMPLATES = {
     channels: ['in-app', 'email', 'sms'],
   },
 
+  BOOKING_QUEUED: {
+    title: 'Reservation Queued',
+    message: 'Your reservation has been queued due to unavailability.',
+    type: 'booking',
+    priority: 'medium',
+    channels: ['in-app', 'email'],
+  },
+
   BOOKING_UPDATED: {
     title: 'Booking Updated',
     message: 'Your booking status has been updated.',

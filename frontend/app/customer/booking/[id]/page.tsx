@@ -28,6 +28,8 @@ export default function BookingPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [queued, setQueued] = useState(false);
+  const [alternatives, setAlternatives] = useState<any[]>([]);
   const [recommendations, setRecommendations] = useState<Service[]>([]);
 
   useEffect(() => {
@@ -98,7 +100,15 @@ export default function BookingPage() {
         return;
       }
 
-      router.push('/customer/bookings');
+      if (data.queued) {
+        // Item was queued, show alternatives
+        setQueued(true);
+        setAlternatives(data.alternatives || []);
+        setError('');
+      } else {
+        // Booking confirmed successfully
+        router.push('/customer/bookings');
+      }
     } catch (err) {
       setError('An error occurred. Please try again.');
     } finally {
@@ -245,6 +255,65 @@ export default function BookingPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Queued Reservation Message */}
+      {queued && (
+        <div className="mt-8 card p-6 border-l-4 border-yellow-500">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="text-2xl">⏳</div>
+            <div>
+              <h3 className="text-lg font-semibold text-yellow-700">Reservation Queued</h3>
+              <p className="text-sm text-[var(--muted)]">
+                Your requested item is currently unavailable. You've been added to the reservation queue with first-come, first-served priority.
+              </p>
+            </div>
+          </div>
+
+          {alternatives.length > 0 && (
+            <div className="mt-6">
+              <h4 className="font-semibold mb-3">Alternative Options Available:</h4>
+              <div className="space-y-3">
+                {alternatives.map((alt, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <span className="font-medium">{alt.name}</span>
+                      <span className="text-sm text-[var(--muted)] ml-2">
+                        ₱{alt.price} • {alt.availableQuantity} available
+                      </span>
+                      <br />
+                      <span className="text-xs text-[var(--muted)]">{alt.reason}</span>
+                    </div>
+                    <Link
+                      href={`/customer/booking/${alt.serviceId}`}
+                      className="btn-secondary text-sm"
+                    >
+                      Book This Instead
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-700">
+              <strong>What happens next?</strong><br />
+              • You'll be notified immediately when your reservation becomes available<br />
+              • We'll process reservations in first-come, first-served order<br />
+              • Check your notifications and bookings page for updates
+            </p>
+          </div>
+
+          <div className="mt-4 flex gap-3">
+            <Link href="/customer/bookings" className="btn-primary">
+              View My Bookings
+            </Link>
+            <Link href="/customer/services" className="btn-secondary">
+              Browse More Services
+            </Link>
           </div>
         </div>
       )}
