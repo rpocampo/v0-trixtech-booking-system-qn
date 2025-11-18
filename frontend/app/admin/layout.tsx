@@ -79,6 +79,13 @@ export default function AdminLayout({
             >
               Customers
             </Link>
+            <Link
+              href="/admin/reports"
+              className="block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Reports
+            </Link>
             <button
               onClick={() => {
                 localStorage.clear();
@@ -124,6 +131,9 @@ export default function AdminLayout({
             </Link>
             <Link href="/admin/customers" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
               {isSidebarCollapsed ? '👥' : 'Customers'}
+            </Link>
+            <Link href="/admin/reports" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+              {isSidebarCollapsed ? '📊' : 'Reports'}
             </Link>
             <button
               onClick={() => {

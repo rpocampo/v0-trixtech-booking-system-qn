@@ -1,4 +1,4 @@
-// File: C:\Users\63936\Downloads\v0-trixtech-booking-system-qn\frontend\app\admin\dashboard\page.tsx
+// File: c:\Users\63936\Downloads\v0-trixtech-booking-system-qn\frontend\app\admin\dashboard\page.tsx
 import * as entry from '../../../../../app/admin/dashboard/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

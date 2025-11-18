@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSocket } from '../../../components/SocketProvider';
 
 interface Booking {
   _id: string;
-  serviceId: { name: string; price: number };
+  serviceId: { name: string; price: number; category: string };
+  quantity: number;
   bookingDate: string;
   status: string;
   totalPrice: number;
@@ -12,8 +14,10 @@ interface Booking {
 }
 
 export default function Bookings() {
+  const { socket } = useSocket();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -36,6 +40,27 @@ export default function Bookings() {
     fetchBookings();
   }, []);
 
+  // Real-time updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleBookingCreated = (data: any) => {
+      console.log('New booking created:', data);
+      setUpdating(true);
+
+      // Add the new booking to the list
+      setBookings(prev => [data.booking, ...prev]);
+
+      setTimeout(() => setUpdating(false), 2000);
+    };
+
+    socket.on('booking-created', handleBookingCreated);
+
+    return () => {
+      socket.off('booking-created', handleBookingCreated);
+    };
+  }, [socket]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
@@ -55,6 +80,14 @@ export default function Bookings() {
 
   return (
     <div>
+      {/* Real-time Update Indicator */}
+      {updating && (
+        <div className="fixed top-4 right-4 z-50 bg-[var(--primary)] text-white px-4 py-2 rounded-lg shadow-lg animate-slide-in flex items-center gap-2">
+          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+          <span className="text-sm font-medium">New booking added!</span>
+        </div>
+      )}
+
       <h1 className="text-4xl font-bold mb-2">Your Bookings</h1>
       <p className="text-[var(--muted)] mb-8">Manage your service bookings</p>
 
@@ -72,6 +105,11 @@ export default function Bookings() {
                   <p className="text-[var(--muted)] text-sm">
                     {new Date(booking.bookingDate).toLocaleString()}
                   </p>
+                  {booking.serviceId?.category === 'equipment' && (
+                    <p className="text-[var(--muted)] text-sm">
+                      Quantity: {booking.quantity}
+                    </p>
+                  )}
                 </div>
                 <div className="text-right">
                   <p className="text-2xl font-bold text-[var(--primary)]">₱{booking.totalPrice}</p>

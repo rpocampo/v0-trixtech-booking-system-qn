@@ -12,6 +12,12 @@ const bookingSchema = new mongoose.Schema(
       ref: 'Service',
       required: true,
     },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+      default: 1,
+    },
     bookingDate: {
       type: Date,
       required: true,

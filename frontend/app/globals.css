@@ -3,18 +3,72 @@
 @tailwind utilities;
 
 :root {
-  --background: #f8f9fa;
-  --foreground: #1a1a1a;
-  --primary: #7c3aed;
-  --primary-light: #a78bfa;
-  --primary-dark: #6d28d9;
-  --accent: #ec4899;
-  --accent-light: #f472b6;
+  /* Modern Color Palette */
+  --background: #fafbfc;
+  --background-secondary: #ffffff;
+  --foreground: #1a202c;
+  --foreground-secondary: #4a5568;
+
+  /* Primary Brand Colors */
+  --primary: #6366f1;
+  --primary-light: #818cf8;
+  --primary-dark: #4f46e5;
+  --primary-50: #eef2ff;
+  --primary-100: #e0e7ff;
+  --primary-500: #6366f1;
+  --primary-600: #4f46e5;
+  --primary-700: #4338ca;
+
+  /* Accent Colors */
+  --accent: #f59e0b;
+  --accent-light: #fbbf24;
+  --accent-dark: #d97706;
+
+  /* Status Colors */
   --success: #10b981;
+  --success-light: #34d399;
+  --success-dark: #059669;
   --warning: #f59e0b;
+  --warning-light: #fbbf24;
+  --warning-dark: #d97706;
   --danger: #ef4444;
-  --border: #e5e7eb;
-  --muted: #6b7280;
+  --danger-light: #f87171;
+  --danger-dark: #dc2626;
+
+  /* Neutral Colors */
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --muted: #64748b;
+  --muted-light: #94a3b8;
+
+  /* Surface Colors */
+  --surface: #ffffff;
+  --surface-secondary: #f8fafc;
+  --surface-hover: #f1f5f9;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --gradient-accent: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+  --gradient-success: linear-gradient(135deg, #10b981 0%, #06b6d4 100%);
+
+  /* Spacing */
+  --radius-sm: 0.375rem;
+  --radius: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  /* Transitions */
+  --transition-fast: 150ms ease-in-out;
+  --transition-normal: 250ms ease-in-out;
+  --transition-slow: 350ms ease-in-out;
 }
 
 * {
@@ -23,50 +77,232 @@
   box-sizing: border-box;
 }
 
-html,
-body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+html {
+  scroll-behavior: smooth;
 }
 
-/* Buttons */
+html,
+body {
+  background: linear-gradient(135deg, var(--background) 0%, #f1f5f9 100%);
+  color: var(--foreground);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Focus styles for accessibility */
+*:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for all interactive elements */
+button, a, input, textarea, select {
+  transition: all var(--transition-fast);
+}
+
+/* Loading animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Modern Button System */
 .btn-primary {
-  @apply bg-[var(--primary)] text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-[var(--primary-dark)] active:scale-95 transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-[var(--primary)] relative overflow-hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn-primary:hover::before {
+  left: 100%;
 }
 
 .btn-secondary {
-  @apply border-2 border-[var(--primary)] text-[var(--primary)] px-4 py-2.5 rounded-lg font-semibold hover:bg-[var(--primary)] hover:text-white active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply border-2 border-[var(--primary)] text-[var(--primary)] bg-white px-6 py-3 rounded-xl font-semibold hover:bg-[var(--primary)] hover:text-white active:scale-95 transition-all duration-200 shadow-sm hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-success {
+  @apply bg-gradient-to-r from-[var(--success)] to-[var(--success-dark)] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-warning {
+  @apply bg-gradient-to-r from-[var(--warning)] to-[var(--warning-dark)] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
 .btn-danger {
-  @apply bg-[var(--danger)] text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-red-600 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply bg-gradient-to-r from-[var(--danger)] to-[var(--danger-dark)] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
 }
 
 .btn-ghost {
-  @apply text-[var(--primary)] hover:bg-[var(--primary)] hover:bg-opacity-10 px-4 py-2.5 rounded-lg font-semibold transition-all;
+  @apply text-[var(--primary)] hover:bg-[var(--primary-50)] px-4 py-2.5 rounded-lg font-medium transition-all duration-200 hover:shadow-sm;
 }
 
-/* Cards */
+.btn-outline {
+  @apply border border-[var(--border)] bg-white text-[var(--foreground)] px-4 py-2.5 rounded-lg font-medium hover:bg-[var(--surface-hover)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all duration-200;
+}
+
+/* Modern Card System */
 .card {
-  @apply bg-white border border-[var(--border)] rounded-lg shadow-sm hover:shadow-md transition-shadow;
+  @apply bg-white border border-[var(--border)] rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 animate-fade-in;
+}
+
+.card-elevated {
+  @apply bg-white border border-[var(--border)] rounded-xl shadow-lg hover:shadow-xl transition-all duration-300;
+}
+
+.card-gradient {
+  @apply bg-gradient-to-br from-white to-[var(--surface-secondary)] border border-[var(--border)] rounded-xl shadow-lg hover:shadow-xl transition-all duration-300;
 }
 
 .card-hover {
-  @apply card cursor-pointer hover:border-[var(--primary)] hover:border-opacity-30;
+  @apply card cursor-pointer hover:border-[var(--primary)] hover:border-opacity-50 hover:-translate-y-1;
 }
 
-/* Form elements */
+.card-interactive {
+  @apply card cursor-pointer hover:shadow-xl hover:-translate-y-2 transition-all duration-300;
+}
+
+/* Service Cards */
+.service-card {
+  @apply card-interactive overflow-hidden;
+}
+
+.service-card:hover .service-image {
+  @apply scale-110;
+}
+
+.service-image {
+  @apply transition-transform duration-500;
+}
+
+/* Notification Cards */
+.notification-card {
+  @apply card border-l-4 border-l-[var(--primary)] bg-gradient-to-r from-[var(--primary-50)] to-white;
+}
+
+.notification-card-unread {
+  @apply card border-l-4 border-l-[var(--accent)] bg-gradient-to-r from-yellow-50 to-white;
+}
+
+/* Enhanced Form Elements */
 .input-field {
-  @apply w-full px-4 py-2.5 border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-20 focus:border-[var(--primary)] bg-white transition-all;
+  @apply w-full px-4 py-3 border border-[var(--border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-30 focus:border-[var(--primary)] bg-white transition-all duration-200 text-[var(--foreground)] placeholder-[var(--muted)] shadow-sm;
+}
+
+.input-field:hover {
+  @apply border-[var(--primary)] border-opacity-50;
+}
+
+.input-field:focus {
+  @apply shadow-lg;
 }
 
 .input-field::placeholder {
-  @apply text-[var(--muted)];
+  @apply text-[var(--muted)] transition-colors duration-200;
 }
 
 .input-field:disabled {
-  @apply bg-gray-50 cursor-not-allowed;
+  @apply bg-[var(--surface-hover)] cursor-not-allowed opacity-60;
+}
+
+.input-field.error {
+  @apply border-[var(--danger)] focus:ring-[var(--danger)] focus:ring-opacity-30;
+}
+
+/* Select dropdowns */
+.select-field {
+  @apply input-field cursor-pointer pr-10 appearance-none;
+}
+
+/* Textarea */
+.textarea-field {
+  @apply input-field resize-none;
+}
+
+.textarea-field:focus {
+  @apply min-h-[120px];
+}
+
+/* Checkbox and Radio */
+.checkbox-field, .radio-field {
+  @apply w-5 h-5 text-[var(--primary)] border-2 border-[var(--border)] rounded focus:ring-[var(--primary)] focus:ring-opacity-30 transition-all duration-200;
+}
+
+.checkbox-field:checked, .radio-field:checked {
+  @apply bg-[var(--primary)] border-[var(--primary)];
+}
+
+/* Form Groups */
+.form-group {
+  @apply space-y-2;
+}
+
+.form-label {
+  @apply block text-sm font-semibold text-[var(--foreground)] mb-2;
+}
+
+.form-help {
+  @apply text-xs text-[var(--muted)] mt-1;
+}
+
+.form-error {
+  @apply text-xs text-[var(--danger)] mt-1 font-medium;
 }
 
 /* Utilities */
