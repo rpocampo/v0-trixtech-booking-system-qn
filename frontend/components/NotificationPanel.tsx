@@ -21,9 +21,10 @@ interface Notification {
 interface NotificationPanelProps {
   isOpen: boolean;
   onClose: () => void;
+  position?: 'default' | 'sidebar';
 }
 
-export default function NotificationPanel({ isOpen, onClose }: NotificationPanelProps) {
+export default function NotificationPanel({ isOpen, onClose, position = 'default' }: NotificationPanelProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -129,98 +130,109 @@ export default function NotificationPanel({ isOpen, onClose }: NotificationPanel
   if (!isOpen) return null;
 
   return (
-    <div className="absolute right-0 top-12 w-96 max-h-96 bg-white border border-[var(--border)] rounded-xl shadow-xl z-50 overflow-hidden animate-slide-in">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-[var(--border)] bg-[var(--surface-secondary)]">
-        <h3 className="font-semibold text-[var(--foreground)]">Notifications</h3>
-        <div className="flex items-center gap-2">
-          {unreadCount > 0 && (
-            <span className="bg-[var(--primary)] text-white text-xs px-2 py-1 rounded-full">
-              {unreadCount}
-            </span>
-          )}
-          <button
-            onClick={markAllAsRead}
-            className="text-sm text-[var(--primary)] hover:text-[var(--primary-dark)] transition-colors"
-            disabled={unreadCount === 0}
-          >
-            Mark all read
-          </button>
-          <button
-            onClick={onClose}
-            className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
-          >
-            ✕
-          </button>
-        </div>
-      </div>
+    <>
+      {/* Backdrop overlay */}
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 z-40 animate-fade-in"
+        onClick={onClose}
+      />
 
-      {/* Notifications List */}
-      <div className="max-h-80 overflow-y-auto">
-        {loading ? (
-          <div className="p-4 text-center text-[var(--muted)]">
-            <div className="animate-pulse">Loading...</div>
+      {/* Floating Notification Panel - Centered on screen */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+        <div className="w-full max-w-md max-h-[80vh] bg-white border border-[var(--border)] rounded-2xl shadow-2xl overflow-hidden animate-scale-in">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-[var(--border)] bg-[var(--surface-secondary)]">
+            <h3 className="font-semibold text-[var(--foreground)]">Notifications</h3>
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <span className="bg-[var(--primary)] text-white text-xs px-2 py-1 rounded-full">
+                  {unreadCount}
+                </span>
+              )}
+              <button
+                onClick={markAllAsRead}
+                className="text-sm text-[var(--primary)] hover:text-[var(--primary-dark)] transition-colors"
+                disabled={unreadCount === 0}
+              >
+                Mark all read
+              </button>
+              <button
+                onClick={onClose}
+                className="text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+              >
+                ✕
+              </button>
+            </div>
           </div>
-        ) : notifications.length === 0 ? (
-          <div className="p-8 text-center text-[var(--muted)]">
-            <div className="text-4xl mb-2">🔔</div>
-            <p>No notifications yet</p>
-          </div>
-        ) : (
-          notifications.map((notification) => (
-            <div
-              key={notification._id}
-              className={`p-4 border-b border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer ${
-                !notification.isRead ? getPriorityColor(notification.priority) : ''
-              }`}
-              onClick={() => !notification.isRead && markAsRead(notification._id)}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h4 className={`font-medium text-sm ${!notification.isRead ? 'text-[var(--foreground)]' : 'text-[var(--muted)]'}`}>
-                      {notification.title}
-                    </h4>
-                    {!notification.isRead && (
-                      <div className="w-2 h-2 bg-[var(--primary)] rounded-full flex-shrink-0"></div>
-                    )}
-                  </div>
-                  <p className="text-sm text-[var(--muted)] mb-2 line-clamp-2">
-                    {notification.message}
-                  </p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-[var(--muted-light)]">
-                      {formatTime(notification.createdAt)}
-                    </span>
-                    {notification.metadata?.actionUrl && (
-                      <Link
-                        href={notification.metadata.actionUrl}
-                        className="text-xs text-[var(--primary)] hover:text-[var(--primary-dark)] font-medium"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        View →
-                      </Link>
-                    )}
+
+          {/* Notifications List */}
+          <div className="max-h-80 overflow-y-auto">
+            {loading ? (
+              <div className="p-4 text-center text-[var(--muted)]">
+                <div className="animate-pulse">Loading...</div>
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="p-8 text-center text-[var(--muted)]">
+                <div className="text-4xl mb-2">🔔</div>
+                <p>No notifications yet</p>
+              </div>
+            ) : (
+              notifications.map((notification) => (
+                <div
+                  key={notification._id}
+                  className={`p-4 border-b border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer ${
+                    !notification.isRead ? getPriorityColor(notification.priority) : ''
+                  }`}
+                  onClick={() => !notification.isRead && markAsRead(notification._id)}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h4 className={`font-medium text-sm ${!notification.isRead ? 'text-[var(--foreground)]' : 'text-[var(--muted)]'}`}>
+                          {notification.title}
+                        </h4>
+                        {!notification.isRead && (
+                          <div className="w-2 h-2 bg-[var(--primary)] rounded-full flex-shrink-0"></div>
+                        )}
+                      </div>
+                      <p className="text-sm text-[var(--muted)] mb-2 line-clamp-2">
+                        {notification.message}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-[var(--muted-light)]">
+                          {formatTime(notification.createdAt)}
+                        </span>
+                        {notification.metadata?.actionUrl && (
+                          <Link
+                            href={notification.metadata.actionUrl}
+                            className="text-xs text-[var(--primary)] hover:text-[var(--primary-dark)] font-medium"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            View →
+                          </Link>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+              ))
+            )}
+          </div>
 
-      {/* Footer */}
-      {notifications.length > 0 && (
-        <div className="p-3 border-t border-[var(--border)] bg-[var(--surface-secondary)]">
-          <Link
-            href="/customer/notifications"
-            className="text-sm text-[var(--primary)] hover:text-[var(--primary-dark)] font-medium block text-center"
-            onClick={onClose}
-          >
-            View all notifications →
-          </Link>
+          {/* Footer */}
+          {notifications.length > 0 && (
+            <div className="p-3 border-t border-[var(--border)] bg-[var(--surface-secondary)]">
+              <Link
+                href="/customer/notifications"
+                className="text-sm text-[var(--primary)] hover:text-[var(--primary-dark)] font-medium block text-center"
+                onClick={onClose}
+              >
+                View all notifications →
+              </Link>
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }

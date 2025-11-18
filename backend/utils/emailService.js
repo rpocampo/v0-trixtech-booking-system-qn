@@ -23,9 +23,79 @@ const initializeEmailService = () => {
   return transporter;
 };
 
-// Send booking confirmation email
+// Retry utility with exponential backoff
+const retryWithBackoff = async (fn, maxRetries = 3, baseDelay = 1000) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+
+      const delay = baseDelay * Math.pow(2, attempt - 1);
+      console.log(`Attempt ${attempt} failed, retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+};
+
+// Circuit breaker state
+let emailCircuitBreaker = {
+  failures: 0,
+  lastFailureTime: null,
+  state: 'CLOSED', // CLOSED, OPEN, HALF_OPEN
+  failureThreshold: 5,
+  recoveryTimeout: 60000, // 1 minute
+};
+
+// Circuit breaker check
+const checkCircuitBreaker = () => {
+  const now = Date.now();
+
+  if (emailCircuitBreaker.state === 'OPEN') {
+    if (now - emailCircuitBreaker.lastFailureTime > emailCircuitBreaker.recoveryTimeout) {
+      emailCircuitBreaker.state = 'HALF_OPEN';
+      console.log('Circuit breaker: HALF_OPEN - Testing service');
+      return true;
+    }
+    return false;
+  }
+
+  return true;
+};
+
+// Update circuit breaker on failure
+const recordFailure = () => {
+  emailCircuitBreaker.failures++;
+  emailCircuitBreaker.lastFailureTime = Date.now();
+
+  if (emailCircuitBreaker.failures >= emailCircuitBreaker.failureThreshold) {
+    emailCircuitBreaker.state = 'OPEN';
+    console.log('Circuit breaker: OPEN - Service unavailable');
+  }
+};
+
+// Update circuit breaker on success
+const recordSuccess = () => {
+  if (emailCircuitBreaker.state === 'HALF_OPEN') {
+    emailCircuitBreaker.state = 'CLOSED';
+    emailCircuitBreaker.failures = 0;
+    console.log('Circuit breaker: CLOSED - Service recovered');
+  }
+};
+
+// Send booking confirmation email with fallback
 const sendBookingConfirmation = async (email, bookingDetails) => {
-  if (!transporter) return; // Skip if email not configured
+  if (!transporter) {
+    console.log('Email service not configured, skipping confirmation');
+    return;
+  }
+
+  if (!checkCircuitBreaker()) {
+    console.log('Circuit breaker open, skipping email to prevent further failures');
+    return;
+  }
 
   const mailOptions = {
     from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
@@ -43,10 +113,31 @@ const sendBookingConfirmation = async (email, bookingDetails) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await retryWithBackoff(async () => {
+      await transporter.sendMail(mailOptions);
+    });
+
+    recordSuccess();
     console.log(`Booking confirmation sent to ${email}`);
   } catch (error) {
-    console.error('Error sending email:', error);
+    recordFailure();
+    console.error('Error sending email after retries:', error);
+
+    // Fallback: Log to database for manual follow-up
+    try {
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        userId: null, // System notification
+        type: 'system',
+        title: 'Email Delivery Failed',
+        message: `Failed to send booking confirmation to ${email}. Manual follow-up required.`,
+        priority: 'high',
+        channels: ['in-app'],
+        metadata: { email, bookingDetails, error: error.message }
+      });
+    } catch (dbError) {
+      console.error('Failed to log email failure to database:', dbError);
+    }
   }
 };
 

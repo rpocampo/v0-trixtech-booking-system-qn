@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import NotificationBell from '../../components/NotificationBell';
+import { useSocket } from '../../components/SocketProvider';
 
 interface User {
   id: string;
@@ -18,10 +18,12 @@ export default function CustomerLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const { socket } = useSocket();
   const [isLoading, setIsLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -51,6 +53,52 @@ export default function CustomerLayout({
 
     fetchUser();
   }, [router]);
+
+  // Fetch unread notifications count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (!user) return;
+
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await fetch('http://localhost:5000/api/notifications/unread-count', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (data.success) {
+          setUnreadNotifications(data.count);
+        }
+      } catch (error) {
+        console.error('Failed to fetch unread count:', error);
+      }
+    };
+
+    if (user) {
+      fetchUnreadCount();
+
+      // Poll for new notifications every 30 seconds
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
+  // Real-time notification updates
+  useEffect(() => {
+    if (socket && user) {
+      const handleNewNotification = (notification: any) => {
+        console.log('New notification received:', notification);
+        setUnreadNotifications(prev => prev + 1);
+      };
+
+      socket.on('notification', handleNewNotification);
+
+      return () => {
+        socket.off('notification', handleNewNotification);
+      };
+    }
+  }, [socket, user]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
@@ -87,15 +135,15 @@ export default function CustomerLayout({
             </Link>
             <Link
               href="/customer/notifications"
-              className="px-4 py-2 rounded-lg text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200 font-medium"
+              className="relative px-4 py-2 rounded-lg text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200 font-medium"
             >
               Notifications
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1 animate-pulse shadow-lg">
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                </span>
+              )}
             </Link>
-
-            {/* Notification Bell */}
-            <div className="mx-2">
-              <NotificationBell />
-            </div>
 
             {/* User Menu Dropdown */}
             <div className="relative ml-2">
@@ -152,7 +200,6 @@ export default function CustomerLayout({
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-2">
-            <NotificationBell />
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 rounded-lg text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200"
@@ -209,11 +256,16 @@ export default function CustomerLayout({
               </Link>
               <Link
                 href="/customer/notifications"
-                className="flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200"
+                className="relative flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <span className="text-lg">🔔</span>
                 Notifications
+                {unreadNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1 animate-pulse shadow-lg">
+                    {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                  </span>
+                )}
               </Link>
 
               <div className="border-t border-[var(--border)] my-3"></div>

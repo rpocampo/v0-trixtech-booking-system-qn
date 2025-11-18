@@ -12,7 +12,8 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const { initializeEmailService } = require('./utils/emailService');
 const { processReservationQueue, cleanupExpiredReservations } = require('./utils/recommendationService');
-const { errorHandler } = require('./middleware/errorHandler');
+const { errorHandler, requestLogger } = require('./middleware/errorHandler');
+const { monitoringMiddleware, healthCheckHandler } = require('./utils/monitoring');
 
 dotenv.config();
 
@@ -33,6 +34,8 @@ initializeEmailService();
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(requestLogger);
+app.use(monitoringMiddleware);
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static('uploads'));
@@ -45,10 +48,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
 
-// Health check
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'TRIXTECH API is running' });
-});
+// Enhanced health check with monitoring
+app.get('/api/health', healthCheckHandler);
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {

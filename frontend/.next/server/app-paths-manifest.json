@@ -1,9 +1,8 @@
 {
-  "/admin/bookings/page": "app/admin/bookings/page.js",
-  "/customer/bookings/page": "app/customer/bookings/page.js",
-  "/customer/dashboard/page": "app/customer/dashboard/page.js",
+  "/admin/dashboard/page": "app/admin/dashboard/page.js",
+  "/customer/notifications/page": "app/customer/notifications/page.js",
   "/customer/services/page": "app/customer/services/page.js",
   "/customer/booking/[id]/page": "app/customer/booking/[id]/page.js",
-  "/admin/reports/page": "app/admin/reports/page.js",
-  "/admin/services/page": "app/admin/services/page.js"
+  "/customer/bookings/page": "app/customer/bookings/page.js",
+  "/admin/bookings/page": "app/admin/bookings/page.js"
 }
