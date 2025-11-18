@@ -1,7 +1,30 @@
-# Maintenance and Monitoring Guide - TrixTech Booking System
+# 🔧 Maintenance & Monitoring Guide - TrixTech Booking System
 
-## Overview
-This guide outlines procedures for ongoing maintenance, monitoring, and troubleshooting of the TrixTech Web-Based Booking and Reservation System.
+## 📋 Overview
+This comprehensive guide provides procedures for maintaining, monitoring, and troubleshooting your TrixTech booking system. Regular maintenance ensures optimal performance, security, and user experience.
+
+## 🕐 Maintenance Schedule
+
+### 📅 Daily Tasks (15 minutes)
+- [ ] **System Health Check**: Verify all services are running
+- [ ] **Error Log Review**: Check for new errors or warnings
+- [ ] **Backup Verification**: Confirm automated backups completed
+- [ ] **Resource Monitoring**: Check CPU, memory, disk usage
+- [ ] **User Activity**: Monitor login attempts and booking activity
+
+### 📊 Weekly Tasks (30 minutes)
+- [ ] **Performance Analysis**: Review response times and bottlenecks
+- [ ] **Security Updates**: Apply system and dependency updates
+- [ ] **Database Optimization**: Check query performance and indexes
+- [ ] **User Feedback**: Review support tickets and user comments
+- [ ] **Analytics Review**: Analyze booking trends and user behavior
+
+### 📈 Monthly Tasks (1 hour)
+- [ ] **Comprehensive Backup Test**: Restore from backup to verify integrity
+- [ ] **Security Audit**: Full security assessment and vulnerability scan
+- [ ] **Performance Benchmarking**: Compare against performance baselines
+- [ ] **User Experience Review**: Test all user flows and identify improvements
+- [ ] **Documentation Update**: Update guides and procedures as needed
 
 ## Daily Maintenance Tasks
 
@@ -52,24 +75,60 @@ This guide outlines procedures for ongoing maintenance, monitoring, and troubles
 - [ ] Review and update documentation
 - [ ] Plan feature enhancements
 
-## Monitoring Setup
+## 🩺 Quick Health Checks
 
-### Application Monitoring
-
-#### PM2 Process Monitoring
+### ⚡ System Status (2 minutes)
 ```bash
-# Install PM2
+# Check if services are running
+curl http://localhost:5000/api/health
+
+# Check database connection
+mongosh --eval "db.stats()" mongodb://localhost:27017/trixtech
+
+# Check application logs
+tail -f backend/logs/app.log
+tail -f frontend/.next/server.log
+```
+
+### 📊 Key Metrics to Monitor
+- **Response Time**: API calls should be < 500ms
+- **Error Rate**: Should be < 1% of total requests
+- **Memory Usage**: Should be < 80% of available RAM
+- **Database Connections**: Should be within configured limits
+- **Disk Space**: Should have > 20% free space
+
+---
+
+## 🔍 Monitoring Setup
+
+### 📈 Application Monitoring
+
+#### PM2 Process Manager (Production)
+```bash
+# Install PM2 globally
 npm install -g pm2
 
-# Start application with monitoring
+# Start backend with monitoring
+cd backend
 pm2 start server.js --name "trixtech-backend"
-pm2 monit
+pm2 monit  # Real-time monitoring dashboard
 
 # Enable log rotation
 pm2 install pm2-logrotate
 pm2 set pm2-logrotate:max_size 10M
 pm2 set pm2-logrotate:retain 7
+
+# Save PM2 configuration
+pm2 startup
+pm2 save
 ```
+
+#### Built-in Health Monitoring
+The system includes automatic health monitoring:
+- **Health Endpoint**: `/api/health` - Comprehensive system status
+- **Request Tracking**: Automatic request/response monitoring
+- **Error Logging**: All errors automatically logged and tracked
+- **Performance Metrics**: Real-time performance data collection
 
 #### Key Metrics to Monitor
 - CPU usage
@@ -137,23 +196,81 @@ db.currentOp()
 - SMS alerts for critical issues
 - Slack/Teams integration for team notifications
 
-## Troubleshooting Guide
+## 🚨 Quick Troubleshooting
 
-### Common Issues and Solutions
+### ⚡ Common Issues & Quick Fixes
 
-#### Application Not Starting
+#### 🔴 Application Won't Start
 ```bash
-# Check logs
-pm2 logs trixtech-backend
+# Check what's wrong
+pm2 logs trixtech-backend --lines 50
 
 # Check environment variables
-cat .env
+cat backend/.env | grep -E "(PORT|MONGO|JWT)"
 
-# Verify dependencies
-npm list --depth=0
+# Verify Node.js version
+node --version  # Should be 16+
 
-# Check port availability
+# Check port conflicts
 netstat -tlnp | grep :5000
+lsof -i :5000
+
+# Restart service
+pm2 restart trixtech-backend
+```
+
+#### 🔴 Database Connection Failed
+```bash
+# Test database connection
+mongosh mongodb://localhost:27017/trixtech --eval "db.stats()"
+
+# Check MongoDB service
+sudo systemctl status mongod  # Linux
+brew services list | grep mongodb  # Mac
+
+# Restart database
+sudo systemctl restart mongod  # Linux
+brew services restart mongodb-community  # Mac
+```
+
+#### 🔴 High Memory/CPU Usage
+```bash
+# Check resource usage
+pm2 monit
+htop  # or top
+
+# Restart application
+pm2 restart trixtech-backend
+
+# Check for memory leaks
+pm2 reloadLogs
+grep "memory" ~/.pm2/logs/trixtech-backend-out.log
+```
+
+#### 🔴 Users Can't Login
+```bash
+# Check JWT secret
+grep JWT_SECRET backend/.env
+
+# Verify user exists in database
+mongosh mongodb://localhost:27017/trixtech --eval "db.users.find().limit(5)"
+
+# Check authentication logs
+grep "login\|auth" backend/logs/app.log
+```
+
+#### 🔴 Emails Not Sending
+```bash
+# Check email configuration
+grep EMAIL backend/.env
+
+# Test email service
+curl -X POST http://localhost:5000/api/test-email \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com"}'
+
+# Check email logs
+grep "email\|mail" backend/logs/app.log
 ```
 
 #### Database Connection Issues
@@ -234,12 +351,16 @@ const cache = require('memory-cache');
 app.use(express.json({ limit: '10mb' }));
 ```
 
-## Backup and Recovery
+## 💾 Backup & Recovery
 
-### Automated Backup Setup
+### 🔄 Automated Backup Setup
 ```bash
-# Create backup script
-cat > /usr/local/bin/backup-trixtech.sh << 'EOF'
+# Create backup directory
+sudo mkdir -p /backup/trixtech
+sudo chown $(whoami):$(whoami) /backup/trixtech
+
+# Create automated backup script
+cat > ~/backup-trixtech.sh << 'EOF'
 #!/bin/bash
 DATE=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR="/backup/trixtech"
@@ -247,17 +368,56 @@ BACKUP_DIR="/backup/trixtech"
 # Database backup
 mongodump --db trixtech --out $BACKUP_DIR/db_$DATE
 
-# File backup
-tar -czf $BACKUP_DIR/files_$DATE.tar.gz /app/uploads
+# File backup (if you have uploads)
+if [ -d "/app/uploads" ]; then
+    tar -czf $BACKUP_DIR/files_$DATE.tar.gz /app/uploads
+fi
+
+# Environment files backup
+tar -czf $BACKUP_DIR/config_$DATE.tar.gz /app/backend/.env
 
 # Cleanup old backups (keep last 7 days)
 find $BACKUP_DIR -name "db_*" -mtime +7 -delete
 find $BACKUP_DIR -name "files_*.tar.gz" -mtime +7 -delete
+find $BACKUP_DIR -name "config_*.tar.gz" -mtime +7 -delete
 
-echo "Backup completed: $DATE"
+echo "✅ Backup completed: $DATE"
 EOF
 
-chmod +x /usr/local/bin/backup-trixtech.sh
+chmod +x ~/backup-trixtech.sh
+```
+
+### ⏰ Schedule Daily Backups
+```bash
+# Add to crontab for daily backups at 2 AM
+crontab -e
+
+# Add this line:
+0 2 * * * ~/backup-trixtech.sh >> ~/backup-trixtech.log 2>&1
+```
+
+### 🔧 Manual Backup Commands
+```bash
+# Quick database backup
+mongodump --db trixtech --out ./backup_$(date +%Y%m%d)
+
+# Quick file backup
+tar -czf uploads_backup_$(date +%Y%m%d).tar.gz uploads/
+
+# Backup everything
+tar -czf full_backup_$(date +%Y%m%d).tar.gz . --exclude=node_modules --exclude=.git
+```
+
+### 🔄 Recovery Procedures
+```bash
+# Restore database
+mongorestore --db trixtech ./backup/db_latest
+
+# Restore files
+tar -xzf ./backup/files_latest.tar.gz -C /app/uploads
+
+# Verify restoration
+mongosh mongodb://localhost:27017/trixtech --eval "db.stats()"
 ```
 
 ### Backup Verification
@@ -382,9 +542,64 @@ const mongoose = require('mongoose');
 2. **Level 2**: Development team lead
 3. **Level 3**: Management and external consultants
 
-## Documentation Updates
+## 📚 Documentation & Support
 
-- [ ] Update this guide quarterly
-- [ ] Document new features and procedures
-- [ ] Review and update emergency contacts
-- [ ] Maintain change log for all updates
+### 🔄 Regular Updates
+- [ ] **Review this guide** quarterly for accuracy
+- [ ] **Document new features** as they are added
+- [ ] **Update emergency contacts** annually
+- [ ] **Maintain change log** for all system updates
+- [ ] **Archive old procedures** when replaced
+
+### 🆘 Support Resources
+
+#### 📞 Emergency Contacts
+- **Primary Admin**: [Your Name] - [Phone] - [Email]
+- **Technical Lead**: [Dev Name] - [Phone] - [Email]
+- **Hosting Provider**: [Provider Support] - [Support Phone]
+- **Database Provider**: [DB Support] - [Support Email]
+
+#### 📖 Additional Resources
+- **System Documentation**: See SETUP_GUIDE.md, DEPLOYMENT_GUIDE.md
+- **API Documentation**: Visit `/api/docs` when running
+- **Health Monitoring**: Check `/api/health` endpoint
+- **Logs Location**: `backend/logs/` and PM2 logs
+
+#### 🎯 Quick Reference Commands
+```bash
+# System status
+curl http://localhost:5000/api/health
+
+# View logs
+pm2 logs trixtech-backend --lines 100
+
+# Restart services
+pm2 restart trixtech-backend
+
+# Database backup
+~/backup-trixtech.sh
+
+# Check disk space
+df -h
+
+# Monitor resources
+pm2 monit
+```
+
+---
+
+## 🎉 Maintenance Summary
+
+**Your TrixTech system is now equipped with:**
+
+✅ **Automated Health Monitoring** - Real-time system status tracking
+✅ **Comprehensive Logging** - Detailed error and performance logs
+✅ **Automated Backups** - Daily database and file backups
+✅ **Performance Tracking** - Response time and resource monitoring
+✅ **Security Updates** - Regular dependency and system updates
+✅ **Quick Troubleshooting** - Fast diagnosis and resolution guides
+✅ **Scalability Ready** - Monitoring for growth and peak loads
+
+**Remember:** Regular maintenance = Happy users! Schedule time weekly for system checks and monthly for comprehensive reviews.
+
+**🚀 Stay proactive, monitor regularly, and your booking system will run smoothly!**

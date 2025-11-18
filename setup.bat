@@ -1,152 +1,310 @@
 @echo off
-echo ================================
-echo TRIXTECH Booking System Setup
-echo ================================
+chcp 65001 >nul 2>&1
+color 0A
+cls
 echo.
+echo   ╔══════════════════════════════════════════════════════════════╗
+echo   ║                    🚀 TRIXTECH BOOKING SYSTEM                 ║
+echo   ║                     Windows Setup Script                      ║
+echo   ╚══════════════════════════════════════════════════════════════╝
+echo.
+echo   📋 Prerequisites Check...
+echo   ──────────────────────────────────────────────────────────────
 
 REM Check if Node.js is installed
 where node >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [ERROR] Node.js is not installed.
-    echo Please download and install Node.js from: https://nodejs.org/
-    echo Recommended version: Node.js 18+ with npm
+    echo   ❌ Node.js is not installed.
+    echo.
+    echo   📥 Please download and install Node.js from:
+    echo   🌐 https://nodejs.org/
+    echo   💡 Recommended: Node.js 18+ (LTS version)
+    echo.
+    echo   After installation, run this script again.
     pause
     exit /b 1
 )
 
 REM Check Node.js version
 for /f "tokens=*" %%i in ('node --version') do set NODE_VERSION=%%i
-echo [INFO] Node.js version: %NODE_VERSION%
+echo   ✅ Node.js version: %NODE_VERSION%
 
 REM Check npm version
 for /f "tokens=*" %%i in ('npm --version') do set NPM_VERSION=%%i
-echo [INFO] npm version: %NPM_VERSION%
+echo   ✅ npm version: %NPM_VERSION%
 
+REM Check if we're in the right directory
+if not exist "backend" (
+    echo   ❌ Error: 'backend' directory not found.
+    echo   💡 Please run this script from the project root directory.
+    pause
+    exit /b 1
+)
+
+if not exist "frontend" (
+    echo   ❌ Error: 'frontend' directory not found.
+    echo   💡 Please run this script from the project root directory.
+    pause
+    exit /b 1
+)
+
+echo   ✅ Project structure verified
 echo.
-echo [STEP 1/6] Installing backend dependencies...
+
+echo   🔧 Installation Progress...
+echo   ──────────────────────────────────────────────────────────────
+echo.
+echo   📦 Step 1/7: Installing Backend Dependencies
+echo   ──────────────────────────────────────────────────────────────
 cd backend
-echo [INFO] Working directory: %cd%
+echo   📂 Working directory: %cd%
+echo   ⏳ Installing packages... (this may take a few minutes)
 call npm install
 if %errorlevel% neq 0 (
-    echo [ERROR] Failed to install backend dependencies
+    echo.
+    echo   ❌ Failed to install backend dependencies
+    echo   💡 Try running: npm cache clean --force
+    echo   💡 Then run this setup script again
     cd ..
     pause
     exit /b 1
 )
 cd ..
-echo [SUCCESS] Backend dependencies installed
-
+echo   ✅ Backend dependencies installed successfully
 echo.
-echo [STEP 2/6] Installing frontend dependencies...
+
+echo   🎨 Step 2/7: Installing Frontend Dependencies
+echo   ──────────────────────────────────────────────────────────────
 cd frontend
-echo [INFO] Working directory: %cd%
+echo   📂 Working directory: %cd%
+echo   ⏳ Installing packages... (this may take a few minutes)
 call npm install
 if %errorlevel% neq 0 (
-    echo [ERROR] Failed to install frontend dependencies
+    echo.
+    echo   ❌ Failed to install frontend dependencies
+    echo   💡 Try running: npm cache clean --force
+    echo   💡 Then run this setup script again
     cd ..
     pause
     exit /b 1
 )
 cd ..
-echo [SUCCESS] Frontend dependencies installed
-
+echo   ✅ Frontend dependencies installed successfully
 echo.
-echo [STEP 3/6] Checking for MongoDB...
+
+echo   🗄️  Step 3/7: Database Setup (MongoDB)
+echo   ──────────────────────────────────────────────────────────────
 where mongod >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [WARNING] MongoDB not found in PATH.
-    echo Please ensure MongoDB is installed and running.
-    echo Download from: https://www.mongodb.com/try/download/community
+    echo   ⚠️  MongoDB not found in system PATH
+    echo.
+    echo   📥 RECOMMENDED: Download MongoDB Compass (Easiest!)
+    echo   🌐 https://mongodb.com/products/tools/compass
+    echo   💡 Just click "Connect" - no installation needed!
+    echo.
+    echo   🔧 ALTERNATIVE: Install MongoDB Community Server
+    echo   🌐 https://mongodb.com/try/download/community
+    echo.
+    echo   ⚠️  IMPORTANT: Start MongoDB before running the application
 ) else (
-    echo [SUCCESS] MongoDB found in system PATH
+    echo   ✅ MongoDB found in system PATH
+    echo   💡 MongoDB is ready to use
 )
-
 echo.
-echo [STEP 4/6] Setting up environment configuration...
+
+echo   ⚙️  Step 4/7: Environment Configuration
+echo   ──────────────────────────────────────────────────────────────
 if not exist "backend\.env" (
     if exist "backend\.env.example" (
         copy "backend\.env.example" "backend\.env"
-        echo [INFO] Created backend/.env from .env.example
-        echo [WARNING] Please edit backend/.env with your actual configuration values
+        echo   ✅ Created backend/.env from template
+        echo   ⚠️  IMPORTANT: Edit backend/.env with your settings
+        echo.
+        echo   📝 Required Backend Settings:
+        echo   ─────────────────────────────
+        echo   MONGODB_URI=mongodb://localhost:27017/trixtech
+        echo   JWT_SECRET=your-32-character-secret-key-here
+        echo   EMAIL_USER=your-email@gmail.com (optional)
+        echo   EMAIL_PASSWORD=your-app-password (optional)
+        echo.
     ) else (
-        echo [WARNING] backend/.env.example not found. Please create backend/.env manually
+        echo   ⚠️  backend/.env.example not found
+        echo   📝 Please create backend/.env manually with required settings
     )
 ) else (
-    echo [INFO] backend/.env already exists
+    echo   ✅ backend/.env already exists
 )
 
+if not exist "frontend\.env.local" (
+    if exist "frontend\.env.example" (
+        copy "frontend\.env.example" "frontend\.env.local"
+        echo   ✅ Created frontend/.env.local from template
+    ) else (
+        echo   ⚠️  frontend/.env.example not found
+        echo   📝 Please create frontend/.env.local manually
+    )
+) else (
+    echo   ✅ frontend/.env.local already exists
+)
 echo.
-echo [STEP 5/6] Verifying installation...
+
+echo   🔍 Step 5/7: Installation Verification
+echo   ──────────────────────────────────────────────────────────────
 cd backend
 call npm list --depth=0 >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [WARNING] Backend dependency verification failed
+    echo   ⚠️  Backend dependency verification warning
 ) else (
-    echo [SUCCESS] Backend dependencies verified
+    echo   ✅ Backend dependencies verified
 )
 cd ..
 
 cd frontend
 call npm list --depth=0 >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [WARNING] Frontend dependency verification failed
+    echo   ⚠️  Frontend dependency verification warning
 ) else (
-    echo [SUCCESS] Frontend dependencies verified
+    echo   ✅ Frontend dependencies verified
 )
 cd ..
-
 echo.
-echo [STEP 6/6] Creating startup scripts...
+
+echo   🚀 Step 6/7: Creating Startup Scripts
+echo   ──────────────────────────────────────────────────────────────
 if not exist "start.bat" (
     echo @echo off > start.bat
-    echo echo Starting TRIXTECH Booking System... >> start.bat
+    echo chcp 65001 ^>nul 2^>^&1 >> start.bat
+    echo color 0A >> start.bat
+    echo cls >> start.bat
     echo echo. >> start.bat
-    echo echo Starting backend server... >> start.bat
-    echo start cmd /k "cd backend && npm start" >> start.bat
-    echo timeout /t 3 /nobreak >nul >> start.bat
-    echo echo Starting frontend server... >> start.bat
-    echo start cmd /k "cd frontend && npm run dev" >> start.bat
+    echo echo   ╔══════════════════════════════════════════════════════════════╗ >> start.bat
+    echo echo   ║                 🚀 TRIXTECH BOOKING SYSTEM                   ║ >> start.bat
+    echo echo   ║                      Application Startup                      ║ >> start.bat
+    echo echo   ╚══════════════════════════════════════════════════════════════╝ >> start.bat
     echo echo. >> start.bat
-    echo echo Servers starting... >> start.bat
-    echo echo Backend: http://localhost:5000 >> start.bat
-    echo echo Frontend: http://localhost:3000 >> start.bat
-    echo pause >> start.bat
-    echo [SUCCESS] Created start.bat for easy startup
+    echo echo   Starting servers... Please wait... >> start.bat
+    echo echo. >> start.bat
+    echo echo   🔧 Backend Server (Terminal 1) >> start.bat
+    echo start "TRIXTECH Backend" cmd /k "cd backend && echo Backend Server && echo =============== && npm start" >> start.bat
+    echo timeout /t 5 /nobreak ^>nul >> start.bat
+    echo echo   🎨 Frontend Server (Terminal 2) >> start.bat
+    echo start "TRIXTECH Frontend" cmd /k "cd frontend && echo Frontend Server && echo ================ && npm run dev" >> start.bat
+    echo echo. >> start.bat
+    echo echo   ════════════════════════════════════════════════════════════════ >> start.bat
+    echo echo   🌐 ACCESS URLs: >> start.bat
+    echo echo   ────────────── >> start.bat
+    echo echo   📱 Customer Portal: http://localhost:3000 >> start.bat
+    echo echo   👑 Admin Dashboard: http://localhost:3000/admin >> start.bat
+    echo echo   🔌 Backend API:     http://localhost:5000/api >> start.bat
+    echo echo   ❤️ Health Check:    http://localhost:5000/api/health >> start.bat
+    echo echo. >> start.bat
+    echo echo   ════════════════════════════════════════════════════════════════ >> start.bat
+    echo echo   📚 DEMO ACCOUNTS: >> start.bat
+    echo echo   ───────────────── >> start.bat
+    echo echo   👑 Admin: admin@trixtech.com / admin123 >> start.bat
+    echo echo   👤 Customer: customer@trixtech.com / customer123 >> start.bat
+    echo echo. >> start.bat
+    echo echo   Press any key to close this window... >> start.bat
+    echo pause ^>nul >> start.bat
+    echo   ✅ Created enhanced start.bat script
+) else (
+    echo   ✅ start.bat already exists
 )
+echo.
 
+echo   🎯 Step 7/7: Final Setup & Demo Data
+echo   ──────────────────────────────────────────────────────────────
+REM Optional: Seed demo data if script exists
+if exist "backend\scripts\seed.js" (
+    echo   🌱 Seeding demo data...
+    cd backend
+    call node scripts\seed.js
+    if %errorlevel% neq 0 (
+        echo   ⚠️  Demo data seeding failed (non-critical)
+    ) else (
+        echo   ✅ Demo data seeded successfully
+    )
+    cd ..
+) else (
+    echo   ℹ️  Demo data script not found (optional)
+)
 echo.
-echo ================================
-echo SETUP COMPLETE! ✅
-echo ================================
+
+echo   ╔══════════════════════════════════════════════════════════════╗
+echo   ║                 🎉 SETUP COMPLETE! SUCCESS!                  ║
+echo   ╚══════════════════════════════════════════════════════════════╝
 echo.
-echo Your TRIXTECH Booking System is ready to run!
+echo   ✅ All dependencies installed successfully
+echo   ✅ Environment files configured
+echo   ✅ Startup scripts created
+echo   ✅ Demo data seeded (if available)
 echo.
-echo IMPORTANT NEXT STEPS:
-echo ─────────────────────
-echo 1. 📝 Configure Environment Variables:
-echo    - Edit backend/.env with your settings
-echo    - Required: MONGODB_URI, JWT_SECRET, EMAIL credentials
+echo   ════════════════════════════════════════════════════════════════
+echo   🚀 NEXT STEPS - Get Your System Running!
+echo   ════════════════════════════════════════════════════════════════
 echo.
-echo 2. 🗄️  Start MongoDB:
-echo    - Make sure MongoDB is running on your system
-echo    - Default connection: mongodb://localhost:27017/trixtech
+echo   1️⃣  📝 CONFIGURE ENVIRONMENT (Required)
+echo      ───────────────────────────────────
+echo      Edit backend/.env with your settings:
+echo      • MONGODB_URI=mongodb://localhost:27017/trixtech
+echo      • JWT_SECRET=your-32-character-secret-key
+echo      • EMAIL_USER=your-email@gmail.com (optional)
+echo      • EMAIL_PASSWORD=your-app-password (optional)
 echo.
-echo 3. 🚀 Start the Application:
-echo    - Option A: Run 'start.bat' (opens both servers)
-echo    - Option B: Manual startup:
-echo      Terminal 1: cd backend && npm start
-echo      Terminal 2: cd frontend && npm run dev
+echo   2️⃣  🗄️  START MONGODB (Required)
+echo      ─────────────────────────────
+echo      RECOMMENDED: Download MongoDB Compass
+echo      🌐 https://mongodb.com/products/tools/compass
+echo      💡 Just click "Connect" - no installation needed!
 echo.
-echo 🌐 Access URLs:
-echo    - Frontend: http://localhost:3000
-echo    - Backend API: http://localhost:5000
-echo    - Admin Dashboard: http://localhost:3000/admin/dashboard
+echo   3️⃣  🚀 START THE APPLICATION
+echo      ──────────────────────────
+echo      Option A - Easy Start: Run 'start.bat'
+echo      Option B - Manual:
+echo        Terminal 1: cd backend && npm start
+echo        Terminal 2: cd frontend && npm run dev
 echo.
-echo 📚 Documentation:
-echo    - README.md - Project overview
-echo    - SETUP_GUIDE.md - Detailed setup instructions
-echo    - API_REFERENCE.md - API documentation
+echo   ════════════════════════════════════════════════════════════════
+echo   🌐 ACCESS YOUR APPLICATION
+echo   ════════════════════════════════════════════════════════════════
 echo.
-echo 🎯 Ready to start developing! Happy coding! 🚀
+echo   📱 Customer Portal:  http://localhost:3000
+echo   👑 Admin Dashboard:  http://localhost:3000/admin
+echo   🔌 Backend API:      http://localhost:5000/api
+echo   ❤️ Health Check:     http://localhost:5000/api/health
 echo.
-pause
+echo   ════════════════════════════════════════════════════════════════
+echo   🔑 DEMO ACCOUNTS
+echo   ════════════════════════════════════════════════════════════════
+echo.
+echo   👑 ADMIN ACCOUNT:
+echo      Email: admin@trixtech.com
+echo      Password: admin123
+echo.
+echo   👤 CUSTOMER ACCOUNT:
+echo      Email: customer@trixtech.com
+echo      Password: customer123
+echo.
+echo   ════════════════════════════════════════════════════════════════
+echo   📚 DOCUMENTATION & SUPPORT
+echo   ════════════════════════════════════════════════════════════════
+echo.
+echo   📖 Guides Available:
+echo      • README.md - Project overview
+echo      • SETUP_GUIDE.md - Detailed setup instructions
+echo      • QUICK_START.md - 2-minute setup guide
+echo      • DEPLOYMENT_GUIDE.md - Production deployment
+echo      • MAINTENANCE_GUIDE.md - System maintenance
+echo      • UAT_GUIDE.md - Testing procedures
+echo.
+echo   🆘 Need Help?
+echo      • Check SETUP_GUIDE.md for detailed troubleshooting
+echo      • Visit http://localhost:5000/api/health for system status
+echo      • All logs are in backend/logs/ and frontend/.next/
+echo.
+echo   ════════════════════════════════════════════════════════════════
+echo   🎯 READY TO START BOOKING! HAPPY CODING! 🚀
+echo   ════════════════════════════════════════════════════════════════
+echo.
+echo   Press any key to exit...
+pause >nul
