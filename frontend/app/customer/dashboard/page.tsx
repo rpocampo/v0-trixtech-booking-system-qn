@@ -100,21 +100,33 @@ export default function CustomerDashboard() {
 
       {/* Stats Grid */}
       <div className="grid md:grid-cols-4 gap-6">
-        <div className="stat-box">
-          <div className="stat-label">Total Bookings</div>
+        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
+          <div className="stat-label flex items-center gap-2">
+            <span className="text-lg">📊</span>
+            Total Bookings
+          </div>
           <div className="stat-value text-[var(--primary)]">{stats.totalBookings}</div>
         </div>
-        <div className="stat-box">
-          <div className="stat-label">Upcoming</div>
+        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
+          <div className="stat-label flex items-center gap-2">
+            <span className="text-lg">⏰</span>
+            Upcoming
+          </div>
           <div className="stat-value text-[var(--accent)]">{stats.upcomingBookings}</div>
         </div>
-        <div className="stat-box">
-          <div className="stat-label">Completed</div>
+        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
+          <div className="stat-label flex items-center gap-2">
+            <span className="text-lg">✅</span>
+            Completed
+          </div>
           <div className="stat-value text-[var(--success)]">{stats.completedBookings}</div>
         </div>
-        <div className="stat-box">
-          <div className="stat-label">Total Spent</div>
-          <div className="stat-value text-[var(--primary)]">${stats.totalSpent.toFixed(2)}</div>
+        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
+          <div className="stat-label flex items-center gap-2">
+            <span className="text-lg">💰</span>
+            Total Spent
+          </div>
+          <div className="stat-value text-[var(--primary)]">₱{stats.totalSpent.toFixed(2)}</div>
         </div>
       </div>
 
@@ -138,7 +150,7 @@ export default function CustomerDashboard() {
                   <span className={`badge ${booking.status === 'confirmed' ? 'badge-success' : booking.status === 'completed' ? 'badge-primary' : 'badge-warning'}`}>
                     {booking.status}
                   </span>
-                  <p className="font-semibold text-[var(--primary)]">${booking.totalPrice}</p>
+                  <p className="font-semibold text-[var(--primary)]">₱{booking.totalPrice}</p>
                 </div>
               </div>
             ))}
@@ -150,19 +162,19 @@ export default function CustomerDashboard() {
 
       {/* Quick Actions */}
       <div className="grid md:grid-cols-3 gap-6">
-        <Link href="/customer/services" className="card-hover p-6 group">
-          <div className="text-3xl mb-3 group-hover:translate-x-1 transition-transform">📅</div>
-          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)]">Browse Services</h3>
+        <Link href="/customer/services" className="card-hover p-6 group hover:shadow-xl transition-all duration-300 border-l-4 border-[var(--primary)]">
+          <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">📅</div>
+          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">Browse Services</h3>
           <p className="text-[var(--muted)]">Discover and book available services</p>
         </Link>
-        <Link href="/customer/bookings" className="card-hover p-6 group">
-          <div className="text-3xl mb-3 group-hover:translate-x-1 transition-transform">📋</div>
-          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)]">My Bookings</h3>
+        <Link href="/customer/bookings" className="card-hover p-6 group hover:shadow-xl transition-all duration-300 border-l-4 border-[var(--accent)]">
+          <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">📋</div>
+          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)] group-hover:text-[var(--accent)] transition-colors">My Bookings</h3>
           <p className="text-[var(--muted)]">Manage and track your reservations</p>
         </Link>
-        <Link href="/customer/profile" className="card-hover p-6 group">
-          <div className="text-3xl mb-3 group-hover:translate-x-1 transition-transform">👤</div>
-          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)]">Profile</h3>
+        <Link href="/customer/profile" className="card-hover p-6 group hover:shadow-xl transition-all duration-300 border-l-4 border-blue-500">
+          <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">👤</div>
+          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)] group-hover:text-blue-600 transition-colors">Profile</h3>
           <p className="text-[var(--muted)]">Update your account information</p>
         </Link>
       </div>

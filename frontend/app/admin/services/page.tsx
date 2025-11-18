@@ -10,6 +10,7 @@ interface Service {
   price: number;
   duration: number;
   isAvailable: boolean;
+  quantity?: number;
 }
 
 export default function AdminServices() {
@@ -22,7 +23,11 @@ export default function AdminServices() {
     category: 'party',
     price: 0,
     duration: 60,
+    quantity: 1,
+    image: null as File | null,
   });
+  const [editingQuantity, setEditingQuantity] = useState<string | null>(null);
+  const [quantityValue, setQuantityValue] = useState(1);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -50,13 +55,29 @@ export default function AdminServices() {
     const token = localStorage.getItem('token');
 
     try {
+      const formDataToSend = new FormData();
+
+      // Add all form fields except image
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('description', formData.description);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('price', formData.price.toString());
+      formDataToSend.append('duration', formData.duration.toString());
+      if (formData.quantity) {
+        formDataToSend.append('quantity', formData.quantity.toString());
+      }
+
+      // Add image if exists
+      if (formData.image) {
+        formDataToSend.append('image', formData.image);
+      }
+
       const response = await fetch('http://localhost:5000/api/services', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(formData),
+        body: formDataToSend,
       });
 
       const data = await response.json();
@@ -69,6 +90,8 @@ export default function AdminServices() {
           category: 'party',
           price: 0,
           duration: 60,
+          quantity: 1,
+          image: null,
         });
         setShowForm(false);
       }
@@ -92,6 +115,30 @@ export default function AdminServices() {
       }
     } catch (error) {
       console.error('Failed to delete service:', error);
+    }
+  };
+
+  const updateQuantity = async (id: string, newQuantity: number) => {
+    const token = localStorage.getItem('token');
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/services/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ quantity: newQuantity }),
+      });
+
+      if (response.ok) {
+        setServices(services.map((s) =>
+          s._id === id ? { ...s, quantity: newQuantity } : s
+        ));
+        setEditingQuantity(null);
+      }
+    } catch (error) {
+      console.error('Failed to update quantity:', error);
     }
   };
 
@@ -137,12 +184,13 @@ export default function AdminServices() {
                   <option value="wedding">Wedding</option>
                   <option value="corporate">Corporate</option>
                   <option value="cleaning">Cleaning</option>
+                  <option value="equipment">Equipment</option>
                   <option value="other">Other</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Price ($)</label>
+                <label className="block text-sm font-medium mb-2">Price (₱)</label>
                 <input
                   type="number"
                   value={formData.price}
@@ -166,6 +214,17 @@ export default function AdminServices() {
                   step="15"
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2">Quantity (for equipment)</label>
+                <input
+                  type="number"
+                  value={formData.quantity}
+                  onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) })}
+                  className="input-field"
+                  min="1"
+                />
+              </div>
             </div>
 
             <div>
@@ -178,6 +237,17 @@ export default function AdminServices() {
                 rows={3}
                 placeholder="Service description..."
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Service Image</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setFormData({ ...formData, image: e.target.files?.[0] || null })}
+                className="input-field"
+              />
+              <p className="text-xs text-[var(--muted)] mt-1">Upload an image for the service (optional)</p>
             </div>
 
             <button type="submit" className="btn-primary">
@@ -197,7 +267,48 @@ export default function AdminServices() {
                 <div className="flex gap-6 mt-4 text-sm">
                   <span>Category: <span className="font-semibold capitalize">{service.category}</span></span>
                   <span>Duration: <span className="font-semibold">{service.duration} min</span></span>
-                  <span>Price: <span className="font-semibold text-[var(--primary)]">${service.price}</span></span>
+                  <span>Price: <span className="font-semibold text-[var(--primary)]">₱{service.price}</span></span>
+                  {service.category === 'equipment' && (
+                    <span className="flex items-center gap-2">
+                      Quantity:
+                      {editingQuantity === service._id ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            value={quantityValue}
+                            onChange={(e) => setQuantityValue(parseInt(e.target.value))}
+                            className="w-16 px-2 py-1 text-sm border rounded"
+                            min="0"
+                          />
+                          <button
+                            onClick={() => updateQuantity(service._id, quantityValue)}
+                            className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingQuantity(null)}
+                            className="px-2 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="font-semibold text-green-600 flex items-center gap-2">
+                          {service.quantity || 0}
+                          <button
+                            onClick={() => {
+                              setEditingQuantity(service._id);
+                              setQuantityValue(service.quantity || 1);
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-800 underline"
+                          >
+                            Edit
+                          </button>
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </div>
               </div>
               <button

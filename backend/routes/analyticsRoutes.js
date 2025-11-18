@@ -1,6 +1,6 @@
 const express = require('express');
 const { getAnalytics } = require('../utils/analyticsService');
-const { auth, isAdmin } = require('../middleware/auth');
+const { authMiddleware: auth, adminMiddleware: isAdmin } = require('../middleware/auth');
 
 const router = express.Router();
 

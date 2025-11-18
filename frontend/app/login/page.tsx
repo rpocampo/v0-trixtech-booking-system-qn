@@ -8,6 +8,7 @@ export default function Login() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -56,22 +57,23 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[var(--primary)] via-[var(--primary-light)] to-[var(--accent)] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-800 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-pink-400/30 to-purple-600/30 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-blue-400/30 to-indigo-600/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-br from-yellow-400/20 to-orange-500/20 rounded-full blur-2xl animate-bounce"></div>
       </div>
 
       {/* Card */}
-      <div className="card w-full max-w-md p-8 relative z-10 shadow-xl">
+      <div className="bg-white/95 backdrop-blur-lg w-full max-w-md p-8 relative z-10 shadow-2xl rounded-2xl border border-white/20">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-block p-3 bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] rounded-lg mb-4">
-            <div className="text-white text-2xl font-bold">TT</div>
+          <div className="inline-block p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 rounded-2xl mb-4 shadow-lg transform hover:scale-105 transition-transform duration-300">
+            <div className="text-white text-3xl font-bold animate-pulse">TT</div>
           </div>
-          <h1 className="text-3xl font-bold text-[var(--foreground)]">TRIXTECH</h1>
-          <p className="text-[var(--muted)] mt-2">Booking & Reservation System</p>
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">TRIXTECH</h1>
+          <p className="text-gray-600 mt-2 font-medium">Premium Booking & Reservation System</p>
         </div>
 
         {/* Error Message */}
@@ -98,44 +100,44 @@ export default function Login() {
 
           <div>
             <label className="block text-sm font-semibold text-[var(--foreground)] mb-2">Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              className="input-field"
-              placeholder="••••••••"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                className="input-field pr-10"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
+              >
+                {showPassword ? '🙈' : '👁️'}
+              </button>
+            </div>
           </div>
 
-          <button type="submit" disabled={loading} className="btn-primary w-full mt-6">
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
+          <div className="mt-6">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                  Signing in...
+                </div>
+              ) : (
+                'Sign In ✨'
+              )}
+            </button>
+          </div>
         </form>
 
-        <div className="my-6 relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-[var(--border)]"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-[var(--muted)]">Demo Credentials</span>
-          </div>
-        </div>
-
-        {/* Demo Credentials */}
-        <div className="space-y-3 mb-6">
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-[var(--muted)] font-semibold">ADMIN</p>
-            <p className="text-sm text-[var(--foreground)] font-mono">admin@trixtech.com</p>
-            <p className="text-sm text-[var(--foreground)] font-mono">admin123</p>
-          </div>
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <p className="text-xs text-[var(--muted)] font-semibold">CUSTOMER</p>
-            <p className="text-sm text-[var(--foreground)] font-mono">customer@trixtech.com</p>
-            <p className="text-sm text-[var(--foreground)] font-mono">customer123</p>
-          </div>
-        </div>
 
         {/* Register Link */}
         <p className="text-center text-[var(--muted)] text-sm">

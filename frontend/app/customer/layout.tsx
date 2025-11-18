@@ -11,6 +11,8 @@ export default function CustomerLayout({
 }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -37,7 +39,8 @@ export default function CustomerLayout({
             TRIXTECH
           </Link>
 
-          <div className="flex gap-6 items-center">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex gap-6 items-center">
             <Link href="/customer/dashboard" className="text-[var(--foreground)] hover:text-[var(--primary)] transition-colors">
               Dashboard
             </Link>
@@ -47,20 +50,102 @@ export default function CustomerLayout({
             <Link href="/customer/bookings" className="text-[var(--foreground)] hover:text-[var(--primary)] transition-colors">
               Bookings
             </Link>
-            <Link href="/customer/profile" className="text-[var(--foreground)] hover:text-[var(--primary)] transition-colors">
-              Profile
-            </Link>
-            <button
-              onClick={() => {
-                localStorage.clear();
-                router.push('/');
-              }}
-              className="text-[var(--accent)] hover:text-[var(--primary)] transition-colors"
-            >
-              Logout
-            </button>
+
+            {/* User Menu Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center gap-2 text-[var(--foreground)] hover:text-[var(--primary)] transition-colors"
+              >
+                <span>👤</span>
+                <svg className={`w-4 h-4 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isUserMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-[var(--border)] z-50">
+                  <div className="py-1">
+                    <Link
+                      href="/customer/profile"
+                      className="block px-4 py-2 text-sm text-[var(--foreground)] hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    >
+                      Profile
+                    </Link>
+                    <button
+                      onClick={() => {
+                        localStorage.clear();
+                        router.push('/');
+                        setIsUserMenuOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-[var(--accent)] hover:bg-gray-100 hover:text-[var(--primary)] transition-colors"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+            className="md:hidden p-2 rounded-md text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-gray-100 transition-colors"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+            </svg>
+          </button>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        {isMenuOpen && (
+          <div className="md:hidden bg-white border-t border-[var(--border)]">
+            <div className="px-4 py-2 space-y-2">
+              <Link
+                href="/customer/dashboard"
+                className="block px-3 py-2 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-gray-50 rounded transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Dashboard
+              </Link>
+              <Link
+                href="/customer/services"
+                className="block px-3 py-2 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-gray-50 rounded transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Services
+              </Link>
+              <Link
+                href="/customer/bookings"
+                className="block px-3 py-2 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-gray-50 rounded transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Bookings
+              </Link>
+              <div className="border-t border-gray-200 my-2"></div>
+              <Link
+                href="/customer/profile"
+                className="block px-3 py-2 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-gray-50 rounded transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Profile
+              </Link>
+              <button
+                onClick={() => {
+                  localStorage.clear();
+                  router.push('/');
+                  setIsMenuOpen(false);
+                }}
+                className="w-full text-left px-3 py-2 text-[var(--accent)] hover:text-[var(--primary)] hover:bg-gray-50 rounded transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Main Content */}

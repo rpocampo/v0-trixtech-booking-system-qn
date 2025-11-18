@@ -68,13 +68,13 @@ export default function Bookings() {
             <div key={booking._id} className="card p-6">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="text-lg font-semibold">{booking.serviceId.name}</h3>
+                  <h3 className="text-lg font-semibold">{booking.serviceId?.name || 'Unknown Service'}</h3>
                   <p className="text-[var(--muted)] text-sm">
                     {new Date(booking.bookingDate).toLocaleString()}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-[var(--primary)]">${booking.totalPrice}</p>
+                  <p className="text-2xl font-bold text-[var(--primary)]">₱{booking.totalPrice}</p>
                   <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mt-2 ${getStatusColor(booking.status)}`}>
                     {booking.status}
                   </span>

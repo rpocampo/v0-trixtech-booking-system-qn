@@ -12,7 +12,7 @@ const serviceSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['party', 'wedding', 'corporate', 'cleaning', 'other'],
+      enum: ['party', 'wedding', 'corporate', 'cleaning', 'equipment', 'other'],
       required: true,
     },
     price: {
@@ -30,6 +30,11 @@ const serviceSchema = new mongoose.Schema(
     isAvailable: {
       type: Boolean,
       default: true,
+    },
+    quantity: {
+      type: Number,
+      default: 1,
+      min: 0,
     },
   },
   { timestamps: true }

@@ -7,7 +7,8 @@ import { useRouter } from 'next/navigation';
 export default function AdminDashboard() {
   const router = useRouter();
   const [stats, setStats] = useState({
-    totalServices: 0,
+    availableServices: 0,
+    availableEquipment: 0,
     totalBookings: 0,
     totalCustomers: 0,
     revenue: 0,
@@ -45,7 +46,8 @@ export default function AdminDashboard() {
         revenue = bookings.reduce((sum: number, booking: any) => sum + booking.totalPrice, 0);
 
         setStats({
-          totalServices: servicesData.services?.length || 0,
+          availableServices: servicesData.services?.filter((s: any) => s.isAvailable).length || 0,
+          availableEquipment: servicesData.services?.filter((s: any) => s.category === 'equipment' && s.isAvailable).length || 0,
           totalBookings: bookings.length,
           totalCustomers: customersData.users?.filter((u: any) => u.role === 'customer').length || 0,
           revenue,
@@ -79,40 +81,59 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid md:grid-cols-4 gap-6">
-        <div className="stat-box">
-          <div className="stat-label">Total Services</div>
-          <div className="stat-value text-[var(--primary)]">{stats.totalServices}</div>
+      <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-6">
+        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
+          <div className="stat-label flex items-center gap-2">
+            <span className="text-lg">✅</span>
+            Available Services
+          </div>
+          <div className="stat-value text-green-600">{stats.availableServices}</div>
         </div>
-        <div className="stat-box">
-          <div className="stat-label">Total Bookings</div>
+        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
+          <div className="stat-label flex items-center gap-2">
+            <span className="text-lg">🎒</span>
+            Available Equipment
+          </div>
+          <div className="stat-value text-purple-600">{stats.availableEquipment}</div>
+        </div>
+        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
+          <div className="stat-label flex items-center gap-2">
+            <span className="text-lg">📅</span>
+            Total Bookings
+          </div>
           <div className="stat-value text-[var(--accent)]">{stats.totalBookings}</div>
         </div>
-        <div className="stat-box">
-          <div className="stat-label">Total Customers</div>
+        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
+          <div className="stat-label flex items-center gap-2">
+            <span className="text-lg">👥</span>
+            Total Customers
+          </div>
           <div className="stat-value text-blue-600">{stats.totalCustomers}</div>
         </div>
-        <div className="stat-box">
-          <div className="stat-label">Total Revenue</div>
-          <div className="stat-value text-[var(--success)]">${stats.revenue.toFixed(2)}</div>
+        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
+          <div className="stat-label flex items-center gap-2">
+            <span className="text-lg">💰</span>
+            Total Revenue
+          </div>
+          <div className="stat-value text-[var(--success)]">₱{stats.revenue.toFixed(2)}</div>
         </div>
       </div>
 
       {/* Management Cards */}
       <div className="grid md:grid-cols-3 gap-6">
-        <Link href="/admin/services" className="card-hover p-6 group">
-          <div className="text-3xl mb-3 group-hover:translate-x-1 transition-transform">⚙️</div>
-          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)]">Manage Services</h3>
+        <Link href="/admin/services" className="card-hover p-6 group hover:shadow-xl transition-all duration-300 border-l-4 border-[var(--primary)]">
+          <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">⚙️</div>
+          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">Manage Services</h3>
           <p className="text-[var(--muted)]">Create, edit, or delete services</p>
         </Link>
-        <Link href="/admin/bookings" className="card-hover p-6 group">
-          <div className="text-3xl mb-3 group-hover:translate-x-1 transition-transform">📅</div>
-          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)]">Manage Bookings</h3>
+        <Link href="/admin/bookings" className="card-hover p-6 group hover:shadow-xl transition-all duration-300 border-l-4 border-[var(--accent)]">
+          <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">📅</div>
+          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)] group-hover:text-[var(--accent)] transition-colors">Manage Bookings</h3>
           <p className="text-[var(--muted)]">Update booking status and payments</p>
         </Link>
-        <Link href="/admin/customers" className="card-hover p-6 group">
-          <div className="text-3xl mb-3 group-hover:translate-x-1 transition-transform">👥</div>
-          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)]">Manage Customers</h3>
+        <Link href="/admin/customers" className="card-hover p-6 group hover:shadow-xl transition-all duration-300 border-l-4 border-blue-500">
+          <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">👥</div>
+          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)] group-hover:text-blue-600 transition-colors">Manage Customers</h3>
           <p className="text-[var(--muted)]">View and manage customer accounts</p>
         </Link>
       </div>
@@ -143,7 +164,7 @@ export default function AdminDashboard() {
                         {booking.status}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-right font-semibold text-[var(--primary)]">${booking.totalPrice}</td>
+                    <td className="py-3 px-4 text-right font-semibold text-[var(--primary)]">₱{booking.totalPrice}</td>
                   </tr>
                 ))}
               </tbody>

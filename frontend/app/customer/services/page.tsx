@@ -10,6 +10,8 @@ interface Service {
   category: string;
   price: number;
   duration: number;
+  quantity?: number;
+  image?: string;
 }
 
 export default function Services() {
@@ -49,6 +51,16 @@ export default function Services() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {services.map((service) => (
             <div key={service._id} className="card p-6 flex flex-col">
+              {service.image && (
+                <img
+                  src={service.image.startsWith('/uploads/') ? `http://localhost:5000${service.image}` : service.image}
+                  alt={service.name}
+                  className="w-full h-48 object-cover rounded-lg mb-4"
+                  onError={(e) => {
+                    e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Image+Not+Available';
+                  }}
+                />
+              )}
               <h3 className="text-xl font-semibold mb-2">{service.name}</h3>
               <p className="text-[var(--muted)] text-sm mb-4">{service.description}</p>
 
@@ -61,9 +73,17 @@ export default function Services() {
                   <span className="text-[var(--muted)] text-sm">Category:</span>
                   <span className="font-semibold capitalize">{service.category}</span>
                 </div>
+                {service.category === 'equipment' && service.quantity && (
+                  <div className="flex justify-between">
+                    <span className="text-[var(--muted)] text-sm">Available:</span>
+                    <span className={`font-semibold ${service.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {service.quantity} {service.quantity === 1 ? 'item' : 'items'}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between pt-2 border-t border-[var(--border)]">
                   <span className="font-semibold">Price:</span>
-                  <span className="text-[var(--primary)] font-bold">${service.price}</span>
+                  <span className="text-[var(--primary)] font-bold">₱{service.price}</span>
                 </div>
               </div>
 

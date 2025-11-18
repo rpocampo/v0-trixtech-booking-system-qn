@@ -19,10 +19,17 @@ export default function Profile() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setError('No authentication token found');
+        setLoading(false);
+        return;
+      }
       try {
         const response = await fetch('http://localhost:5000/api/auth/me', {
           headers: { Authorization: `Bearer ${token}` },
@@ -35,9 +42,14 @@ export default function Profile() {
             phone: data.user.phone || '',
             address: data.user.address || '',
           });
+        } else {
+          setError('Failed to load profile');
         }
       } catch (error) {
         console.error('Failed to fetch user:', error);
+        setError('Network error. Please check your connection.');
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -75,7 +87,11 @@ export default function Profile() {
     }
   };
 
-  if (!user) return <div>Loading...</div>;
+  if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--primary)]"></div></div>;
+
+  if (error) return <div className="flex items-center justify-center min-h-screen"><div className="text-red-500">{error}</div></div>;
+
+  if (!user) return <div className="flex items-center justify-center min-h-screen"><div className="text-[var(--muted)]">No user data available</div></div>;
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -128,9 +144,11 @@ export default function Profile() {
             />
           </div>
 
-          <button type="submit" disabled={submitting} className="btn-primary w-full">
-            {submitting ? 'Saving...' : 'Save Changes'}
-          </button>
+          <div className="mt-6">
+            <button type="submit" disabled={submitting} className="btn-primary w-full">
+              {submitting ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
         </form>
       </div>
     </div>

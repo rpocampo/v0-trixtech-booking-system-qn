@@ -101,7 +101,7 @@ export default function BookingPage() {
             </div>
             <div className="flex justify-between pb-3 border-b border-[var(--border)]">
               <span className="text-[var(--muted)]">Price:</span>
-              <span className="text-[var(--primary)] font-bold">${service.price}</span>
+              <span className="text-[var(--primary)] font-bold">₱{service.price}</span>
             </div>
           </div>
         </div>
