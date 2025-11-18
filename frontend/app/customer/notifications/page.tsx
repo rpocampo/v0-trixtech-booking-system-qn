@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSocket } from '../../../components/SocketProvider';
 
 interface Notification {
   _id: string;
@@ -20,6 +21,7 @@ interface Notification {
 }
 
 export default function NotificationsPage() {
+  const { socket } = useSocket();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
@@ -30,6 +32,68 @@ export default function NotificationsPage() {
   useEffect(() => {
     fetchNotifications();
   }, [filter, currentPage]);
+
+  // Listen for real-time notifications
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewNotification = (notificationData: any) => {
+      console.log('New notification received:', notificationData);
+
+      // Create a notification object from the socket data
+      const newNotification: Notification = {
+        _id: `temp_${Date.now()}`, // Temporary ID for real-time notifications
+        title: notificationData.title || 'New Notification',
+        message: notificationData.message || 'You have a new notification',
+        type: notificationData.type || 'system',
+        priority: notificationData.priority || 'medium',
+        isRead: false,
+        createdAt: new Date().toISOString(),
+        metadata: notificationData.metadata || {},
+      };
+
+      setNotifications(prev => [newNotification, ...prev]);
+
+      // Refresh the notifications from server to get persisted ones
+      setTimeout(() => {
+        fetchNotifications();
+      }, 1000);
+    };
+
+    // Listen for booking-related events that should trigger notifications
+    socket.on('booking-created', (data) => {
+      handleNewNotification({
+        title: 'Booking Confirmed',
+        message: `Your booking for ${data.serviceName} has been confirmed.`,
+        type: 'booking',
+        priority: 'medium',
+        metadata: {
+          bookingId: data.id,
+          serviceId: data.serviceId,
+        },
+      });
+    });
+
+    socket.on('booking-updated', (data) => {
+      handleNewNotification({
+        title: 'Booking Updated',
+        message: `Your booking status has been updated.`,
+        type: 'booking',
+        priority: 'medium',
+        metadata: {
+          bookingId: data.id,
+        },
+      });
+    });
+
+    socket.on('notification', handleNewNotification);
+
+    return () => {
+      socket.off('booking-created', handleNewNotification);
+      socket.off('booking-updated', handleNewNotification);
+      socket.off('notification', handleNewNotification);
+    };
+  }, [socket]);
 
   const fetchNotifications = async () => {
     setLoading(true);

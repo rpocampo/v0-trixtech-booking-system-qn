@@ -126,10 +126,35 @@ const sendLowStockAlert = async (serviceName, currentQuantity) => {
   }
 };
 
+// Send SMS notification (placeholder for future implementation)
+const sendSMSNotification = async (userId, notificationData) => {
+  try {
+    const user = await User.findById(userId);
+    if (!user || !user.phone) return;
+
+    // Placeholder for SMS service integration (e.g., Twilio, AWS SNS, etc.)
+    // In a real implementation, you would integrate with an SMS service provider
+    console.log('SMS notification would be sent to:', user.phone, notificationData.message);
+
+    // Example integration structure:
+    // const twilio = require('twilio');
+    // const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
+    // await client.messages.create({
+    //   body: notificationData.message,
+    //   from: process.env.TWILIO_PHONE_NUMBER,
+    //   to: user.phone
+    // });
+
+  } catch (error) {
+    console.error('Error sending SMS notification:', error);
+  }
+};
+
 module.exports = {
   initializeEmailService,
   sendBookingConfirmation,
   sendCancellationEmail,
   sendAdminBookingNotification,
   sendLowStockAlert,
+  sendSMSNotification,
 };

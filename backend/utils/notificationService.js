@@ -1,6 +1,6 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
-const { sendBookingConfirmation, sendAdminBookingNotification, sendLowStockAlert } = require('./emailService');
+const { sendBookingConfirmation, sendAdminBookingNotification, sendLowStockAlert, sendSMSNotification } = require('./emailService');
 
 // Create and send notification
 const createNotification = async (userId, notificationData) => {
@@ -18,8 +18,7 @@ const createNotification = async (userId, notificationData) => {
     }
 
     if (notificationData.channels.includes('sms')) {
-      // SMS implementation would go here
-      console.log('SMS notification would be sent:', notificationData);
+      await sendSMSNotification(userId, notificationData);
     }
 
     return notification;
@@ -113,7 +112,7 @@ const NOTIFICATION_TEMPLATES = {
     message: 'Your booking has been confirmed successfully.',
     type: 'booking',
     priority: 'medium',
-    channels: ['in-app', 'email'],
+    channels: ['in-app', 'email', 'sms'],
   },
 
   BOOKING_CANCELLED: {
@@ -121,7 +120,15 @@ const NOTIFICATION_TEMPLATES = {
     message: 'Your booking has been cancelled.',
     type: 'booking',
     priority: 'medium',
-    channels: ['in-app', 'email'],
+    channels: ['in-app', 'email', 'sms'],
+  },
+
+  BOOKING_COMPLETED: {
+    title: 'Booking Completed',
+    message: 'Your booking has been completed successfully.',
+    type: 'booking',
+    priority: 'medium',
+    channels: ['in-app', 'email', 'sms'],
   },
 
   BOOKING_UPDATED: {
@@ -145,7 +152,7 @@ const NOTIFICATION_TEMPLATES = {
     message: 'A new booking has been made.',
     type: 'admin',
     priority: 'high',
-    channels: ['in-app', 'email'],
+    channels: ['in-app', 'email', 'sms'],
   },
 
   SYSTEM_MAINTENANCE: {

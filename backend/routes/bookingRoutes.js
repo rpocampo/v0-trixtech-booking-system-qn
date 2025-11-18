@@ -104,8 +104,10 @@ router.post('/', authMiddleware, async (req, res, next) => {
 
     // Create notifications and emit real-time events
     try {
+      console.log('Creating notifications for booking:', booking._id);
+
       // Customer notification
-      await sendTemplateNotification(req.user.id, 'BOOKING_CONFIRMED', {
+      const customerNotification = await sendTemplateNotification(req.user.id, 'BOOKING_CONFIRMED', {
         message: `Your booking for ${service.name} has been confirmed.`,
         metadata: {
           bookingId: booking._id,
@@ -113,11 +115,14 @@ router.post('/', authMiddleware, async (req, res, next) => {
           amount: booking.totalPrice,
         },
       });
+      console.log('Customer notification created:', customerNotification?._id);
 
       // Admin notification
       const adminUsers = await User.find({ role: 'admin' });
+      console.log('Found admin users:', adminUsers.length);
+
       for (const admin of adminUsers) {
-        await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
+        const adminNotification = await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
           message: `New booking received from customer for ${service.name}.`,
           metadata: {
             bookingId: booking._id,
@@ -125,6 +130,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
             amount: booking.totalPrice,
           },
         });
+        console.log('Admin notification created for', admin._id, ':', adminNotification?._id);
       }
 
       // Emit real-time events
@@ -209,10 +215,53 @@ router.put('/:id', adminMiddleware, async (req, res, next) => {
       req.params.id,
       { status, paymentStatus },
       { new: true }
-    ).populate('serviceId');
+    ).populate('serviceId').populate('customerId');
 
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Send notifications based on status change
+    try {
+      if (status === 'completed') {
+        // Notify customer that booking is completed
+        await sendTemplateNotification(booking.customerId._id, 'BOOKING_COMPLETED', {
+          message: `Your booking for ${booking.serviceId.name} has been completed successfully.`,
+          metadata: {
+            bookingId: booking._id,
+            serviceId: booking.serviceId._id,
+            amount: booking.totalPrice,
+          },
+        });
+
+        // Send completion email to customer
+        const customer = await User.findById(booking.customerId._id);
+        if (customer) {
+          await sendBookingConfirmation(customer.email, {
+            serviceName: booking.serviceId.name,
+            quantity: booking.quantity,
+            date: booking.bookingDate,
+            time: new Date(booking.bookingDate).toLocaleTimeString(),
+            totalPrice: booking.totalPrice,
+          });
+        }
+      }
+
+      // Emit real-time event for status update
+      const io = global.io;
+      if (io) {
+        io.to(`user_${booking.customerId._id}`).emit('booking-updated', {
+          booking: {
+            id: booking._id,
+            serviceName: booking.serviceId.name,
+            status: booking.status,
+            date: booking.bookingDate,
+          }
+        });
+      }
+    } catch (notificationError) {
+      console.error('Error sending status update notifications:', notificationError);
+      // Don't fail the booking update if notifications fail
     }
 
     res.json({ success: true, booking });

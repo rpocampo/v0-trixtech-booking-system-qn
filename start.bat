@@ -1,0 +1,13 @@
+@echo off 
+echo Starting TRIXTECH Booking System... 
+echo. 
+echo Starting backend server... 
+start cmd /k "cd backend && npm start" 
+timeout /t 3 /nobreak 
+echo Starting frontend server... 
+start cmd /k "cd frontend && npm run dev" 
+echo. 
+echo Servers starting... 
+echo Backend: http://localhost:5000 
+echo Frontend: http://localhost:3000 
+pause 

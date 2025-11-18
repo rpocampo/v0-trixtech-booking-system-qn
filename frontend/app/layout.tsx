@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import SocketProvider from '../components/SocketProvider';
+import NotificationProvider from '../components/NotificationProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,7 +20,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <SocketProvider>
-          {children}
+          <NotificationProvider>
+            {children}
+          </NotificationProvider>
         </SocketProvider>
       </body>
     </html>
