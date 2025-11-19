@@ -18,19 +18,19 @@ export default function AdminDashboard() {
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
   const [lowStockItems, setLowStockItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [recentBookingsLoading, setRecentBookingsLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   const fetchStats = async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
     try {
-      const [servicesRes, bookingsRes, customersRes] = await Promise.all([
+      const [servicesRes, customersRes] = await Promise.all([
         fetch('http://localhost:5000/api/services', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch('http://localhost:5000/api/bookings/admin/all', {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch('http://localhost:5000/api/users', {
@@ -39,36 +39,66 @@ export default function AdminDashboard() {
       ]);
 
       // Handle 401 errors gracefully
-      if (servicesRes.status === 401 || bookingsRes.status === 401 || customersRes.status === 401) {
+      if (servicesRes.status === 401 || customersRes.status === 401) {
         localStorage.clear();
         router.push('/login');
         return;
       }
 
       const servicesData = await servicesRes.json();
-      const bookingsData = await bookingsRes.json();
       const customersData = await customersRes.json();
-
-      let revenue = 0;
-      const bookings = bookingsData.bookings || [];
-      revenue = bookings.reduce((sum: number, booking: any) => sum + booking.totalPrice, 0);
 
       const lowStock = servicesData.services?.filter((s: any) => s.category === 'equipment' && s.quantity <= 5) || [];
 
       setStats({
         availableServices: servicesData.services?.filter((s: any) => s.isAvailable).length || 0,
         availableEquipment: servicesData.services?.filter((s: any) => s.category === 'equipment' && s.isAvailable).length || 0,
-        totalBookings: bookings.length,
+        totalBookings: 0, // Will be updated by fetchRecentBookings
         totalCustomers: customersData.users?.filter((u: any) => u.role === 'customer').length || 0,
-        revenue,
+        revenue: 0, // Will be updated by fetchRecentBookings
       });
 
-      setRecentBookings(bookings.slice(0, 8));
       setLowStockItems(lowStock);
     } catch (error) {
       console.error('Failed to fetch stats:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRecentBookings = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      setRecentBookingsLoading(true);
+      const response = await fetch('http://localhost:5000/api/bookings/admin/all?limit=10', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.status === 401) {
+        localStorage.clear();
+        router.push('/login');
+        return;
+      }
+
+      const data = await response.json();
+      const bookings = data.bookings || [];
+
+      // Calculate revenue from recent bookings
+      const revenue = bookings.reduce((sum: number, booking: any) => sum + booking.totalPrice, 0);
+
+      setStats(prev => ({
+        ...prev,
+        totalBookings: bookings.length,
+        revenue,
+      }));
+
+      setRecentBookings(bookings);
+    } catch (error) {
+      console.error('Failed to fetch recent bookings:', error);
+    } finally {
+      setRecentBookingsLoading(false);
     }
   };
 
@@ -80,6 +110,7 @@ export default function AdminDashboard() {
     }
 
     fetchStats();
+    fetchRecentBookings();
   }, [router]);
 
   // Real-time updates
@@ -91,28 +122,8 @@ export default function AdminDashboard() {
       setUpdating(true);
       setLastUpdate(new Date());
 
-      // Update stats
-      setStats(prev => ({
-        ...prev,
-        totalBookings: prev.totalBookings + 1,
-      }));
-
-      // Add to recent bookings if not already there
-      setRecentBookings(prev => {
-        const newBooking = {
-          id: data.booking.id,
-          serviceName: data.booking.serviceName,
-          date: data.booking.date,
-          time: new Date(data.booking.date).toLocaleTimeString(),
-          status: data.booking.status,
-          totalPrice: data.booking.totalPrice,
-          customerName: 'New Customer', // Would need to fetch from API
-        };
-
-        // Remove oldest if we have 8, add new one at top
-        const updated = [newBooking, ...prev.slice(0, 7)];
-        return updated;
-      });
+      // Refresh recent bookings to get complete data with customer info
+      fetchRecentBookings();
 
       setTimeout(() => setUpdating(false), 2000);
     };
@@ -260,26 +271,48 @@ export default function AdminDashboard() {
       {/* Recent Bookings */}
       <div className="card p-6">
         <h2 className="section-title">Recent Bookings</h2>
-        {recentBookings.length > 0 ? (
+        {recentBookingsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-[var(--primary)] border-t-transparent"></div>
+            <span className="ml-3 text-[var(--muted)]">Loading recent bookings...</span>
+          </div>
+        ) : recentBookings.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--border)]">
                   <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Service</th>
                   <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Customer</th>
-                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Date</th>
+                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Date & Time</th>
                   <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Status</th>
                   <th className="text-right py-3 px-4 font-semibold text-[var(--muted)]">Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {recentBookings.map((booking) => (
-                  <tr key={booking.id} className="border-b border-[var(--border)] hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-4">{booking.serviceName}</td>
-                    <td className="py-3 px-4">{booking.customerName}</td>
-                    <td className="py-3 px-4">{new Date(booking.date).toLocaleDateString()}</td>
+                  <tr
+                    key={booking._id}
+                    className="border-b border-[var(--border)] hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      setSelectedBooking(booking);
+                      setShowBookingModal(true);
+                    }}
+                  >
+                    <td className="py-3 px-4">{booking.serviceId?.name || 'Unknown Service'}</td>
+                    <td className="py-3 px-4">{booking.customerId?.name || 'Unknown Customer'}</td>
                     <td className="py-3 px-4">
-                      <span className={`badge ${booking.status === 'confirmed' ? 'badge-success' : booking.status === 'completed' ? 'badge-primary' : 'badge-warning'}`}>
+                      <div className="text-sm">
+                        <div>{new Date(booking.bookingDate).toLocaleDateString()}</div>
+                        <div className="text-[var(--muted)] text-xs">{new Date(booking.bookingDate).toLocaleTimeString()}</div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`badge ${
+                        booking.status === 'confirmed' ? 'badge-success' :
+                        booking.status === 'completed' ? 'badge-primary' :
+                        booking.status === 'pending' ? 'badge-info' :
+                        'badge-warning'
+                      }`}>
                         {booking.status}
                       </span>
                     </td>
@@ -293,6 +326,158 @@ export default function AdminDashboard() {
           <p className="text-[var(--muted)] text-center py-8">No bookings yet</p>
         )}
       </div>
+
+      {/* Booking Details Modal */}
+      {showBookingModal && selectedBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-[var(--foreground)]">Booking Details</h3>
+                <button
+                  onClick={() => setShowBookingModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-3xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Booking Info */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="card p-4">
+                    <h4 className="font-semibold mb-3 text-[var(--foreground)]">Booking Information</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-[var(--muted)]">Booking ID:</span>
+                        <span className="font-mono text-xs">{selectedBooking._id}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[var(--muted)]">Status:</span>
+                        <span className={`badge ${
+                          selectedBooking.status === 'confirmed' ? 'badge-success' :
+                          selectedBooking.status === 'completed' ? 'badge-primary' :
+                          selectedBooking.status === 'pending' ? 'badge-info' :
+                          'badge-warning'
+                        }`}>
+                          {selectedBooking.status}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[var(--muted)]">Date & Time:</span>
+                        <span>{new Date(selectedBooking.bookingDate).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[var(--muted)]">Quantity:</span>
+                        <span>{selectedBooking.quantity}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="card p-4">
+                    <h4 className="font-semibold mb-3 text-[var(--foreground)]">Customer Information</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-[var(--muted)]">Name:</span>
+                        <span>{selectedBooking.customerId?.name || 'Unknown'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[var(--muted)]">Email:</span>
+                        <span className="text-xs">{selectedBooking.customerId?.email || 'Unknown'}</span>
+                      </div>
+                      {selectedBooking.customerId?.phone && (
+                        <div className="flex justify-between">
+                          <span className="text-[var(--muted)]">Phone:</span>
+                          <span>{selectedBooking.customerId.phone}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Service Details */}
+                <div className="card p-4">
+                  <h4 className="font-semibold mb-3 text-[var(--foreground)]">Service Details</h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-[var(--muted)]">Service:</span>
+                          <span>{selectedBooking.serviceId?.name || 'Unknown'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[var(--muted)]">Category:</span>
+                          <span className="capitalize">{selectedBooking.serviceId?.category?.replace('-', ' ') || 'Unknown'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[var(--muted)]">Type:</span>
+                          <span className="capitalize">{selectedBooking.serviceId?.serviceType || 'Unknown'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-[var(--muted)]">Unit Price:</span>
+                          <span>₱{selectedBooking.serviceId?.price || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-[var(--muted)]">Quantity:</span>
+                          <span>{selectedBooking.quantity}</span>
+                        </div>
+                        <div className="flex justify-between font-semibold text-lg">
+                          <span className="text-[var(--muted)]">Total:</span>
+                          <span className="text-[var(--primary)]">₱{selectedBooking.totalPrice}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                {selectedBooking.notes && (
+                  <div className="card p-4">
+                    <h4 className="font-semibold mb-3 text-[var(--foreground)]">Additional Notes</h4>
+                    <p className="text-[var(--muted)] text-sm">{selectedBooking.notes}</p>
+                  </div>
+                )}
+
+                {/* Payment Status */}
+                <div className="card p-4">
+                  <h4 className="font-semibold mb-3 text-[var(--foreground)]">Payment Information</h4>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[var(--muted)]">Payment Status:</span>
+                    <span className={`badge ${
+                      selectedBooking.paymentStatus === 'paid' ? 'badge-success' :
+                      selectedBooking.paymentStatus === 'unpaid' ? 'badge-warning' :
+                      'badge-info'
+                    }`}>
+                      {selectedBooking.paymentStatus}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 mt-8 pt-6 border-t border-gray-200">
+                <button
+                  onClick={() => setShowBookingModal(false)}
+                  className="btn-secondary flex-1"
+                >
+                  Close
+                </button>
+                <Link
+                  href={`/admin/bookings`}
+                  className="btn-primary flex-1 text-center"
+                  onClick={() => setShowBookingModal(false)}
+                >
+                  Manage All Bookings
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

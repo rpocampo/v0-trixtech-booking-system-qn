@@ -429,10 +429,19 @@ router.get('/', authMiddleware, async (req, res, next) => {
 // Get all bookings (admin only)
 router.get('/admin/all', adminMiddleware, async (req, res, next) => {
   try {
-    const bookings = await Booking.find()
+    const { limit } = req.query;
+    const limitNum = limit ? parseInt(limit) : undefined;
+
+    let query = Booking.find()
       .populate('serviceId')
       .populate('customerId', 'name email phone')
       .sort({ createdAt: -1 });
+
+    if (limitNum) {
+      query = query.limit(limitNum);
+    }
+
+    const bookings = await query;
 
     res.json({ success: true, bookings });
   } catch (error) {
