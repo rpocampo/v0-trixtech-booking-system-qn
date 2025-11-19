@@ -57,6 +57,8 @@ export default function Services() {
   });
   const [showFilters, setShowFilters] = useState(false);
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const [showServiceModal, setShowServiceModal] = useState(false);
 
   const fetchServices = async (filterParams = filters) => {
     try {
@@ -100,6 +102,11 @@ export default function Services() {
     };
     setFilters(clearedFilters);
     setPendingFilters(clearedFilters);
+  };
+
+  const viewServiceDetails = (service: Service) => {
+    setSelectedService(service);
+    setShowServiceModal(true);
   };
 
   useEffect(() => {
@@ -462,12 +469,12 @@ export default function Services() {
 
                   {/* Action Buttons */}
                   <div className="flex gap-2">
-                    <Link
-                      href={`/customer/services/${service._id}`}
+                    <button
+                      onClick={() => viewServiceDetails(service)}
                       className="btn-secondary flex-1 text-center"
                     >
                       View Details
-                    </Link>
+                    </button>
                     <Link
                       href={`/customer/booking/${service._id}`}
                       className="btn-primary flex-1 text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300"
@@ -496,6 +503,237 @@ export default function Services() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Service Details Modal */}
+      {showServiceModal && selectedService && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-3xl font-bold text-[var(--foreground)]">{selectedService.name}</h3>
+                <button
+                  onClick={() => setShowServiceModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-3xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="grid lg:grid-cols-2 gap-8">
+                {/* Service Image */}
+                <div className="space-y-4">
+                  {selectedService.image ? (
+                    <img
+                      src={selectedService.image.startsWith('/uploads/') ? `http://localhost:5000${selectedService.image}` : selectedService.image}
+                      alt={selectedService.name}
+                      className="w-full h-64 object-cover rounded-lg"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://via.placeholder.com/600x400?text=Service+Image';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-64 bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 rounded-lg flex items-center justify-center">
+                      <div className="text-6xl opacity-50">
+                        {selectedService.category === 'party' ? '🎉' :
+                         selectedService.category === 'wedding' ? '💒' :
+                         selectedService.category === 'corporate' ? '🏢' :
+                         selectedService.category === 'equipment' ? '🎪' :
+                         selectedService.category === 'cleaning' ? '🧹' : '⚙️'}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Gallery Images */}
+                  {selectedService.gallery && selectedService.gallery.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {selectedService.gallery.slice(0, 3).map((image, index) => (
+                        <img
+                          key={index}
+                          src={image.startsWith('/uploads/') ? `http://localhost:5000${image}` : image}
+                          alt={`${selectedService.name} ${index + 1}`}
+                          className="w-full h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://via.placeholder.com/150x100?text=Image';
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Service Details */}
+                <div className="space-y-6">
+                  {/* Basic Information */}
+                  <div className="card p-6">
+                    <h4 className="text-xl font-semibold mb-4">Service Information</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-[var(--muted)]">Category:</span>
+                        <span className="font-medium capitalize">{selectedService.category.replace('-', ' ')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[var(--muted)]">Type:</span>
+                        <span className="font-medium capitalize">{selectedService.serviceType}</span>
+                      </div>
+                      {selectedService.location && (
+                        <div className="flex justify-between">
+                          <span className="text-[var(--muted)]">Location:</span>
+                          <span className="font-medium capitalize">{selectedService.location}</span>
+                        </div>
+                      )}
+                      {selectedService.duration && (
+                        <div className="flex justify-between">
+                          <span className="text-[var(--muted)]">Duration:</span>
+                          <span className="font-medium">{selectedService.duration} minutes</span>
+                        </div>
+                      )}
+                      {(selectedService.serviceType === 'equipment' || selectedService.serviceType === 'supply') && selectedService.quantity && (
+                        <div className="flex justify-between">
+                          <span className="text-[var(--muted)]">Available Quantity:</span>
+                          <span className={`font-medium ${selectedService.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {selectedService.quantity} units
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Pricing */}
+                  <div className="card p-6">
+                    <h4 className="text-xl font-semibold mb-4">Pricing</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[var(--muted)]">Price:</span>
+                        <span className="text-3xl font-bold text-[var(--primary)]">₱{selectedService.price}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[var(--muted)]">Price Type:</span>
+                        <span className="font-medium capitalize">{(selectedService.priceType || 'flat-rate').replace('-', ' ')}</span>
+                      </div>
+                      {selectedService.minOrder && (
+                        <div className="flex justify-between">
+                          <span className="text-[var(--muted)]">Minimum Order:</span>
+                          <span className="font-medium">{selectedService.minOrder}</span>
+                        </div>
+                      )}
+                      {selectedService.maxOrder && (
+                        <div className="flex justify-between">
+                          <span className="text-[var(--muted)]">Maximum Order:</span>
+                          <span className="font-medium">{selectedService.maxOrder}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div className="card p-6">
+                    <h4 className="text-xl font-semibold mb-4">Description</h4>
+                    <p className="text-[var(--muted)] leading-relaxed">{selectedService.description}</p>
+                    {selectedService.shortDescription && selectedService.shortDescription !== selectedService.description && (
+                      <p className="text-[var(--muted)] leading-relaxed mt-3 text-sm">
+                        {selectedService.shortDescription}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Features & Included Items */}
+                  {(selectedService.features && selectedService.features.length > 0) ||
+                   (selectedService.includedItems && selectedService.includedItems.length > 0) && (
+                    <div className="card p-6">
+                      <h4 className="text-xl font-semibold mb-4">What's Included</h4>
+                      <div className="space-y-4">
+                        {selectedService.features && selectedService.features.length > 0 && (
+                          <div>
+                            <h5 className="font-medium mb-2">Features:</h5>
+                            <ul className="list-disc list-inside text-[var(--muted)] space-y-1">
+                              {selectedService.features.map((feature, index) => (
+                                <li key={index}>{feature}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {selectedService.includedItems && selectedService.includedItems.length > 0 && (
+                          <div>
+                            <h5 className="font-medium mb-2">Included Items:</h5>
+                            <ul className="list-disc list-inside text-[var(--muted)] space-y-1">
+                              {selectedService.includedItems.map((item, index) => (
+                                <li key={index}>{item}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Requirements */}
+                  {selectedService.requirements && selectedService.requirements.length > 0 && (
+                    <div className="card p-6">
+                      <h4 className="text-xl font-semibold mb-4">Requirements</h4>
+                      <ul className="list-disc list-inside text-[var(--muted)] space-y-1">
+                        {selectedService.requirements.map((requirement, index) => (
+                          <li key={index}>{requirement}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Event Types */}
+                  {selectedService.eventTypes && selectedService.eventTypes.length > 0 && (
+                    <div className="card p-6">
+                      <h4 className="text-xl font-semibold mb-4">Suitable For</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedService.eventTypes.map((eventType, index) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1 bg-[var(--primary)]/10 text-[var(--primary)] rounded-full text-sm font-medium capitalize"
+                          >
+                            {eventType}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Tags */}
+                  {selectedService.tags && selectedService.tags.length > 0 && (
+                    <div className="card p-6">
+                      <h4 className="text-xl font-semibold mb-4">Tags</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedService.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium"
+                          >
+                            #{tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-4 mt-8 pt-6 border-t border-gray-200">
+                <button
+                  onClick={() => setShowServiceModal(false)}
+                  className="btn-secondary flex-1"
+                >
+                  Close
+                </button>
+                <Link
+                  href={`/customer/booking/${selectedService._id}`}
+                  className="btn-primary flex-1 text-center"
+                  onClick={() => setShowServiceModal(false)}
+                >
+                  Book This Service
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

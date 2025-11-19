@@ -10,6 +10,8 @@ interface Booking {
   status: string;
   paymentStatus: string;
   totalPrice: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export default function AdminBookings() {
@@ -22,6 +24,8 @@ export default function AdminBookings() {
     dateFrom: '',
     dateTo: '',
   });
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [showBookingModal, setShowBookingModal] = useState(false);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -97,6 +101,11 @@ export default function AdminBookings() {
     } catch (error) {
       console.error('Failed to update booking:', error);
     }
+  };
+
+  const viewBooking = (booking: Booking) => {
+    setSelectedBooking(booking);
+    setShowBookingModal(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -231,7 +240,12 @@ export default function AdminBookings() {
                   </select>
                 </td>
                 <td className="px-6 py-3">
-                  <button className="text-[var(--primary)] hover:underline text-sm">View</button>
+                  <button
+                    onClick={() => viewBooking(booking)}
+                    className="text-[var(--primary)] hover:underline text-sm"
+                  >
+                    View
+                  </button>
                 </td>
               </tr>
             ))}
@@ -248,6 +262,129 @@ export default function AdminBookings() {
       {bookings.length === 0 && (
         <div className="card p-8 text-center">
           <p className="text-[var(--muted)]">No bookings yet</p>
+        </div>
+      )}
+
+      {/* Booking Details Modal */}
+      {showBookingModal && selectedBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold">Booking Details</h3>
+                <button
+                  onClick={() => setShowBookingModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Booking ID */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-semibold text-sm text-gray-600 mb-1">Booking ID</h4>
+                  <p className="font-mono text-sm">{selectedBooking._id}</p>
+                </div>
+
+                {/* Customer Information */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="card p-4">
+                    <h4 className="font-semibold mb-3">Customer Information</h4>
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-sm text-gray-600">Name:</span>
+                        <p className="font-medium">{selectedBooking.customerId?.name || 'Unknown Customer'}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-gray-600">Email:</span>
+                        <p className="font-medium">{selectedBooking.customerId?.email || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Service Information */}
+                  <div className="card p-4">
+                    <h4 className="font-semibold mb-3">Service Information</h4>
+                    <div className="space-y-2">
+                      <div>
+                        <span className="text-sm text-gray-600">Service:</span>
+                        <p className="font-medium">{selectedBooking.serviceId?.name || 'Unknown Service'}</p>
+                      </div>
+                      <div>
+                        <span className="text-sm text-gray-600">Unit Price:</span>
+                        <p className="font-medium">₱{selectedBooking.serviceId?.price || 0}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Booking Details */}
+                <div className="card p-4">
+                  <h4 className="font-semibold mb-3">Booking Details</h4>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <span className="text-sm text-gray-600">Booking Date:</span>
+                      <p className="font-medium">{new Date(selectedBooking.bookingDate).toLocaleDateString()}</p>
+                      <p className="text-sm text-gray-500">{new Date(selectedBooking.bookingDate).toLocaleTimeString()}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-600">Total Price:</span>
+                      <p className="font-medium text-lg">₱{selectedBooking.totalPrice}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-600">Created:</span>
+                      <p className="font-medium">{new Date(selectedBooking.createdAt || '').toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Status Information */}
+                <div className="card p-4">
+                  <h4 className="font-semibold mb-3">Status Information</h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-sm text-gray-600">Booking Status:</span>
+                      <div className="mt-1">
+                        <select
+                          value={selectedBooking.status}
+                          onChange={(e) => updateBooking(selectedBooking._id, e.target.value, selectedBooking.paymentStatus)}
+                          className={`px-3 py-1 rounded text-sm font-semibold ${getStatusColor(selectedBooking.status)}`}
+                        >
+                          <option value="pending">Pending</option>
+                          <option value="confirmed">Confirmed</option>
+                          <option value="completed">Completed</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-600">Payment Status:</span>
+                      <div className="mt-1">
+                        <select
+                          value={selectedBooking.paymentStatus}
+                          onChange={(e) => updateBooking(selectedBooking._id, selectedBooking.status, e.target.value)}
+                          className={`px-3 py-1 rounded text-sm font-semibold ${selectedBooking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
+                        >
+                          <option value="unpaid">Unpaid</option>
+                          <option value="paid">Paid</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setShowBookingModal(false)}
+                  className="btn-secondary"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
