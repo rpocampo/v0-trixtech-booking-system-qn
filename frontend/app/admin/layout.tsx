@@ -39,7 +39,7 @@ export default function AdminLayout({
           TRIXTECH Admin
         </Link>
         <div className="flex items-center gap-2">
-          <NotificationBell variant="dark" position="sidebar" />
+          {!isLoading && <NotificationBell variant="dark" position="sidebar" />}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="p-2 rounded-md hover:bg-[var(--primary)] transition-colors"
@@ -114,7 +114,7 @@ export default function AdminLayout({
               </Link>
             )}
             <div className="flex items-center gap-2">
-              <NotificationBell variant="dark" position="sidebar" />
+              {!isLoading && <NotificationBell variant="dark" position="sidebar" />}
               <button
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                 className="p-2 rounded hover:bg-[var(--primary)] transition-colors"

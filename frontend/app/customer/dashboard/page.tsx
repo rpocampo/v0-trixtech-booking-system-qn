@@ -13,9 +13,10 @@ interface User {
 
 interface Booking {
   id: string;
-  serviceName: string;
-  date: string;
-  time: string;
+  serviceId: {
+    name: string;
+  };
+  bookingDate: string;
   status: string;
   totalPrice: number;
 }
@@ -77,7 +78,16 @@ export default function CustomerDashboard() {
             totalSpent,
           });
 
-          setRecentBookings(bookings.slice(0, 5));
+          // Transform bookings to match the expected interface
+          const transformedBookings = bookings.slice(0, 5).map((booking: any) => ({
+            id: booking._id,
+            serviceId: booking.serviceId,
+            bookingDate: booking.bookingDate,
+            status: booking.status,
+            totalPrice: booking.totalPrice,
+          }));
+
+          setRecentBookings(transformedBookings);
         }
       } catch (error) {
         console.error('Failed to fetch data:', error);
@@ -196,16 +206,20 @@ export default function CustomerDashboard() {
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 flex items-center justify-center text-xl">
-                    {booking.serviceName.charAt(0)}
+                    {booking.serviceId?.name?.charAt(0) || '?'}
                   </div>
                   <div>
-                    <p className="font-semibold text-[var(--foreground)]">{booking.serviceName}</p>
+                    <p className="font-semibold text-[var(--foreground)]">{booking.serviceId?.name || 'Unknown Service'}</p>
                     <p className="text-sm text-[var(--muted)]">
-                      {new Date(booking.date).toLocaleDateString('en-US', {
+                      {new Date(booking.bookingDate).toLocaleDateString('en-US', {
                         weekday: 'short',
                         month: 'short',
                         day: 'numeric'
-                      })} at {booking.time}
+                      })} at {new Date(booking.bookingDate).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
                     </p>
                   </div>
                 </div>

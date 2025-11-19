@@ -38,6 +38,13 @@ export default function AdminDashboard() {
         }),
       ]);
 
+      // Handle 401 errors gracefully
+      if (servicesRes.status === 401 || bookingsRes.status === 401 || customersRes.status === 401) {
+        localStorage.clear();
+        router.push('/login');
+        return;
+      }
+
       const servicesData = await servicesRes.json();
       const bookingsData = await bookingsRes.json();
       const customersData = await customersRes.json();

@@ -26,10 +26,22 @@ export default function AdminBookings() {
   useEffect(() => {
     const fetchBookings = async () => {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const response = await fetch('http://localhost:5000/api/bookings/admin/all', {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if (response.status === 401) {
+          // Token expired or invalid, don't log as error
+          setLoading(false);
+          return;
+        }
+
         const data = await response.json();
         if (data.success) {
           setBookings(data.bookings);
