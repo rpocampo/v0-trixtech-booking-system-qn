@@ -1,11 +1,3 @@
 {
-  "/login/page": "app/login/page.js",
-  "/page": "app/page.js",
-  "/customer/booking/[id]/page": "app/customer/booking/[id]/page.js",
-  "/customer/services/page": "app/customer/services/page.js",
-  "/admin/bookings/page": "app/admin/bookings/page.js",
-  "/customer/bookings/page": "app/customer/bookings/page.js",
-  "/admin/dashboard/page": "app/admin/dashboard/page.js",
-  "/admin/reports/page": "app/admin/reports/page.js",
-  "/admin/customers/page": "app/admin/customers/page.js"
+  "/admin/notifications/page": "app/admin/notifications/page.js"
 }

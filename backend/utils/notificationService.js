@@ -21,6 +21,42 @@ const createNotification = async (userId, notificationData) => {
       await sendSMSNotification(userId, notificationData);
     }
 
+    // Emit real-time notification via Socket.IO
+    try {
+      const io = global.io;
+      if (io) {
+        console.log('Emitting notification to user:', userId, notificationData.title);
+
+        // Emit to specific user
+        io.to(`user_${userId}`).emit('notification', {
+          id: notification._id,
+          title: notificationData.title,
+          message: notificationData.message,
+          type: notificationData.type,
+          priority: notificationData.priority,
+          createdAt: notification.createdAt,
+          metadata: notificationData.metadata || {},
+        });
+
+        // If it's an admin notification, also emit to admin room
+        if (notificationData.type === 'admin') {
+          io.to('admin').emit('admin-notification', {
+            id: notification._id,
+            title: notificationData.title,
+            message: notificationData.message,
+            type: notificationData.type,
+            priority: notificationData.priority,
+            createdAt: notification.createdAt,
+            metadata: notificationData.metadata || {},
+          });
+        }
+      } else {
+        console.log('Socket.IO not available for notification emission');
+      }
+    } catch (socketError) {
+      console.error('Error emitting notification via Socket.IO:', socketError);
+    }
+
     return notification;
   } catch (error) {
     console.error('Error creating notification:', error);

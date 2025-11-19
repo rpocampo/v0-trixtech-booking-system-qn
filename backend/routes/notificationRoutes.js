@@ -23,7 +23,7 @@ router.get('/', authMiddleware, async (req, res) => {
 
     res.json({
       success: true,
-      data: result.notifications,
+      notifications: result.notifications,
       total: result.total,
       hasMore: result.hasMore,
     });

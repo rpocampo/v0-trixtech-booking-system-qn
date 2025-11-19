@@ -1,13 +1,16 @@
 {
-  "timestamp": "2025-11-19T03:06:03.901Z",
+  "timestamp": "2025-11-19T03:26:57.311Z",
   "summary": {
-    "issues": 0,
+    "issues": 2,
     "warnings": 0,
-    "status": "HEALTHY"
+    "status": "NEEDS_ATTENTION"
   },
-  "issues": [],
+  "issues": [
+    "Health check unreachable: fetch failed",
+    "Services endpoint unreachable: fetch failed"
+  ],
   "warnings": [],
   "recommendations": [
-    "System is healthy - continue monitoring"
+    "Review and fix critical issues immediately"
   ]
 }

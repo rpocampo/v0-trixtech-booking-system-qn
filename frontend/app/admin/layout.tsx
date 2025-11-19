@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import NotificationBell from '../../components/NotificationBell';
+import { useSocket } from '../../components/SocketProvider';
 
 export default function AdminLayout({
   children,
@@ -11,9 +11,11 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const { socket } = useSocket();
   const [isLoading, setIsLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -27,6 +29,70 @@ export default function AdminLayout({
     setIsLoading(false);
   }, [router]);
 
+  // Fetch unread notifications count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const response = await fetch('http://localhost:5000/api/notifications/unread-count', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.status === 401) {
+          // Token expired, don't log as error
+          return;
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          setUnreadNotifications(data.count);
+        }
+      } catch (error) {
+        console.error('Failed to fetch unread count:', error);
+      }
+    };
+
+    if (!isLoading) {
+      fetchUnreadCount();
+
+      // Poll for new notifications every 30 seconds
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isLoading]);
+
+  // Real-time notification updates
+  useEffect(() => {
+    if (socket && !isLoading) {
+      const handleNewNotification = (notification: any) => {
+        console.log('New admin notification received:', notification);
+        setUnreadNotifications(prev => prev + 1);
+      };
+
+      const handleAdminNotification = (notification: any) => {
+        console.log('New admin-specific notification received:', notification);
+        setUnreadNotifications(prev => prev + 1);
+      };
+
+      const handleNewBooking = (data: any) => {
+        console.log('New booking notification for admin:', data);
+        setUnreadNotifications(prev => prev + 1);
+      };
+
+      socket.on('notification', handleNewNotification);
+      socket.on('admin-notification', handleAdminNotification);
+      socket.on('new-booking', handleNewBooking);
+
+      return () => {
+        socket.off('notification', handleNewNotification);
+        socket.off('admin-notification', handleAdminNotification);
+        socket.off('new-booking', handleNewBooking);
+      };
+    }
+  }, [socket, isLoading]);
+
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
@@ -39,7 +105,6 @@ export default function AdminLayout({
           TRIXTECH Admin
         </Link>
         <div className="flex items-center gap-2">
-          {!isLoading && <NotificationBell variant="dark" position="sidebar" />}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="p-2 rounded-md hover:bg-[var(--primary)] transition-colors"
@@ -90,6 +155,18 @@ export default function AdminLayout({
             >
               Reports
             </Link>
+            <Link
+              href="/admin/notifications"
+              className="relative block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Notifications
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1 animate-pulse shadow-lg">
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                </span>
+              )}
+            </Link>
             <button
               onClick={() => {
                 localStorage.clear();
@@ -114,7 +191,6 @@ export default function AdminLayout({
               </Link>
             )}
             <div className="flex items-center gap-2">
-              {!isLoading && <NotificationBell variant="dark" position="sidebar" />}
               <button
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                 className="p-2 rounded hover:bg-[var(--primary)] transition-colors"
@@ -141,6 +217,14 @@ export default function AdminLayout({
             </Link>
             <Link href="/admin/reports" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
               {isSidebarCollapsed ? '📊' : 'Reports'}
+            </Link>
+            <Link href="/admin/notifications" className={`relative block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+              {isSidebarCollapsed ? '🔔' : 'Notifications'}
+              {unreadNotifications > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1 animate-pulse shadow-lg">
+                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                </span>
+              )}
             </Link>
             <button
               onClick={() => {
