@@ -168,9 +168,11 @@ button, a, input, textarea, select {
   animation: scaleIn 0.3s ease-out;
 }
 
-/* Modern Button System */
+/* Enhanced Modern Button System */
 .btn-primary {
   @apply bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-[var(--primary)] relative overflow-hidden;
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
 }
 
 .btn-primary::before {
@@ -180,20 +182,64 @@ button, a, input, textarea, select {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  transition: left 0.6s ease;
 }
 
 .btn-primary:hover::before {
   left: 100%;
 }
 
+.btn-primary:hover {
+  background-position: right center;
+  transform: translateY(-2px);
+}
+
 .btn-secondary {
-  @apply border-2 border-[var(--primary)] text-[var(--primary)] bg-white px-6 py-3 rounded-xl font-semibold hover:bg-[var(--primary)] hover:text-white active:scale-95 transition-all duration-200 shadow-sm hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply border-2 border-[var(--primary)] text-[var(--primary)] bg-white px-6 py-3 rounded-xl font-semibold hover:bg-[var(--primary)] hover:text-white active:scale-95 transition-all duration-200 shadow-sm hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden;
+}
+
+.btn-secondary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.3s ease;
+  z-index: -1;
+}
+
+.btn-secondary:hover::before {
+  width: 100%;
+}
+
+.btn-secondary:hover {
+  color: white;
+  transform: translateY(-1px);
 }
 
 .btn-success {
-  @apply bg-gradient-to-r from-[var(--success)] to-[var(--success-dark)] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply bg-gradient-to-r from-[var(--success)] to-[var(--success-dark)] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden;
+}
+
+.btn-success::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-success:hover::after {
+  width: 300px;
+  height: 300px;
 }
 
 .btn-warning {
@@ -205,11 +251,183 @@ button, a, input, textarea, select {
 }
 
 .btn-ghost {
-  @apply text-[var(--primary)] hover:bg-[var(--primary-50)] px-4 py-2.5 rounded-lg font-medium transition-all duration-200 hover:shadow-sm;
+  @apply text-[var(--primary)] hover:bg-[var(--primary-50)] px-4 py-2.5 rounded-lg font-medium transition-all duration-200 hover:shadow-sm relative;
+}
+
+.btn-ghost::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--primary-50);
+  border-radius: 8px;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.btn-ghost:hover::before {
+  transform: scaleX(1);
 }
 
 .btn-outline {
-  @apply border border-[var(--border)] bg-white text-[var(--foreground)] px-4 py-2.5 rounded-lg font-medium hover:bg-[var(--surface-hover)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all duration-200;
+  @apply border border-[var(--border)] bg-white text-[var(--foreground)] px-4 py-2.5 rounded-lg font-medium hover:bg-[var(--surface-hover)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all duration-200 relative;
+}
+
+.btn-outline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, var(--primary), var(--accent));
+  border-radius: 8px;
+  opacity: 0;
+  z-index: -1;
+  transition: opacity 0.3s ease;
+}
+
+.btn-outline:hover::before {
+  opacity: 0.1;
+}
+
+/* Button Animations */
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes button-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px var(--primary), 0 0 10px var(--primary), 0 0 15px var(--primary);
+  }
+  50% {
+    box-shadow: 0 0 10px var(--primary), 0 0 20px var(--primary), 0 0 30px var(--primary);
+  }
+}
+
+/* Enhanced Button Sizes */
+.btn-sm {
+  @apply px-3 py-1.5 text-sm gap-1.5 min-h-[32px];
+}
+
+.btn-md {
+  @apply px-4 py-2.5 text-sm gap-2 min-h-[40px];
+}
+
+.btn-lg {
+  @apply px-6 py-3 text-base gap-2.5 min-h-[48px];
+}
+
+.btn-xl {
+  @apply px-8 py-4 text-lg gap-3 min-h-[56px];
+}
+
+/* Button States */
+.btn-loading {
+  @apply cursor-wait;
+}
+
+.btn-loading::after {
+  content: '';
+  width: 16px;
+  height: 16px;
+  margin-left: 8px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Ripple Effect */
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-ripple:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Focus States for Accessibility */
+.btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Disabled State Enhancements */
+.btn:disabled {
+  @apply opacity-60 cursor-not-allowed transform-none;
+  filter: grayscale(50%);
+}
+
+/* Mobile Optimizations */
+@media (max-width: 640px) {
+  .btn {
+    @apply min-h-[44px] px-4 py-3 text-base;
+  }
+
+  .btn-sm {
+    @apply min-h-[40px] px-3 py-2;
+  }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .btn {
+    border-width: 2px;
+  }
+
+  .btn-primary {
+    @apply bg-[var(--primary)] border-[var(--primary)] text-white;
+  }
+
+  .btn-secondary {
+    @apply border-black text-black bg-white;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .btn {
+    transition: none;
+    animation: none;
+  }
+
+  .btn:active {
+    transform: none;
+  }
+
+  .btn-primary::before,
+  .btn-secondary::before,
+  .btn-success::after,
+  .btn-ghost::before,
+  .btn-outline::before {
+    display: none;
+  }
 }
 
 /* Modern Card System */

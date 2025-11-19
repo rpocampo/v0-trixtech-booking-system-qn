@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Button from '../../../../components/Button';
 
 interface Service {
   _id: string;
@@ -360,9 +361,14 @@ export default function BookingPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <button onClick={() => router.back()} className="text-[var(--primary)] hover:underline mb-6">
-        ← Back
-      </button>
+      <Button
+        onClick={() => router.back()}
+        variant="ghost"
+        icon="←"
+        className="mb-6"
+      >
+        Back
+      </Button>
 
       <h1 className="text-3xl font-bold mb-2">{service.name}</h1>
       <p className="text-[var(--muted)] mb-8">{service.description}</p>
@@ -472,9 +478,9 @@ export default function BookingPage() {
               </div>
             </div>
 
-            <button type="submit" disabled={submitting} className="btn-primary w-full">
+            <Button type="submit" loading={submitting} size="lg" fullWidth>
               {submitting ? 'Processing...' : 'Confirm Booking'}
-            </button>
+            </Button>
           </form>
         </div>
       </div>
@@ -602,7 +608,7 @@ export default function BookingPage() {
 
           <div className="flex gap-3 justify-center">
             {paymentStatus === 'failed' && (
-              <button
+              <Button
                 onClick={async () => {
                   const token = localStorage.getItem('token');
                   if (token && currentBookingId) {
@@ -610,19 +616,19 @@ export default function BookingPage() {
                     setPaymentStatus('pending');
                   }
                 }}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                variant="primary"
               >
                 Generate New QR Code
-              </button>
+              </Button>
             )}
 
-            <button
+            <Button
               onClick={() => router.back()}
-              className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200"
+              variant="outline"
               disabled={paymentStatus === 'completed'}
             >
               {paymentStatus === 'completed' ? 'Redirecting...' : 'Cancel'}
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -3,6 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
+import Button from '../../../components/Button';
 
 export default function ResetPassword() {
   const params = useParams();
@@ -308,20 +309,15 @@ export default function ResetPassword() {
           </div>
 
           <div className="mt-6">
-            <button
+            <Button
               type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              loading={loading}
+              size="lg"
+              fullWidth
+              icon={loading ? undefined : '🔑'}
             >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-                  Updating Password...
-                </div>
-              ) : (
-                'Reset Password 🔑'
-              )}
-            </button>
+              {loading ? 'Updating Password...' : 'Reset Password'}
+            </Button>
           </div>
         </form>
 
