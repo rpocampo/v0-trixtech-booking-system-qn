@@ -59,6 +59,7 @@ export default function Services() {
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [showServiceModal, setShowServiceModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   const fetchServices = async (filterParams = filters) => {
     try {
@@ -139,6 +140,15 @@ export default function Services() {
     }));
     setShowFilters(false); // Close the panel after applying
   };
+
+  // Filter services by category
+  useEffect(() => {
+    if (selectedCategory === 'all') {
+      setFilteredServices(services);
+    } else {
+      setFilteredServices(services.filter(service => service.category === selectedCategory));
+    }
+  }, [services, selectedCategory]);
 
   // Real-time updates
   useEffect(() => {
@@ -227,52 +237,6 @@ export default function Services() {
 
           {/* Quick Filters */}
           <div className="flex gap-2 flex-wrap">
-            <select
-              value={pendingFilters.serviceType}
-              onChange={(e) => {
-                const newValue = e.target.value;
-                setPendingFilters(prev => ({ ...prev, serviceType: newValue }));
-                setFilters(prev => ({ ...prev, serviceType: newValue }));
-              }}
-              className="input-field min-w-[120px]"
-            >
-              <option value="">All Types</option>
-              <option value="service">Services</option>
-              <option value="equipment">Equipment</option>
-              <option value="supply">Supplies</option>
-            </select>
-
-            <select
-              value={pendingFilters.eventType}
-              onChange={(e) => {
-                const newValue = e.target.value;
-                setPendingFilters(prev => ({ ...prev, eventType: newValue }));
-                setFilters(prev => ({ ...prev, eventType: newValue }));
-              }}
-              className="input-field min-w-[120px]"
-            >
-              <option value="">All Events</option>
-              <option value="wedding">Wedding</option>
-              <option value="corporate">Corporate</option>
-              <option value="birthday">Birthday</option>
-              <option value="graduation">Graduation</option>
-              <option value="party">Party</option>
-            </select>
-
-            <select
-              value={pendingFilters.location}
-              onChange={(e) => {
-                const newValue = e.target.value;
-                setPendingFilters(prev => ({ ...prev, location: newValue }));
-                setFilters(prev => ({ ...prev, location: newValue }));
-              }}
-              className="input-field min-w-[120px]"
-            >
-              <option value="">All Locations</option>
-              <option value="indoor">Indoor</option>
-              <option value="outdoor">Outdoor</option>
-            </select>
-
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="btn-secondary flex items-center gap-2"
@@ -383,12 +347,17 @@ export default function Services() {
         </div>
       ) : (
         <>
-          {/* Category Filter (if needed in future) */}
+          {/* Category Filter */}
           <div className="flex flex-wrap justify-center gap-2 mb-8">
-            {['all', ...Array.from(new Set(services.map(s => s.category)))].map((category) => (
+            {['all', 'party', 'other', 'equipment', 'corporate', 'cleaning', 'wedding'].map((category) => (
               <button
                 key={category}
-                className="px-4 py-2 rounded-full bg-[var(--surface-secondary)] text-[var(--muted)] hover:bg-[var(--primary)] hover:text-white transition-all duration-200 capitalize"
+                onClick={() => setSelectedCategory(category)}
+                className={`px-4 py-2 rounded-full transition-all duration-200 capitalize ${
+                  selectedCategory === category
+                    ? 'bg-[var(--primary)] text-white'
+                    : 'bg-[var(--surface-secondary)] text-[var(--muted)] hover:bg-[var(--primary)] hover:text-white'
+                }`}
               >
                 {category}
               </button>
