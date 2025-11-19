@@ -218,6 +218,106 @@ const sendLowStockAlert = async (serviceName, currentQuantity) => {
   }
 };
 
+// Send password reset email
+const sendPasswordResetEmail = async (email, userName, resetUrl) => {
+  if (!transporter) {
+    console.log('Email service not configured, skipping password reset email');
+    return;
+  }
+
+  if (!checkCircuitBreaker()) {
+    console.log('Circuit breaker open, skipping password reset email');
+    return;
+  }
+
+  const mailOptions = {
+    from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
+    to: email,
+    subject: 'Password Reset - TRIXTECH',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 30px;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">TRIXTECH</h1>
+          <p style="color: #e8e8e8; margin: 10px 0 0 0; font-size: 16px;">Password Reset Request</p>
+        </div>
+
+        <div style="background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+          <h2 style="color: #333; margin-bottom: 20px;">Reset Your Password</h2>
+
+          <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
+            Hi ${userName},
+          </p>
+
+          <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
+            We received a request to reset your password for your TRIXTECH account. If you made this request, click the button below to reset your password:
+          </p>
+
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetUrl}" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; box-shadow: 0 4px 6px rgba(102,126,234,0.3);">
+              Reset Password
+            </a>
+          </div>
+
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
+            <p style="color: #666; margin: 0; font-size: 14px;">
+              <strong>Important:</strong> This link will expire in 1 hour for security reasons. If you didn't request this password reset, please ignore this email.
+            </p>
+          </div>
+
+          <p style="color: #666; line-height: 1.6; margin-bottom: 20px;">
+            If the button above doesn't work, you can copy and paste this link into your browser:
+          </p>
+
+          <p style="word-break: break-all; background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #666;">
+            ${resetUrl}
+          </p>
+
+          <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+          <p style="color: #999; font-size: 12px; text-align: center;">
+            If you have any questions, please contact our support team.<br>
+            This email was sent to ${email}
+          </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px;">
+          <p style="color: #999; font-size: 12px;">
+            © 2024 TRIXTECH. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `,
+  };
+
+  try {
+    await retryWithBackoff(async () => {
+      await transporter.sendMail(mailOptions);
+    });
+
+    recordSuccess();
+    console.log(`Password reset email sent to ${email}`);
+  } catch (error) {
+    recordFailure();
+    console.error('Error sending password reset email after retries:', error);
+
+    // Fallback: Log to database for manual follow-up
+    try {
+      const Notification = require('../models/Notification');
+      await Notification.create({
+        userId: null, // System notification
+        type: 'system',
+        title: 'Password Reset Email Failed',
+        message: `Failed to send password reset email to ${email}. Manual follow-up required.`,
+        priority: 'high',
+        channels: ['in-app'],
+        metadata: { email, userName, resetUrl, error: error.message }
+      });
+    } catch (dbError) {
+      console.error('Failed to log email failure to database:', dbError);
+    }
+  }
+};
+
 // Send SMS notification (placeholder for future implementation)
 const sendSMSNotification = async (userId, notificationData) => {
   try {
@@ -248,5 +348,6 @@ module.exports = {
   sendCancellationEmail,
   sendAdminBookingNotification,
   sendLowStockAlert,
+  sendPasswordResetEmail,
   sendSMSNotification,
 };

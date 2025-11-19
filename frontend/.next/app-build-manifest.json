@@ -1,9 +1,14 @@
 {
   "pages": {
-    "/page": [
+    "/customer/notifications/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/page.js"
+      "static/chunks/app/customer/notifications/page.js"
+    ],
+    "/customer/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/customer/layout.js"
     ],
     "/layout": [
       "static/chunks/webpack.js",
@@ -11,25 +16,40 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/customer/services/page": [
+    "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/customer/services/page.js"
+      "static/chunks/app/page.js"
     ],
-    "/customer/layout": [
+    "/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/customer/layout.js"
+      "static/chunks/app/login/page.js"
     ],
-    "/customer/booking/[id]/page": [
+    "/forgot-password/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/customer/booking/[id]/page.js"
+      "static/chunks/app/forgot-password/page.js"
     ],
-    "/customer/bookings/page": [
+    "/customer/dashboard/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/customer/bookings/page.js"
+      "static/chunks/app/customer/dashboard/page.js"
+    ],
+    "/admin/dashboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/admin/dashboard/page.js"
+    ],
+    "/admin/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/admin/layout.js"
+    ],
+    "/admin/bookings/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/admin/bookings/page.js"
     ]
   }
 }
