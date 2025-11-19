@@ -23,13 +23,14 @@ const paymentSchema = new mongoose.Schema(
     },
     paymentMethod: {
       type: String,
-      enum: ['gcash', 'card', 'bank_transfer'],
+      enum: ['gcash_qr'],
       required: true,
+      default: 'gcash_qr',
     },
     paymentProvider: {
       type: String,
-      enum: ['gcash_sandbox', 'gcash_production'],
-      default: 'gcash_sandbox',
+      enum: ['gcash_qr'],
+      default: 'gcash_qr',
     },
     transactionId: {
       type: String,

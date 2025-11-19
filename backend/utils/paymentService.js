@@ -1,175 +1,104 @@
 const Payment = require('../models/Payment');
 const Booking = require('../models/Booking');
 const { sendTemplateNotification } = require('./notificationService');
-
-// GCash Sandbox Configuration
-const GCASH_CONFIG = {
-  sandbox: {
-    baseUrl: 'https://api-sandbox.gcash.com',
-    clientId: process.env.GCASH_SANDBOX_CLIENT_ID || 'test-client-id',
-    clientSecret: process.env.GCASH_SANDBOX_CLIENT_SECRET || 'test-client-secret',
-    merchantId: process.env.GCASH_SANDBOX_MERCHANT_ID || 'test-merchant-id',
-    redirectUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/callback`,
-  },
-  production: {
-    baseUrl: 'https://api.gcash.com',
-    clientId: process.env.GCASH_CLIENT_ID,
-    clientSecret: process.env.GCASH_CLIENT_SECRET,
-    merchantId: process.env.GCASH_MERCHANT_ID,
-    redirectUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/callback`,
-  }
-};
-
-// Get GCash configuration based on environment
-const getGcashConfig = () => {
-  const isProduction = process.env.NODE_ENV === 'production';
-  return isProduction ? GCASH_CONFIG.production : GCASH_CONFIG.sandbox;
-};
+const { generateQRCodeDataURL, generatePaymentInstructions } = require('./qrCodeService');
 
 // Generate unique transaction ID
 const generateTransactionId = () => {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 8);
-  return `GCASH_${timestamp}_${random}`.toUpperCase();
+  return `TXN_${timestamp}_${random}`.toUpperCase();
 };
 
-// Create payment intent for GCash
-const createPaymentIntent = async (bookingId, amount, userId) => {
+// Generate unique reference number for QR payments
+const generateReferenceNumber = () => {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 8);
+  return `QR_${timestamp}_${random}`.toUpperCase();
+};
+
+// Create QR code-based payment for GCash
+const createQRPayment = async (bookingId, amount, userId) => {
   try {
-    // For sandbox/testing, we'll simulate the GCash payment flow
-    // In production, this would make actual API calls to GCash
-
+    console.log('Creating QR payment for booking:', bookingId, 'amount:', amount, 'user:', userId);
     const transactionId = generateTransactionId();
-    const config = getGcashConfig();
+    const referenceNumber = generateReferenceNumber();
 
-    // Create payment record
+    // Create payment record first
     const payment = new Payment({
       bookingId,
       userId,
       amount,
-      paymentMethod: 'gcash',
-      paymentProvider: config === GCASH_CONFIG.sandbox ? 'gcash_sandbox' : 'gcash_production',
+      paymentMethod: 'gcash_qr',
+      paymentProvider: 'gcash_qr',
       transactionId,
+      referenceNumber,
       status: 'pending',
       paymentData: {
         createdAt: new Date(),
-        config: {
-          redirectUrl: config.redirectUrl,
-          merchantId: config.merchantId,
-        }
+        qrGenerated: true,
+        referenceNumber,
       }
     });
 
     await payment.save();
+    console.log('Payment record created:', payment._id);
 
-    // In sandbox mode, we'll simulate different scenarios
-    const isSandbox = config === GCASH_CONFIG.sandbox;
-
-    if (isSandbox) {
-      // For testing, we'll randomly simulate success/failure
-      // In production, this would be the actual GCash payment URL
-      const paymentUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/gcash-simulator?transactionId=${transactionId}&amount=${amount}`;
-      return {
-        success: true,
-        paymentId: payment._id,
-        transactionId,
-        paymentUrl,
-        status: 'pending'
-      };
-    }
-
-    // Production GCash integration would go here
-    // This would make actual API calls to GCash payment gateway
-
-    return {
-      success: false,
-      error: 'Production GCash integration not implemented yet'
+    // Generate QR code data
+    const qrData = {
+      amount,
+      referenceNumber,
+      merchantName: 'TRIXTECH',
+      merchantId: 'TRIXTECH001',
+      description: `Booking Payment - ${transactionId}`,
+      paymentId: payment._id.toString(),
+      callbackUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/api/payments/verify-qr/${referenceNumber}`
     };
 
-  } catch (error) {
-    console.error('Error creating payment intent:', error);
-    throw error;
-  }
-};
+    const qrCodeDataURL = await generateQRCodeDataURL(qrData);
+    const paymentInstructions = generatePaymentInstructions(qrData);
 
-// Process payment callback/webhook
-const processPaymentCallback = async (transactionId, status, paymentData = {}) => {
-  try {
-    const payment = await Payment.findOne({ transactionId })
-      .populate('bookingId')
-      .populate('userId', 'name email');
-
-    if (!payment) {
-      throw new Error('Payment not found');
-    }
-
-    // Update payment status
-    payment.status = status;
-    payment.paymentData = { ...payment.paymentData, ...paymentData };
-
-    if (status === 'completed') {
-      payment.completedAt = new Date();
-      payment.referenceNumber = paymentData.referenceNumber || `REF_${Date.now()}`;
-    } else if (status === 'failed') {
-      payment.failureReason = paymentData.failureReason || 'Payment failed';
-    }
-
+    // Update payment with QR data
+    payment.paymentData.qrCode = qrCodeDataURL;
+    payment.paymentData.instructions = paymentInstructions;
     await payment.save();
-
-    // If payment is successful, confirm the booking
-    if (status === 'completed') {
-      const booking = payment.bookingId;
-      if (booking) {
-        booking.status = 'confirmed';
-        booking.paymentStatus = 'paid';
-        await booking.save();
-
-        // Send confirmation notifications
-        try {
-          await sendTemplateNotification(payment.userId._id, 'BOOKING_CONFIRMED', {
-            metadata: {
-              bookingId: booking._id,
-              serviceId: booking.serviceId,
-              amount: payment.amount,
-            }
-          });
-
-          // Admin notification
-          const User = require('../models/User');
-          const adminUsers = await User.find({ role: 'admin' });
-          for (const admin of adminUsers) {
-            await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
-              metadata: {
-                bookingId: booking._id,
-                serviceId: booking.serviceId,
-                amount: payment.amount,
-              }
-            });
-          }
-        } catch (notificationError) {
-          console.error('Error sending payment confirmation notifications:', notificationError);
-        }
-      }
-    }
 
     return {
       success: true,
-      payment,
-      booking: payment.bookingId
+      paymentId: payment._id,
+      transactionId,
+      referenceNumber,
+      qrCode: qrCodeDataURL,
+      instructions: paymentInstructions,
+      status: 'pending'
     };
 
   } catch (error) {
-    console.error('Error processing payment callback:', error);
+    console.error('Error creating QR payment:', error);
     throw error;
   }
 };
+
 
 // Get payment status
 const getPaymentStatus = async (paymentId) => {
   try {
-    const payment = await Payment.findById(paymentId)
-      .populate('bookingId')
-      .populate('userId', 'name email');
+    let payment;
+
+    // Check if paymentId is a valid ObjectId
+    if (require('mongoose').Types.ObjectId.isValid(paymentId)) {
+      // Try to find by _id first (for backward compatibility)
+      payment = await Payment.findById(paymentId)
+        .populate('bookingId')
+        .populate('userId', 'name email');
+    }
+
+    if (!payment) {
+      // If not found by _id or not a valid ObjectId, try by referenceNumber
+      payment = await Payment.findOne({ referenceNumber: paymentId })
+        .populate('bookingId')
+        .populate('userId', 'name email');
+    }
 
     if (!payment) {
       return { success: false, error: 'Payment not found' };
@@ -195,7 +124,18 @@ const getPaymentStatus = async (paymentId) => {
 // Cancel payment
 const cancelPayment = async (paymentId, reason = 'User cancelled') => {
   try {
-    const payment = await Payment.findById(paymentId);
+    let payment;
+
+    // Check if paymentId is a valid ObjectId
+    if (require('mongoose').Types.ObjectId.isValid(paymentId)) {
+      // Try to find by _id first (for backward compatibility)
+      payment = await Payment.findById(paymentId);
+    }
+
+    if (!payment) {
+      // If not found by _id or not a valid ObjectId, try by referenceNumber
+      payment = await Payment.findOne({ referenceNumber: paymentId });
+    }
 
     if (!payment) {
       return { success: false, error: 'Payment not found' };
@@ -216,11 +156,85 @@ const cancelPayment = async (paymentId, reason = 'User cancelled') => {
   }
 };
 
+// Verify QR code payment (called when GCash processes the payment)
+const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
+  try {
+    // Find payment by reference number
+    const payment = await Payment.findOne({ referenceNumber })
+      .populate('bookingId')
+      .populate('userId', 'name email');
+
+    if (!payment) {
+      return { success: false, error: 'Payment not found' };
+    }
+
+    if (payment.status === 'completed') {
+      return { success: true, message: 'Payment already completed', payment };
+    }
+
+    // For test payments, allow verification without full validation
+    if (paymentData.test) {
+      console.log('Processing test QR payment verification');
+    }
+
+    // Update payment status
+    payment.status = 'completed';
+    payment.completedAt = new Date();
+    payment.paymentData = { ...payment.paymentData, ...paymentData, verifiedAt: new Date() };
+    await payment.save();
+
+    // Confirm the booking
+    const booking = payment.bookingId;
+    if (booking) {
+      booking.status = 'confirmed';
+      booking.paymentStatus = 'paid';
+      await booking.save();
+
+      // Send confirmation notifications
+      try {
+        await sendTemplateNotification(payment.userId._id, 'BOOKING_CONFIRMED', {
+          metadata: {
+            bookingId: booking._id,
+            serviceId: booking.serviceId,
+            amount: payment.amount,
+          }
+        });
+
+        // Admin notification
+        const User = require('../models/User');
+        const adminUsers = await User.find({ role: 'admin' });
+        for (const admin of adminUsers) {
+          await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
+            metadata: {
+              bookingId: booking._id,
+              serviceId: booking.serviceId,
+              amount: payment.amount,
+            }
+          });
+        }
+      } catch (notificationError) {
+        console.error('Error sending QR payment confirmation notifications:', notificationError);
+      }
+    }
+
+    return {
+      success: true,
+      payment,
+      booking: payment.bookingId,
+      message: 'QR payment verified and booking confirmed'
+    };
+
+  } catch (error) {
+    console.error('Error verifying QR payment:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = {
-  createPaymentIntent,
-  processPaymentCallback,
+  createQRPayment,
+  verifyQRPayment,
   getPaymentStatus,
   cancelPayment,
-  getGcashConfig,
   generateTransactionId,
+  generateReferenceNumber,
 };

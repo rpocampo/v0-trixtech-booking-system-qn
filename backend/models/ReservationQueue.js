@@ -87,6 +87,13 @@ reservationQueueSchema.methods.canFulfill = async function() {
 // Method to fulfill reservation
 reservationQueueSchema.methods.fulfill = async function() {
   const Booking = mongoose.model('Booking');
+  const Service = mongoose.model('Service');
+
+  // Get service to calculate price
+  const service = await Service.findById(this.serviceId);
+  if (!service) {
+    throw new Error('Service not found');
+  }
 
   // Create the booking
   const booking = new Booking({
@@ -94,7 +101,8 @@ reservationQueueSchema.methods.fulfill = async function() {
     serviceId: this.serviceId,
     quantity: this.requestedQuantity,
     bookingDate: this.bookingDate,
-    totalPrice: 0, // Will be calculated in booking creation
+    totalPrice: service.price * this.requestedQuantity,
+    status: 'confirmed', // Auto-confirm fulfilled reservations
     notes: this.notes,
   });
 

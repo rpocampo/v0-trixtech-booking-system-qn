@@ -24,6 +24,14 @@ function PaymentProcessContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [creatingPayment, setCreatingPayment] = useState(false);
+  // QR-only payment system - no method selection needed
+  const [qrPayment, setQrPayment] = useState<{
+    qrCode: string;
+    instructions: any;
+    referenceNumber: string;
+    transactionId: string;
+  } | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed' | 'failed'>('pending');
 
   useEffect(() => {
     if (bookingId) {
@@ -56,6 +64,7 @@ function PaymentProcessContent() {
 
     setCreatingPayment(true);
     setError('');
+    setQrPayment(null);
 
     try {
       const token = localStorage.getItem('token');
@@ -85,41 +94,89 @@ function PaymentProcessContent() {
 
       setBooking(bookingData.booking);
 
-      // Now create payment intent with the correct amount
-      const response = await fetch('http://localhost:5000/api/payments/create-intent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          bookingId,
-          amount: bookingData.booking.totalPrice,
-        }),
-      });
-
-      if (response.status === 401) {
-        setError('Your session has expired. Please log in again.');
-        return;
-      }
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to create payment intent');
-      }
-
-      if (data.success && data.paymentUrl) {
-        // Redirect to GCash payment
-        window.location.href = data.paymentUrl;
-      } else {
-        throw new Error('Invalid payment response');
-      }
+      // Create QR payment (only payment method available)
+      await createQRPayment(bookingData.booking.totalPrice, token);
     } catch (error) {
-      console.error('Error creating payment intent:', error);
+      console.error('Error creating payment:', error);
       setError(error instanceof Error ? error.message : 'Failed to initiate payment');
       setCreatingPayment(false);
     }
+  };
+
+  const createQRPayment = async (amount: number, token: string) => {
+    const response = await fetch('http://localhost:5000/api/payments/create-qr', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        bookingId,
+        amount,
+      }),
+    });
+
+    if (response.status === 401) {
+      throw new Error('Your session has expired. Please log in again.');
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to create QR payment');
+    }
+
+    if (data.success) {
+      setQrPayment({
+        qrCode: data.qrCode,
+        instructions: data.instructions,
+        referenceNumber: data.referenceNumber,
+        transactionId: data.transactionId,
+      });
+      setCreatingPayment(false);
+
+      // Start polling for payment status
+      startPaymentPolling(data.referenceNumber, token);
+    } else {
+      throw new Error('Invalid QR payment response');
+    }
+  };
+
+
+  const startPaymentPolling = (referenceNumber: string, token: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/payments/status/${referenceNumber}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.payment) {
+            if (data.payment.status === 'completed') {
+              setPaymentStatus('completed');
+              clearInterval(pollInterval);
+              // Redirect to success page after a short delay
+              setTimeout(() => {
+                router.push('/customer/bookings?payment=success');
+              }, 2000);
+            } else if (data.payment.status === 'failed') {
+              setPaymentStatus('failed');
+              clearInterval(pollInterval);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error polling payment status:', error);
+      }
+    }, 3000); // Poll every 3 seconds
+
+    // Stop polling after 5 minutes
+    setTimeout(() => {
+      clearInterval(pollInterval);
+    }, 5 * 60 * 1000);
   };
 
   const handleRetry = () => {
@@ -150,6 +207,7 @@ function PaymentProcessContent() {
           <h1 className="text-2xl font-bold text-gray-800">Complete Your Payment</h1>
           <p className="text-gray-600 mt-2">Secure payment powered by GCash</p>
         </div>
+
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
@@ -198,19 +256,155 @@ function PaymentProcessContent() {
           </div>
         )}
 
+        {/* QR Code Display */}
+        {qrPayment && (
+          <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-bold text-gray-800 mb-2">Scan QR Code to Pay</h3>
+              <p className="text-gray-600">Open your GCash app and scan the QR code below</p>
+            </div>
+
+            <div className="flex justify-center mb-6">
+              <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                <img
+                  src={qrPayment.qrCode}
+                  alt="GCash QR Code"
+                  className="w-64 h-64"
+                />
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <h4 className="font-semibold text-blue-800 mb-2">Payment Instructions:</h4>
+              <ol className="text-sm text-blue-700 space-y-1">
+                {qrPayment.instructions.instructions.map((instruction: string, index: number) => (
+                  <li key={index} className="flex items-start">
+                    <span className="font-medium mr-2">{index + 1}.</span>
+                    {instruction}
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="font-medium text-gray-600">Reference:</span>
+                  <div className="font-mono text-gray-800">{qrPayment.referenceNumber}</div>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-600">Amount:</span>
+                  <div className="font-bold text-green-600">₱{qrPayment.instructions.amount}</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Status */}
+            <div className="mt-4 text-center">
+              {paymentStatus === 'pending' && (
+                <div className="space-y-3">
+                  <div className="inline-flex items-center text-blue-600">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                    Waiting for payment...
+                  </div>
+
+                  {/* Test verification button (only in development) */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const token = localStorage.getItem('token');
+                          const response = await fetch(`http://localhost:5000/api/payments/verify-qr/${qrPayment.referenceNumber}`, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`,
+                            },
+                            body: JSON.stringify({
+                              test: true,
+                              amount: qrPayment.instructions.amount,
+                              referenceNumber: qrPayment.referenceNumber
+                            }),
+                          });
+
+                          if (response.ok) {
+                            setPaymentStatus('completed');
+                            setTimeout(() => {
+                              router.push('/customer/bookings?payment=success');
+                            }, 2000);
+                          } else {
+                            setPaymentStatus('failed');
+                          }
+                        } catch (error) {
+                          console.error('Test verification failed:', error);
+                          setPaymentStatus('failed');
+                        }
+                      }}
+                      className="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+                    >
+                      Test: Mark as Paid
+                    </button>
+                  )}
+                </div>
+              )}
+              {paymentStatus === 'completed' && (
+                <div className="inline-flex items-center text-green-600">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Payment completed! Redirecting...
+                </div>
+              )}
+              {paymentStatus === 'failed' && (
+                <div className="inline-flex items-center text-red-600">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Payment failed. Please try again.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-3">
           {creatingPayment ? (
             <div className="text-center py-4">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-              <p className="text-gray-600">Preparing payment...</p>
+              <p className="text-gray-600">Generating QR code...</p>
+            </div>
+          ) : qrPayment ? (
+            // QR Payment active - show status and actions
+            <div className="space-y-3">
+              {paymentStatus === 'failed' && (
+                <button
+                  onClick={() => {
+                    setQrPayment(null);
+                    setPaymentStatus('pending');
+                    createPaymentIntent();
+                  }}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
+                >
+                  Generate New QR Code
+                </button>
+              )}
+
+              <button
+                onClick={() => router.back()}
+                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200"
+                disabled={paymentStatus === 'completed'}
+              >
+                {paymentStatus === 'completed' ? 'Redirecting...' : 'Cancel'}
+              </button>
             </div>
           ) : (
+            // Initial state - generate QR code for payment
             <>
               <button
                 onClick={createPaymentIntent}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
               >
-                Pay with GCash
+                Generate QR Code
               </button>
 
               {error && (

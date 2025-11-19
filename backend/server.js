@@ -18,6 +18,8 @@ const { monitoringMiddleware, healthCheckHandler } = require('./utils/monitoring
 
 dotenv.config();
 
+console.log('GCASH_QR_CODE loaded:', process.env.GCASH_QR_CODE ? 'YES' : 'NO');
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {

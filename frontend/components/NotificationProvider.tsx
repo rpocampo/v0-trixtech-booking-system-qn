@@ -96,14 +96,30 @@ export default function NotificationProvider({ children }: NotificationProviderP
       }
     };
 
+    const handleNewPendingBooking = (data: any) => {
+      // Only show to admins
+      const role = localStorage.getItem('role');
+      if (role === 'admin') {
+        showNotification({
+          id: `admin_pending_booking_${Date.now()}`,
+          title: 'New Pending Booking ⏳',
+          message: `New booking for ${data.serviceName} is pending payment.`,
+          type: 'admin',
+          priority: 'medium',
+        });
+      }
+    };
+
     socket.on('booking-created', handleBookingCreated);
     socket.on('booking-updated', handleBookingUpdated);
     socket.on('new-booking', handleNewBooking);
+    socket.on('new-pending-booking', handleNewPendingBooking);
 
     return () => {
       socket.off('booking-created', handleBookingCreated);
       socket.off('booking-updated', handleBookingUpdated);
       socket.off('new-booking', handleNewBooking);
+      socket.off('new-pending-booking', handleNewPendingBooking);
     };
   }, [socket]);
 

@@ -159,8 +159,8 @@ router.post('/', authMiddleware, async (req, res, next) => {
       // We'll use a unique constraint approach by checking availability again right before saving
 
       // Double-check availability right before creating booking
-        let finalAvailable = true;
-        let finalAvailableQuantity = service.quantity || 1;
+      let finalAvailable = true;
+      let finalAvailableQuantity = service.quantity || 1;
 
         if (service.category === 'equipment') {
           const existingBookings = await Booking.find({
@@ -394,21 +394,28 @@ router.post('/', authMiddleware, async (req, res, next) => {
 // Get single booking by ID
 router.get('/:id', authMiddleware, async (req, res, next) => {
   try {
+    console.log('Fetching booking:', req.params.id, 'for user:', req.user.id);
     const booking = await Booking.findById(req.params.id)
       .populate('serviceId')
       .populate('customerId', 'name email');
 
     if (!booking) {
+      console.log('Booking not found:', req.params.id);
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
+    console.log('Booking found, customerId:', booking.customerId, 'user id:', req.user.id);
+
     // Check if user owns this booking or is admin
     if (booking.customerId._id.toString() !== req.user.id && req.user.role !== 'admin') {
+      console.log('Not authorized - booking customer:', booking.customerId._id.toString(), 'request user:', req.user.id);
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
+    console.log('Booking fetch successful');
     res.json({ success: true, booking });
   } catch (error) {
+    console.error('Error fetching booking:', error);
     next(error);
   }
 });

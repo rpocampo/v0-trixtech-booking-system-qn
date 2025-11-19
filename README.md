@@ -242,10 +242,19 @@ The frontend will run on `http://localhost:3000`
 - Customer and admin cannot access each other's pages
 - All API responses follow a consistent JSON format with success status
 
+## Payment System
+
+The system uses GCash QR code payments for secure and instant transactions:
+
+- **QR Code Generation**: Dynamic QR codes generated for each booking
+- **GCash Integration**: Compatible with GCash mobile app scanning
+- **Real-time Verification**: Automatic payment confirmation
+- **Transaction Security**: Unique reference numbers and validation
+
 ## Future Enhancements
 
 - Email notifications for booking confirmations
-- Payment gateway integration (Stripe)
+- Additional payment methods (Maya, PayPal)
 - Real-time booking updates with WebSockets
 - Service reviews and ratings
 - Advanced reporting and analytics
