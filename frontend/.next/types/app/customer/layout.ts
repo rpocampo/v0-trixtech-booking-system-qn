@@ -1,4 +1,4 @@
-// File: c:\Users\63936\Downloads\v0-trixtech-booking-system-qn\frontend\app\customer\layout.tsx
+// File: C:\Users\63936\Downloads\v0-trixtech-booking-system-qn\frontend\app\customer\layout.tsx
 import * as entry from '../../../../app/customer/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

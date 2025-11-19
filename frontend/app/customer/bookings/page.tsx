@@ -23,9 +23,21 @@ export default function Bookings() {
     const fetchBookings = async () => {
       try {
         const token = localStorage.getItem('token');
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
         const response = await fetch('http://localhost:5000/api/bookings', {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if (response.status === 401) {
+          // Token expired or invalid, don't log as error
+          setLoading(false);
+          return;
+        }
+
         const data = await response.json();
         if (data.success) {
           setBookings(data.bookings);

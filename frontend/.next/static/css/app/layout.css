@@ -571,10 +571,6 @@ video {
 .z-50 {
   z-index: 50;
 }
-.mx-2 {
-  margin-left: 0.5rem;
-  margin-right: 0.5rem;
-}
 .mx-auto {
   margin-left: auto;
   margin-right: auto;
@@ -621,6 +617,9 @@ video {
 }
 .mt-2 {
   margin-top: 0.5rem;
+}
+.mt-3 {
+  margin-top: 0.75rem;
 }
 .mt-4 {
   margin-top: 1rem;
@@ -714,6 +713,9 @@ video {
 }
 .max-h-\[80vh\] {
   max-height: 80vh;
+}
+.max-h-\[90vh\] {
+  max-height: 90vh;
 }
 .min-h-screen {
   min-height: 100vh;
@@ -843,6 +845,9 @@ video {
 }
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+.cursor-not-allowed {
+  cursor: not-allowed;
 }
 .cursor-pointer {
   cursor: pointer;
@@ -991,6 +996,10 @@ video {
   --tw-border-opacity: 1;
   border-color: rgb(229 231 235 / var(--tw-border-opacity, 1));
 }
+.border-gray-300 {
+  --tw-border-opacity: 1;
+  border-color: rgb(209 213 219 / var(--tw-border-opacity, 1));
+}
 .border-gray-500 {
   --tw-border-opacity: 1;
   border-color: rgb(107 114 128 / var(--tw-border-opacity, 1));
@@ -999,13 +1008,25 @@ video {
   --tw-border-opacity: 1;
   border-color: rgb(55 65 81 / var(--tw-border-opacity, 1));
 }
+.border-green-300 {
+  --tw-border-opacity: 1;
+  border-color: rgb(134 239 172 / var(--tw-border-opacity, 1));
+}
 .border-green-400 {
   --tw-border-opacity: 1;
   border-color: rgb(74 222 128 / var(--tw-border-opacity, 1));
 }
+.border-green-500 {
+  --tw-border-opacity: 1;
+  border-color: rgb(34 197 94 / var(--tw-border-opacity, 1));
+}
 .border-orange-500 {
   --tw-border-opacity: 1;
   border-color: rgb(249 115 22 / var(--tw-border-opacity, 1));
+}
+.border-red-300 {
+  --tw-border-opacity: 1;
+  border-color: rgb(252 165 165 / var(--tw-border-opacity, 1));
 }
 .border-red-400 {
   --tw-border-opacity: 1;
@@ -1083,6 +1104,10 @@ video {
 .bg-gray-200 {
   --tw-bg-opacity: 1;
   background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1));
+}
+.bg-gray-300 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(209 213 219 / var(--tw-bg-opacity, 1));
 }
 .bg-gray-50 {
   --tw-bg-opacity: 1;
@@ -1484,6 +1509,10 @@ video {
 .text-gray-400 {
   --tw-text-opacity: 1;
   color: rgb(156 163 175 / var(--tw-text-opacity, 1));
+}
+.text-gray-500 {
+  --tw-text-opacity: 1;
+  color: rgb(107 114 128 / var(--tw-text-opacity, 1));
 }
 .text-gray-600 {
   --tw-text-opacity: 1;
@@ -2728,6 +2757,11 @@ button, a, input, textarea, select {
 .hover\:bg-gray-700:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(55 65 81 / var(--tw-bg-opacity, 1));
+}
+
+.hover\:bg-green-600:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(22 163 74 / var(--tw-bg-opacity, 1));
 }
 
 .hover\:bg-green-700:hover {

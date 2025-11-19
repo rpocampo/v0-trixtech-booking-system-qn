@@ -108,6 +108,13 @@ export default function NotificationsPage() {
       const response = await fetch(`http://localhost:5000/api/notifications?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (response.status === 401) {
+        // Token expired or invalid, don't log as error
+        setLoading(false);
+        return;
+      }
+
       const data = await response.json();
 
       if (data.success) {

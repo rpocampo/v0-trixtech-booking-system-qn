@@ -50,6 +50,13 @@ export default function CustomerDashboard() {
           }),
         ]);
 
+        if (userRes.status === 401 || bookingsRes.status === 401) {
+          // Token expired or invalid, redirect to login
+          localStorage.clear();
+          router.push('/login');
+          return;
+        }
+
         const userData = await userRes.json();
         const bookingsData = await bookingsRes.json();
 

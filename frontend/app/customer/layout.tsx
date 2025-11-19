@@ -40,6 +40,14 @@ export default function CustomerLayout({
         const response = await fetch('http://localhost:5000/api/auth/me', {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if (response.status === 401) {
+          // Token expired or invalid, redirect to login
+          localStorage.clear();
+          router.push('/login');
+          return;
+        }
+
         const data = await response.json();
         if (data.success) {
           setUser(data.user);
@@ -66,6 +74,12 @@ export default function CustomerLayout({
         const response = await fetch('http://localhost:5000/api/notifications/unread-count', {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if (response.status === 401) {
+          // Token expired, don't log as error
+          return;
+        }
+
         const data = await response.json();
         if (data.success) {
           setUnreadNotifications(data.count);

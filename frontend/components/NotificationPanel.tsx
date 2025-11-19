@@ -40,9 +40,21 @@ export default function NotificationPanel({ isOpen, onClose, position = 'default
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
       const response = await fetch('http://localhost:5000/api/notifications?limit=10', {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (response.status === 401) {
+        // Token expired or invalid, don't log as error
+        setLoading(false);
+        return;
+      }
+
       const data = await response.json();
       if (data.success) {
         setNotifications(data.data);
@@ -57,9 +69,17 @@ export default function NotificationPanel({ isOpen, onClose, position = 'default
   const fetchUnreadCount = async () => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) return;
+
       const response = await fetch('http://localhost:5000/api/notifications/unread-count', {
         headers: { Authorization: `Bearer ${token}` },
       });
+
+      if (response.status === 401) {
+        // Token expired or invalid, don't log as error
+        return;
+      }
+
       const data = await response.json();
       if (data.success) {
         setUnreadCount(data.count);

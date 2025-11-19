@@ -10,6 +10,88 @@ const { findAlternativeServices, processReservationQueue } = require('../utils/r
 
 const router = express.Router();
 
+// Check availability for a service at specific date/time
+router.get('/check-availability/:serviceId', authMiddleware, async (req, res, next) => {
+  try {
+    const { serviceId } = req.params;
+    const { date, quantity = 1 } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ success: false, message: 'Date is required' });
+    }
+
+    const service = await Service.findById(serviceId);
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+
+    const requestedQuantity = parseInt(quantity) || 1;
+    const bookingDate = new Date(date);
+
+    // Check if date is in the past
+    if (bookingDate < new Date()) {
+      return res.json({
+        success: true,
+        available: false,
+        reason: 'Cannot book dates in the past',
+        availableQuantity: 0
+      });
+    }
+
+    let isAvailable = true;
+    let availableQuantity = service.quantity || 1;
+    let reason = '';
+
+    if (service.category === 'equipment') {
+      // For equipment, check total booked quantity on this date
+      const existingBookings = await Booking.find({
+        serviceId,
+        bookingDate: {
+          $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
+          $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
+        },
+        status: { $in: ['pending', 'confirmed'] },
+      });
+
+      const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+      availableQuantity = Math.max(0, service.quantity - totalBooked);
+
+      if (availableQuantity < requestedQuantity) {
+        isAvailable = false;
+        reason = `Only ${availableQuantity} items available for this date`;
+      }
+    } else {
+      // For services, check if any booking exists on this date
+      const existingBooking = await Booking.findOne({
+        serviceId,
+        bookingDate: {
+          $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
+          $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
+        },
+        status: { $in: ['pending', 'confirmed'] },
+      });
+
+      if (existingBooking) {
+        isAvailable = false;
+        availableQuantity = 0;
+        reason = 'This service is already booked for this date';
+      }
+    }
+
+    res.json({
+      success: true,
+      available: isAvailable,
+      availableQuantity,
+      requestedQuantity,
+      reason,
+      serviceName: service.name,
+      maxQuantity: service.quantity || 1
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Create booking (customers only)
 router.post('/', authMiddleware, async (req, res, next) => {
   try {
@@ -41,21 +123,27 @@ router.post('/', authMiddleware, async (req, res, next) => {
     if (service.category === 'equipment') {
       const existingBookings = await Booking.find({
         serviceId,
-        bookingDate: new Date(bookingDate),
+        bookingDate: {
+          $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
+          $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
+        },
         status: { $in: ['pending', 'confirmed'] },
       });
 
       const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
-      availableQuantity = service.quantity - totalBooked;
+      availableQuantity = Math.max(0, service.quantity - totalBooked);
 
-      if (totalBooked + requestedQuantity > service.quantity) {
+      if (availableQuantity < requestedQuantity) {
         isAvailable = false;
       }
     } else {
-      // For non-equipment services, check for existing booking
+      // For non-equipment services, check for existing booking on the same day
       const existingBooking = await Booking.findOne({
         serviceId,
-        bookingDate: new Date(bookingDate),
+        bookingDate: {
+          $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
+          $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
+        },
         status: { $in: ['pending', 'confirmed'] },
       });
 
@@ -66,22 +154,97 @@ router.post('/', authMiddleware, async (req, res, next) => {
     }
 
     if (isAvailable) {
-      // Create booking immediately
-      const booking = new Booking({
-        customerId: req.user.id,
-        serviceId,
-        quantity: requestedQuantity,
-        bookingDate: new Date(bookingDate),
-        totalPrice: service.price * requestedQuantity,
-        status: 'confirmed', // Auto-confirm available bookings
-        notes,
-      });
+      // Use database transaction to prevent race conditions
+      const session = await Booking.startSession();
+      session.startTransaction();
 
-      await booking.save();
-      await booking.populate('serviceId');
-      await booking.populate('customerId', 'name email');
+      try {
+        // Double-check availability within transaction
+        let finalAvailable = true;
+        let finalAvailableQuantity = service.quantity || 1;
 
-      // Send notifications and emit real-time events
+        if (service.category === 'equipment') {
+          const existingBookings = await Booking.find({
+            serviceId,
+            bookingDate: {
+              $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
+              $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
+            },
+            status: { $in: ['pending', 'confirmed'] },
+          }).session(session);
+
+          const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+          finalAvailableQuantity = Math.max(0, service.quantity - totalBooked);
+
+          if (finalAvailableQuantity < requestedQuantity) {
+            finalAvailable = false;
+          }
+        } else {
+          const existingBooking = await Booking.findOne({
+            serviceId,
+            bookingDate: {
+              $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
+              $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
+            },
+            status: { $in: ['pending', 'confirmed'] },
+          }).session(session);
+
+          if (existingBooking) {
+            finalAvailable = false;
+            finalAvailableQuantity = 0;
+          }
+        }
+
+        if (!finalAvailable) {
+          await session.abortTransaction();
+          session.endSession();
+
+          // Add to reservation queue instead
+          const alternatives = await findAlternativeServices(serviceId, new Date(bookingDate), requestedQuantity);
+
+          const queueEntry = new ReservationQueue({
+            customerId: req.user.id,
+            serviceId,
+            requestedQuantity,
+            bookingDate: new Date(bookingDate),
+            notes,
+            alternativeSuggestions: alternatives.map(alt => ({
+              serviceId: alt.serviceId,
+              reason: alt.reason,
+              availability: alt.availableQuantity,
+            })),
+          });
+
+          await queueEntry.save();
+
+          return res.status(202).json({
+            success: true,
+            queued: true,
+            queueId: queueEntry._id,
+            alternatives: alternatives.slice(0, 3),
+            message: 'Item became unavailable during booking. Added to reservation queue.'
+          });
+        }
+
+        // Create booking within transaction
+        const booking = new Booking({
+          customerId: req.user.id,
+          serviceId,
+          quantity: requestedQuantity,
+          bookingDate: new Date(bookingDate),
+          totalPrice: service.price * requestedQuantity,
+          status: 'confirmed',
+          notes,
+        });
+
+        await booking.save({ session });
+        await session.commitTransaction();
+        session.endSession();
+
+        await booking.populate('serviceId');
+        await booking.populate('customerId', 'name email');
+
+        // Send notifications and emit real-time events
       try {
         console.log('Creating notifications for booking:', booking._id);
 
@@ -171,6 +334,12 @@ router.post('/', authMiddleware, async (req, res, next) => {
         booking,
         message: 'Booking confirmed successfully!'
       });
+      } catch (transactionError) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error('Transaction error:', transactionError);
+        return res.status(500).json({ success: false, message: 'Booking failed due to concurrent request' });
+      }
     } else {
       // Add to reservation queue
       const alternatives = await findAlternativeServices(serviceId, new Date(bookingDate), requestedQuantity);

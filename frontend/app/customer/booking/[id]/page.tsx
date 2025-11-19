@@ -31,6 +31,46 @@ export default function BookingPage() {
   const [queued, setQueued] = useState(false);
   const [alternatives, setAlternatives] = useState<any[]>([]);
   const [recommendations, setRecommendations] = useState<Service[]>([]);
+  const [showDateTimePicker, setShowDateTimePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedHour, setSelectedHour] = useState(9);
+  const [selectedMinute, setSelectedMinute] = useState(0);
+  const [selectedAmPm, setSelectedAmPm] = useState<'AM' | 'PM'>('AM');
+  const [dateTimeConfirmed, setDateTimeConfirmed] = useState(false);
+  const [availabilityChecked, setAvailabilityChecked] = useState(false);
+  const [availabilityStatus, setAvailabilityStatus] = useState<{
+    available: boolean;
+    availableQuantity: number;
+    reason?: string;
+  } | null>(null);
+
+  // Reset and check availability when selections change
+  useEffect(() => {
+    if (selectedDate) {
+      setAvailabilityChecked(false);
+      setAvailabilityStatus(null);
+
+      // Auto-check availability when all required fields are selected
+      const checkAutoAvailability = async () => {
+        // Convert to 24-hour format
+        let hour24 = selectedHour;
+        if (selectedAmPm === 'PM' && selectedHour !== 12) {
+          hour24 += 12;
+        } else if (selectedAmPm === 'AM' && selectedHour === 12) {
+          hour24 = 0;
+        }
+
+        const dateTime = new Date(selectedDate);
+        dateTime.setHours(hour24, selectedMinute, 0, 0);
+
+        await checkAvailability(dateTime, booking.quantity);
+      };
+
+      // Debounce the check to avoid too many API calls
+      const timeoutId = setTimeout(checkAutoAvailability, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [selectedDate, selectedHour, selectedMinute, selectedAmPm, booking.quantity]);
 
   useEffect(() => {
     const fetchService = async () => {
@@ -72,13 +112,113 @@ export default function BookingPage() {
     }
   }, [serviceId]);
 
+  const openDateTimePicker = () => {
+    setShowDateTimePicker(true);
+  };
+
+  const checkAvailability = async (date: Date, quantity: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please log in to check availability');
+        return false;
+      }
+
+      const response = await fetch(`http://localhost:5000/api/bookings/check-availability/${serviceId}?date=${date.toISOString()}&quantity=${quantity}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (response.status === 401) {
+        setError('Your session has expired. Please log in again.');
+        return false;
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setAvailabilityStatus({
+          available: data.available,
+          availableQuantity: data.availableQuantity,
+          reason: data.reason,
+        });
+        setAvailabilityChecked(true);
+        return data.available;
+      } else {
+        setError(data.message || 'Failed to check availability');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error checking availability:', error);
+      setError('Failed to check availability. Please try again.');
+    }
+    return false;
+  };
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+  };
+
+  const handleTimeConfirm = async () => {
+    if (!selectedDate) {
+      setError('Please select a date first');
+      return;
+    }
+
+    // Convert to 24-hour format
+    let hour24 = selectedHour;
+    if (selectedAmPm === 'PM' && selectedHour !== 12) {
+      hour24 += 12;
+    } else if (selectedAmPm === 'AM' && selectedHour === 12) {
+      hour24 = 0;
+    }
+
+    const dateTime = new Date(selectedDate);
+    dateTime.setHours(hour24, selectedMinute, 0, 0);
+
+    // Check availability if not already checked
+    if (!availabilityChecked) {
+      const isAvailable = await checkAvailability(dateTime, booking.quantity);
+      if (!isAvailable) {
+        return; // Error already set in checkAvailability
+      }
+    } else if (!availabilityStatus?.available) {
+      setError(availabilityStatus?.reason || 'Selected date/time is not available');
+      return;
+    }
+
+    // Format as ISO string for the backend
+    const isoString = dateTime.toISOString();
+    setBooking({ ...booking, bookingDate: isoString });
+    setDateTimeConfirmed(true);
+    setShowDateTimePicker(false);
+    setError('');
+
+    // Scroll to notes section
+    setTimeout(() => {
+      document.getElementById('notes-section')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSubmitting(true);
 
+    if (!booking.bookingDate) {
+      setError('Please select a date and time for your booking');
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please log in to make a booking');
+        setSubmitting(false);
+        return;
+      }
+
       const response = await fetch('http://localhost:5000/api/bookings', {
         method: 'POST',
         headers: {
@@ -92,6 +232,11 @@ export default function BookingPage() {
           notes: booking.notes,
         }),
       });
+
+      if (response.status === 401) {
+        setError('Your session has expired. Please log in again.');
+        return;
+      }
 
       const data = await response.json();
 
@@ -181,16 +326,28 @@ export default function BookingPage() {
 
             <div>
               <label className="block text-sm font-medium mb-2">Booking Date & Time</label>
-              <input
-                type="datetime-local"
-                value={booking.bookingDate}
-                onChange={(e) => setBooking({ ...booking, bookingDate: e.target.value })}
-                required
-                className="input-field"
-              />
+              <button
+                type="button"
+                onClick={openDateTimePicker}
+                className={`input-field text-left ${dateTimeConfirmed ? 'border-green-500 bg-green-50' : ''}`}
+              >
+                {booking.bookingDate ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-600">✓</span>
+                    {new Date(booking.bookingDate).toLocaleString()}
+                  </div>
+                ) : (
+                  'Select date and time'
+                )}
+              </button>
+              {dateTimeConfirmed && (
+                <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
+                  <span>✓</span> Schedule selected successfully
+                </p>
+              )}
             </div>
 
-            <div>
+            <div id="notes-section">
               <label className="block text-sm font-medium mb-2">Additional Notes (Optional)</label>
               <textarea
                 value={booking.notes}
@@ -227,6 +384,135 @@ export default function BookingPage() {
           </form>
         </div>
       </div>
+
+      {/* Date Time Picker Modal */}
+      {showDateTimePicker && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Select Date & Time</h3>
+
+              {/* Date Selection */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2">Date</label>
+                <input
+                  type="date"
+                  min={new Date().toISOString().split('T')[0]}
+                  value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    const date = new Date(e.target.value);
+                    setSelectedDate(date);
+                  }}
+                  className="input-field"
+                />
+              </div>
+
+              {/* Time Selection */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium mb-2">Time</label>
+                <div className="flex gap-2 items-center">
+                  <select
+                    value={selectedHour}
+                    onChange={(e) => setSelectedHour(parseInt(e.target.value))}
+                    className="input-field flex-1"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(hour => (
+                      <option key={hour} value={hour}>{hour.toString().padStart(2, '0')}</option>
+                    ))}
+                  </select>
+                  <span className="text-lg">:</span>
+                  <select
+                    value={selectedMinute}
+                    onChange={(e) => setSelectedMinute(parseInt(e.target.value))}
+                    className="input-field flex-1"
+                  >
+                    {Array.from({ length: 60 }, (_, i) => i).map(minute => (
+                      <option key={minute} value={minute}>{minute.toString().padStart(2, '0')}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* AM/PM Selection */}
+                <div className="flex gap-2 mt-3">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAmPm('AM')}
+                    className={`flex-1 py-2 px-4 rounded border ${
+                      selectedAmPm === 'AM' ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-300'
+                    }`}
+                  >
+                    AM
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAmPm('PM')}
+                    className={`flex-1 py-2 px-4 rounded border ${
+                      selectedAmPm === 'PM' ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-300'
+                    }`}
+                  >
+                    PM
+                  </button>
+                </div>
+
+                {/* Availability Status */}
+                {availabilityChecked && availabilityStatus && (
+                  <div className={`mt-4 p-3 rounded ${
+                    availabilityStatus.available
+                      ? 'bg-green-100 border border-green-300'
+                      : 'bg-red-100 border border-red-300'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span className={availabilityStatus.available ? 'text-green-600' : 'text-red-600'}>
+                        {availabilityStatus.available ? '✓' : '✗'}
+                      </span>
+                      <span className={`text-sm font-medium ${
+                        availabilityStatus.available ? 'text-green-800' : 'text-red-800'
+                      }`}>
+                        {availabilityStatus.available
+                          ? `Available (${availabilityStatus.availableQuantity} ${availabilityStatus.availableQuantity === 1 ? 'item' : 'items'} left)`
+                          : availabilityStatus.reason
+                        }
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* OK Button below AM/PM */}
+                <button
+                  type="button"
+                  onClick={handleTimeConfirm}
+                  disabled={!selectedDate || !availabilityChecked || !availabilityStatus?.available}
+                  className={`w-full mt-4 font-semibold py-3 px-4 rounded ${
+                    !selectedDate || !availabilityChecked || !availabilityStatus?.available
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : 'bg-green-500 hover:bg-green-600 text-white'
+                  }`}
+                >
+                  {!selectedDate
+                    ? 'Select a date first'
+                    : !availabilityChecked
+                      ? 'Checking availability...'
+                      : availabilityStatus?.available
+                        ? 'Confirm Selection'
+                        : 'Not Available'
+                  }
+                </button>
+              </div>
+
+              {/* Cancel Button */}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDateTimePicker(false)}
+                  className="flex-1 btn-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Recommendations */}
       {recommendations.length > 0 && (

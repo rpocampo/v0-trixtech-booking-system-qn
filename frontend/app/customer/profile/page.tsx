@@ -34,6 +34,13 @@ export default function Profile() {
         const response = await fetch('http://localhost:5000/api/auth/me', {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if (response.status === 401) {
+          setError('Your session has expired. Please log in again.');
+          setLoading(false);
+          return;
+        }
+
         const data = await response.json();
         if (data.success) {
           setUser(data.user);
