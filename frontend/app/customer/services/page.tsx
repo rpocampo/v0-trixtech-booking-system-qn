@@ -84,9 +84,6 @@ export default function Services() {
     }
   };
 
-  const applyFilters = () => {
-    setFilters(pendingFilters);
-  };
 
   const clearFilters = () => {
     const clearedFilters = {
@@ -102,6 +99,8 @@ export default function Services() {
     };
     setFilters(clearedFilters);
     setPendingFilters(clearedFilters);
+    fetchServices(clearedFilters);
+    setShowFilters(false); // Close the panel after clearing
   };
 
   const viewServiceDetails = (service: Service) => {
@@ -115,10 +114,31 @@ export default function Services() {
 
   // Apply filters when they change
   useEffect(() => {
-    if (Object.keys(filters).length > 0) {
-      fetchServices();
-    }
+    fetchServices(filters);
   }, [filters]);
+
+  // Real-time search
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (pendingFilters.search !== filters.search) {
+        setFilters(prev => ({ ...prev, search: pendingFilters.search }));
+      }
+    }, 300); // Debounce search by 300ms
+
+    return () => clearTimeout(timeoutId);
+  }, [pendingFilters.search, filters.search]);
+
+  const applyFilters = () => {
+    setFilters(prev => ({
+      ...prev,
+      category: pendingFilters.category,
+      minPrice: pendingFilters.minPrice,
+      maxPrice: pendingFilters.maxPrice,
+      sortBy: pendingFilters.sortBy,
+      sortOrder: pendingFilters.sortOrder,
+    }));
+    setShowFilters(false); // Close the panel after applying
+  };
 
   // Real-time updates
   useEffect(() => {
@@ -209,7 +229,11 @@ export default function Services() {
           <div className="flex gap-2 flex-wrap">
             <select
               value={pendingFilters.serviceType}
-              onChange={(e) => setPendingFilters(prev => ({ ...prev, serviceType: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setPendingFilters(prev => ({ ...prev, serviceType: newValue }));
+                setFilters(prev => ({ ...prev, serviceType: newValue }));
+              }}
               className="input-field min-w-[120px]"
             >
               <option value="">All Types</option>
@@ -220,7 +244,11 @@ export default function Services() {
 
             <select
               value={pendingFilters.eventType}
-              onChange={(e) => setPendingFilters(prev => ({ ...prev, eventType: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setPendingFilters(prev => ({ ...prev, eventType: newValue }));
+                setFilters(prev => ({ ...prev, eventType: newValue }));
+              }}
               className="input-field min-w-[120px]"
             >
               <option value="">All Events</option>
@@ -233,7 +261,11 @@ export default function Services() {
 
             <select
               value={pendingFilters.location}
-              onChange={(e) => setPendingFilters(prev => ({ ...prev, location: e.target.value }))}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                setPendingFilters(prev => ({ ...prev, location: newValue }));
+                setFilters(prev => ({ ...prev, location: newValue }));
+              }}
               className="input-field min-w-[120px]"
             >
               <option value="">All Locations</option>
@@ -247,14 +279,6 @@ export default function Services() {
             >
               <span>🔍</span>
               {showFilters ? 'Hide Filters' : 'More Filters'}
-            </button>
-
-            <button
-              onClick={applyFilters}
-              className="btn-primary flex items-center gap-2"
-            >
-              <span>✓</span>
-              Apply Filters
             </button>
           </div>
         </div>
@@ -310,19 +334,29 @@ export default function Services() {
 
               <div>
                 <label className="block text-sm font-medium mb-2">Sort By</label>
-                <select
-                  value={pendingFilters.sortBy}
-                  onChange={(e) => setPendingFilters(prev => ({ ...prev, sortBy: e.target.value }))}
-                  className="input-field w-full"
-                >
-                  <option value="name">Name</option>
-                  <option value="price">Price</option>
-                  <option value="category">Category</option>
-                </select>
+                <div className="flex gap-2">
+                  <select
+                    value={pendingFilters.sortBy}
+                    onChange={(e) => setPendingFilters(prev => ({ ...prev, sortBy: e.target.value }))}
+                    className="input-field flex-1"
+                  >
+                    <option value="name">Name</option>
+                    <option value="price">Price</option>
+                    <option value="category">Category</option>
+                  </select>
+                  <select
+                    value={pendingFilters.sortOrder}
+                    onChange={(e) => setPendingFilters(prev => ({ ...prev, sortOrder: e.target.value }))}
+                    className="input-field w-20"
+                  >
+                    <option value="asc">↑</option>
+                    <option value="desc">↓</option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            <div className="mt-4 flex justify-between">
+            <div className="mt-4 flex justify-between items-center">
               <button
                 onClick={clearFilters}
                 className="text-red-600 hover:text-red-800 hover:underline"
