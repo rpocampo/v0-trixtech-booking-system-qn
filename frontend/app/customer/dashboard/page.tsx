@@ -45,7 +45,7 @@ export default function CustomerDashboard() {
           fetch('http://localhost:5000/api/auth/me', {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch('http://localhost:5000/api/bookings/my-bookings', {
+          fetch('http://localhost:5000/api/bookings', {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);

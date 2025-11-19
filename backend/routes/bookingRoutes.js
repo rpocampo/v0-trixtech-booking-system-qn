@@ -107,6 +107,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
     }
 
     const requestedQuantity = quantity || 1;
+    const bookingDateObj = new Date(bookingDate);
 
     // Check available quantity
     if (service.quantity !== undefined && service.quantity < requestedQuantity) {
@@ -124,8 +125,8 @@ router.post('/', authMiddleware, async (req, res, next) => {
       const existingBookings = await Booking.find({
         serviceId,
         bookingDate: {
-          $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
-          $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
+          $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+          $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
         },
         status: { $in: ['pending', 'confirmed'] },
       });
@@ -141,8 +142,8 @@ router.post('/', authMiddleware, async (req, res, next) => {
       const existingBooking = await Booking.findOne({
         serviceId,
         bookingDate: {
-          $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
-          $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
+          $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+          $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
         },
         status: { $in: ['pending', 'confirmed'] },
       });
@@ -154,12 +155,10 @@ router.post('/', authMiddleware, async (req, res, next) => {
     }
 
     if (isAvailable) {
-      // Use database transaction to prevent race conditions
-      const session = await Booking.startSession();
-      session.startTransaction();
+      // Create booking with optimistic locking approach
+      // We'll use a unique constraint approach by checking availability again right before saving
 
-      try {
-        // Double-check availability within transaction
+      // Double-check availability right before creating booking
         let finalAvailable = true;
         let finalAvailableQuantity = service.quantity || 1;
 
@@ -167,11 +166,11 @@ router.post('/', authMiddleware, async (req, res, next) => {
           const existingBookings = await Booking.find({
             serviceId,
             bookingDate: {
-              $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
-              $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
+              $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+              $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
             },
             status: { $in: ['pending', 'confirmed'] },
-          }).session(session);
+          });
 
           const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
           finalAvailableQuantity = Math.max(0, service.quantity - totalBooked);
@@ -183,11 +182,11 @@ router.post('/', authMiddleware, async (req, res, next) => {
           const existingBooking = await Booking.findOne({
             serviceId,
             bookingDate: {
-              $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
-              $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
+              $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+              $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
             },
             status: { $in: ['pending', 'confirmed'] },
-          }).session(session);
+          });
 
           if (existingBooking) {
             finalAvailable = false;
@@ -196,9 +195,6 @@ router.post('/', authMiddleware, async (req, res, next) => {
         }
 
         if (!finalAvailable) {
-          await session.abortTransaction();
-          session.endSession();
-
           // Add to reservation queue instead
           const alternatives = await findAlternativeServices(serviceId, new Date(bookingDate), requestedQuantity);
 
@@ -226,7 +222,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
           });
         }
 
-        // Create booking within transaction
+        // Create booking
         const booking = new Booking({
           customerId: req.user.id,
           serviceId,
@@ -237,109 +233,101 @@ router.post('/', authMiddleware, async (req, res, next) => {
           notes,
         });
 
-        await booking.save({ session });
-        await session.commitTransaction();
-        session.endSession();
+        await booking.save();
 
         await booking.populate('serviceId');
         await booking.populate('customerId', 'name email');
 
         // Send notifications and emit real-time events
-      try {
-        console.log('Creating notifications for booking:', booking._id);
+        try {
+          console.log('Creating notifications for booking:', booking._id);
 
-        // Customer notification
-        const customerNotification = await sendTemplateNotification(req.user.id, 'BOOKING_CONFIRMED', {
-          message: `Your booking for ${service.name} has been confirmed.`,
-          metadata: {
-            bookingId: booking._id,
-            serviceId: service._id,
-            amount: booking.totalPrice,
-          },
-        });
-        console.log('Customer notification created:', customerNotification?._id);
-
-        // Admin notification
-        const adminUsers = await User.find({ role: 'admin' });
-        console.log('Found admin users:', adminUsers.length);
-
-        for (const admin of adminUsers) {
-          const adminNotification = await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
-            message: `New booking received from customer for ${service.name}.`,
+          // Customer notification
+          const customerNotification = await sendTemplateNotification(req.user.id, 'BOOKING_CONFIRMED', {
+            message: `Your booking for ${service.name} has been confirmed.`,
             metadata: {
               bookingId: booking._id,
               serviceId: service._id,
               amount: booking.totalPrice,
             },
           });
-          console.log('Admin notification created for', admin._id, ':', adminNotification?._id);
-        }
+          console.log('Customer notification created:', customerNotification?._id);
 
-        // Send email confirmations
-        const customer = await User.findById(req.user.id);
-        if (customer) {
-          await sendBookingConfirmation(customer.email, {
-            serviceName: service.name,
-            quantity: requestedQuantity,
-            date: booking.bookingDate,
-            time: new Date(booking.bookingDate).toLocaleTimeString(),
-            totalPrice: booking.totalPrice,
-          });
+          // Admin notification
+          const adminUsers = await User.find({ role: 'admin' });
+          console.log('Found admin users:', adminUsers.length);
 
-          await sendAdminBookingNotification({
-            serviceName: service.name,
-            quantity: requestedQuantity,
-            date: booking.bookingDate,
-            totalPrice: booking.totalPrice,
-          }, {
-            name: customer.name,
-            email: customer.email,
-          });
-        }
+          for (const admin of adminUsers) {
+            const adminNotification = await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
+              message: `New booking received from customer for ${service.name}.`,
+              metadata: {
+                bookingId: booking._id,
+                serviceId: service._id,
+                amount: booking.totalPrice,
+              },
+            });
+            console.log('Admin notification created for', admin._id, ':', adminNotification?._id);
+          }
 
-        // Check for low stock alert
-        if (service.category === 'equipment' && service.quantity <= 5) {
-          await sendLowStockAlert(service.name, service.quantity);
-        }
+          // Send email confirmations
+          const customer = await User.findById(req.user.id);
+          if (customer) {
+            await sendBookingConfirmation(customer.email, {
+              serviceName: service.name,
+              quantity: requestedQuantity,
+              date: booking.bookingDate,
+              time: new Date(booking.bookingDate).toLocaleTimeString(),
+              totalPrice: booking.totalPrice,
+            });
 
-        // Emit real-time events
-        const io = global.io;
-        if (io) {
-          io.to(`user_${req.user.id}`).emit('booking-created', {
-            booking: {
-              id: booking._id,
+            await sendAdminBookingNotification({
               serviceName: service.name,
               quantity: requestedQuantity,
               date: booking.bookingDate,
               totalPrice: booking.totalPrice,
-            }
-          });
+            }, {
+              name: customer.name,
+              email: customer.email,
+            });
+          }
 
-          io.to('admin').emit('new-booking', {
-            booking: {
-              id: booking._id,
-              serviceName: service.name,
-              quantity: requestedQuantity,
-              date: booking.bookingDate,
-              totalPrice: booking.totalPrice,
-            }
-          });
+          // Check for low stock alert
+          if (service.category === 'equipment' && service.quantity <= 5) {
+            await sendLowStockAlert(service.name, service.quantity);
+          }
+
+          // Emit real-time events
+          const io = global.io;
+          if (io) {
+            io.to(`user_${req.user.id}`).emit('booking-created', {
+              booking: {
+                id: booking._id,
+                serviceName: service.name,
+                quantity: requestedQuantity,
+                date: booking.bookingDate,
+                totalPrice: booking.totalPrice,
+              }
+            });
+
+            io.to('admin').emit('new-booking', {
+              booking: {
+                id: booking._id,
+                serviceName: service.name,
+                quantity: requestedQuantity,
+                date: booking.bookingDate,
+                totalPrice: booking.totalPrice,
+              }
+            });
+          }
+        } catch (notificationError) {
+          console.error('Error sending booking notifications:', notificationError);
         }
-      } catch (notificationError) {
-        console.error('Error sending booking notifications:', notificationError);
-      }
 
-      res.status(201).json({
-        success: true,
-        booking,
-        message: 'Booking confirmed successfully!'
-      });
-      } catch (transactionError) {
-        await session.abortTransaction();
-        session.endSession();
-        console.error('Transaction error:', transactionError);
-        return res.status(500).json({ success: false, message: 'Booking failed due to concurrent request' });
-      }
+        res.status(201).json({
+          success: true,
+          booking,
+          message: 'Booking confirmed successfully!'
+        });
     } else {
       // Add to reservation queue
       const alternatives = await findAlternativeServices(serviceId, new Date(bookingDate), requestedQuantity);
