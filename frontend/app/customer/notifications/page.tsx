@@ -119,9 +119,9 @@ export default function NotificationsPage() {
 
       if (data.success) {
         if (currentPage === 1) {
-          setNotifications(data.data);
+          setNotifications(data.notifications);
         } else {
-          setNotifications(prev => [...prev, ...data.data]);
+          setNotifications(prev => [...prev, ...data.notifications]);
         }
         setTotal(data.total);
         setHasMore(data.hasMore);
@@ -197,13 +197,13 @@ export default function NotificationsPage() {
     });
   };
 
-  const filteredNotifications = notifications.filter(notif => {
+  const filteredNotifications = (notifications || []).filter(notif => {
     if (filter === 'unread') return !notif.isRead;
     if (filter === 'read') return notif.isRead;
     return true;
   });
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = (notifications || []).filter(n => !n.isRead).length;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -226,9 +226,9 @@ export default function NotificationsPage() {
       {/* Filter Tabs */}
       <div className="flex gap-1 mb-6 p-1 bg-[var(--surface-secondary)] rounded-xl">
         {[
-          { key: 'all', label: 'All', count: notifications.length },
+          { key: 'all', label: 'All', count: (notifications || []).length },
           { key: 'unread', label: 'Unread', count: unreadCount },
-          { key: 'read', label: 'Read', count: notifications.filter(n => n.isRead).length },
+          { key: 'read', label: 'Read', count: (notifications || []).filter(n => n.isRead).length },
         ].map(({ key, label, count }) => (
           <button
             key={key}
@@ -348,12 +348,12 @@ export default function NotificationsPage() {
       </div>
 
       {/* Summary Stats */}
-      {notifications.length > 0 && (
+      {(notifications || []).length > 0 && (
         <div className="mt-12 p-6 bg-gradient-to-r from-[var(--primary-50)] to-[var(--accent)]/10 rounded-xl">
           <h3 className="font-semibold text-[var(--foreground)] mb-4">Notification Summary</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold text-[var(--primary)]">{notifications.length}</div>
+              <div className="text-2xl font-bold text-[var(--primary)]">{(notifications || []).length}</div>
               <div className="text-sm text-[var(--muted)]">Total</div>
             </div>
             <div className="text-center">
@@ -362,13 +362,13 @@ export default function NotificationsPage() {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-[var(--warning)]">
-                {notifications.filter(n => n.type === 'booking').length}
+                {(notifications || []).filter(n => n.type === 'booking').length}
               </div>
               <div className="text-sm text-[var(--muted)]">Bookings</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-[var(--accent)]">
-                {notifications.filter(n => n.type === 'system').length}
+                {(notifications || []).filter(n => n.type === 'system').length}
               </div>
               <div className="text-sm text-[var(--muted)]">System</div>
             </div>

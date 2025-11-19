@@ -250,8 +250,12 @@ export default function BookingPage() {
         setQueued(true);
         setAlternatives(data.alternatives || []);
         setError('');
+      } else if (data.requiresPayment) {
+        // Booking created, redirect to payment
+        console.log('Booking created, redirecting to payment:', data.booking._id);
+        router.push(`/payment/process?bookingId=${data.booking._id}`);
       } else {
-        // Booking confirmed successfully
+        // Booking confirmed successfully (fallback for old behavior)
         router.push('/customer/bookings');
       }
     } catch (err) {

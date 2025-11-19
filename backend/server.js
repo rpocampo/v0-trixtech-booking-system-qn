@@ -10,6 +10,7 @@ const bookingRoutes = require('./routes/bookingRoutes');
 const userRoutes = require('./routes/userRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 const { initializeEmailService } = require('./utils/emailService');
 const { processReservationQueue, cleanupExpiredReservations } = require('./utils/recommendationService');
 const { errorHandler, requestLogger } = require('./middleware/errorHandler');
@@ -47,6 +48,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Enhanced health check with monitoring
 app.get('/api/health', healthCheckHandler);

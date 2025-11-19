@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSocket } from '../../../components/SocketProvider';
 
 interface Booking {
@@ -15,9 +16,52 @@ interface Booking {
 
 export default function Bookings() {
   const { socket } = useSocket();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    // Check for payment status messages
+    const paymentStatus = searchParams.get('payment');
+    if (paymentStatus) {
+      switch (paymentStatus) {
+        case 'success':
+          setPaymentMessage({
+            type: 'success',
+            message: 'Payment completed successfully! Your booking has been confirmed.'
+          });
+          break;
+        case 'failed':
+          setPaymentMessage({
+            type: 'error',
+            message: 'Payment failed. Please try again or contact support.'
+          });
+          break;
+        case 'error':
+          setPaymentMessage({
+            type: 'error',
+            message: 'An error occurred during payment. Please try again.'
+          });
+          break;
+        default:
+          break;
+      }
+
+      // Clear the URL parameter
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('payment');
+      window.history.replaceState({}, '', newUrl.toString());
+
+      // Auto-hide message after 5 seconds
+      setTimeout(() => setPaymentMessage(null), 5000);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -102,6 +146,31 @@ export default function Bookings() {
 
       <h1 className="text-4xl font-bold mb-2">Your Bookings</h1>
       <p className="text-[var(--muted)] mb-8">Manage your service bookings</p>
+
+      {/* Payment Status Message */}
+      {paymentMessage && (
+        <div className={`mb-6 p-4 rounded-lg border ${
+          paymentMessage.type === 'success'
+            ? 'bg-green-50 border-green-200 text-green-800'
+            : paymentMessage.type === 'error'
+            ? 'bg-red-50 border-red-200 text-red-800'
+            : 'bg-blue-50 border-blue-200 text-blue-800'
+        }`}>
+          <div className="flex items-center">
+            {paymentMessage.type === 'success' && (
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+            {paymentMessage.type === 'error' && (
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
+            <span className="font-medium">{paymentMessage.message}</span>
+          </div>
+        </div>
+      )}
 
       {bookings.length === 0 ? (
         <div className="card p-8 text-center">

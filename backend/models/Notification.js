@@ -38,10 +38,8 @@ const notificationSchema = new mongoose.Schema(
       default: ['in-app'],
     }],
     metadata: {
-      bookingId: mongoose.Schema.Types.ObjectId,
-      serviceId: mongoose.Schema.Types.ObjectId,
-      amount: Number,
-      actionUrl: String,
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
     expiresAt: {
       type: Date,

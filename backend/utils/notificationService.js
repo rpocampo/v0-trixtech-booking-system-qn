@@ -167,6 +167,14 @@ const NOTIFICATION_TEMPLATES = {
     channels: ['in-app', 'email', 'sms'],
   },
 
+  BOOKING_PENDING: {
+    title: 'Booking Created - Payment Required',
+    message: 'Your booking has been created and is pending payment confirmation.',
+    type: 'booking',
+    priority: 'medium',
+    channels: ['in-app', 'email'],
+  },
+
   BOOKING_QUEUED: {
     title: 'Reservation Queued',
     message: 'Your reservation has been queued due to unavailability.',
@@ -197,6 +205,14 @@ const NOTIFICATION_TEMPLATES = {
     type: 'admin',
     priority: 'high',
     channels: ['in-app', 'email', 'sms'],
+  },
+
+  NEW_PENDING_BOOKING_ADMIN: {
+    title: 'New Pending Booking',
+    message: 'A new booking is pending payment confirmation.',
+    type: 'admin',
+    priority: 'medium',
+    channels: ['in-app', 'email'],
   },
 
   SYSTEM_MAINTENANCE: {

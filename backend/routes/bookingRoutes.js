@@ -222,14 +222,15 @@ router.post('/', authMiddleware, async (req, res, next) => {
           });
         }
 
-        // Create booking
+        // Create booking with pending status (will be confirmed after payment)
         const booking = new Booking({
           customerId: req.user.id,
           serviceId,
           quantity: requestedQuantity,
           bookingDate: new Date(bookingDate),
           totalPrice: service.price * requestedQuantity,
-          status: 'confirmed',
+          status: 'pending', // Changed from 'confirmed' to 'pending'
+          paymentStatus: 'unpaid', // Explicitly set payment status
           notes,
         });
 
@@ -238,65 +239,38 @@ router.post('/', authMiddleware, async (req, res, next) => {
         await booking.populate('serviceId');
         await booking.populate('customerId', 'name email');
 
-        // Send notifications and emit real-time events
+        // Send pending booking notification
         try {
-          console.log('Creating notifications for booking:', booking._id);
+          console.log('Creating pending booking:', booking._id);
 
-          // Customer notification
-          const customerNotification = await sendTemplateNotification(req.user.id, 'BOOKING_CONFIRMED', {
-            message: `Your booking for ${service.name} has been confirmed.`,
+          // Customer notification for pending booking
+          const customerNotification = await sendTemplateNotification(req.user.id, 'BOOKING_PENDING', {
+            message: `Your booking for ${service.name} has been created and is pending payment.`,
             metadata: {
               bookingId: booking._id,
               serviceId: service._id,
               amount: booking.totalPrice,
             },
           });
-          console.log('Customer notification created:', customerNotification?._id);
+          console.log('Pending booking notification created:', customerNotification?._id);
 
-          // Admin notification
+          // Admin notification for new pending booking
           const adminUsers = await User.find({ role: 'admin' });
           console.log('Found admin users:', adminUsers.length);
 
           for (const admin of adminUsers) {
-            const adminNotification = await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
-              message: `New booking received from customer for ${service.name}.`,
+            const adminNotification = await sendTemplateNotification(admin._id, 'NEW_PENDING_BOOKING_ADMIN', {
+              message: `New pending booking received from customer for ${service.name}.`,
               metadata: {
                 bookingId: booking._id,
                 serviceId: service._id,
                 amount: booking.totalPrice,
               },
             });
-            console.log('Admin notification created for', admin._id, ':', adminNotification?._id);
+            console.log('Admin pending booking notification created for', admin._id, ':', adminNotification?._id);
           }
 
-          // Send email confirmations
-          const customer = await User.findById(req.user.id);
-          if (customer) {
-            await sendBookingConfirmation(customer.email, {
-              serviceName: service.name,
-              quantity: requestedQuantity,
-              date: booking.bookingDate,
-              time: new Date(booking.bookingDate).toLocaleTimeString(),
-              totalPrice: booking.totalPrice,
-            });
-
-            await sendAdminBookingNotification({
-              serviceName: service.name,
-              quantity: requestedQuantity,
-              date: booking.bookingDate,
-              totalPrice: booking.totalPrice,
-            }, {
-              name: customer.name,
-              email: customer.email,
-            });
-          }
-
-          // Check for low stock alert
-          if (service.category === 'equipment' && service.quantity <= 5) {
-            await sendLowStockAlert(service.name, service.quantity);
-          }
-
-          // Emit real-time events
+          // Emit real-time events for pending booking
           const io = global.io;
           if (io) {
             io.to(`user_${req.user.id}`).emit('booking-created', {
@@ -306,27 +280,30 @@ router.post('/', authMiddleware, async (req, res, next) => {
                 quantity: requestedQuantity,
                 date: booking.bookingDate,
                 totalPrice: booking.totalPrice,
+                status: 'pending',
               }
             });
 
-            io.to('admin').emit('new-booking', {
+            io.to('admin').emit('new-pending-booking', {
               booking: {
                 id: booking._id,
                 serviceName: service.name,
                 quantity: requestedQuantity,
                 date: booking.bookingDate,
                 totalPrice: booking.totalPrice,
+                status: 'pending',
               }
             });
           }
         } catch (notificationError) {
-          console.error('Error sending booking notifications:', notificationError);
+          console.error('Error sending pending booking notifications:', notificationError);
         }
 
-        res.status(201).json({
+        res.status(200).json({
           success: true,
           booking,
-          message: 'Booking confirmed successfully!'
+          requiresPayment: true,
+          message: 'Booking created. Please complete payment to confirm.'
         });
     } else {
       // Add to reservation queue
@@ -409,6 +386,28 @@ router.post('/', authMiddleware, async (req, res, next) => {
         message: 'Item currently unavailable. Added to reservation queue with first-come, first-served priority.'
       });
     }
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get single booking by ID
+router.get('/:id', authMiddleware, async (req, res, next) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('serviceId')
+      .populate('customerId', 'name email');
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Check if user owns this booking or is admin
+    if (booking.customerId._id.toString() !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    res.json({ success: true, booking });
   } catch (error) {
     next(error);
   }
