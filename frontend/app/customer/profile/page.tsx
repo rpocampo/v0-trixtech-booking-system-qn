@@ -136,7 +136,7 @@ export default function Profile() {
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               className="input-field"
-              placeholder="+1 (555) 000-0000"
+              placeholder="+63 (555) 000-0000"
             />
           </div>
 
