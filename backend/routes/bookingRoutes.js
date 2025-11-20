@@ -222,13 +222,41 @@ router.post('/', authMiddleware, async (req, res, next) => {
           });
         }
 
+        // Validate service has pricing information
+        if (!service.basePrice || service.basePrice <= 0 || isNaN(service.basePrice)) {
+          return res.status(400).json({
+            success: false,
+            message: `Service "${service.name}" has invalid pricing (₱${service.basePrice}). Please contact support or try a different service.`
+          });
+        }
+
         // Calculate dynamic price based on days before checkout
         const bookingDateTime = new Date(bookingDate);
         const now = new Date();
         const daysBeforeCheckout = Math.ceil((bookingDateTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
         const calculatedPrice = service.calculatePrice(Math.max(0, daysBeforeCheckout));
+
+        // Ensure calculated price is valid
+        if (!calculatedPrice || isNaN(calculatedPrice) || calculatedPrice <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Unable to calculate service price. Please try again or contact support.'
+          });
+        }
+
         const totalPrice = calculatedPrice * requestedQuantity;
+
+        // Ensure total price is valid
+        if (isNaN(totalPrice) || totalPrice <= 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid total price calculation. Please contact support.'
+          });
+        }
+
+        // Calculate applied multiplier safely
+        const appliedMultiplier = service.basePrice > 0 ? calculatedPrice / service.basePrice : 1.0;
 
         // Create booking with pending status (will be confirmed after payment)
         const booking = new Booking({
@@ -238,7 +266,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
           bookingDate: bookingDateTime,
           totalPrice,
           basePrice: service.basePrice,
-          appliedMultiplier: calculatedPrice / service.basePrice,
+          appliedMultiplier,
           daysBeforeCheckout: Math.max(0, daysBeforeCheckout),
           status: 'pending', // Changed from 'confirmed' to 'pending'
           paymentStatus: 'unpaid', // Explicitly set payment status

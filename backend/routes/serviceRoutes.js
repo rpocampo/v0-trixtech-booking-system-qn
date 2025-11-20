@@ -4,6 +4,25 @@ const path = require('path');
 const Service = require('../models/Service');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
+// Validation helper for inclusions
+const validateInclusions = (includedItems) => {
+  if (!includedItems || !Array.isArray(includedItems)) {
+    return { valid: false, message: 'Service inclusions must be provided as an array' };
+  }
+
+  const validItems = includedItems.filter(item => item && item.trim().length > 0);
+
+  if (validItems.length === 0) {
+    return { valid: false, message: 'At least one service inclusion is required' };
+  }
+
+  if (validItems.length !== includedItems.length) {
+    return { valid: false, message: 'Service inclusions cannot contain empty items' };
+  }
+
+  return { valid: true, inclusions: validItems };
+};
+
 const router = express.Router();
 
 // Configure multer for file uploads
@@ -88,7 +107,16 @@ router.get('/', async (req, res, next) => {
     sortOptions[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     const services = await Service.find(query).sort(sortOptions);
-    res.json({ success: true, services });
+
+    // Ensure price is properly calculated for each service
+    const servicesWithPrice = services.map(service => {
+      const serviceObj = service.toObject();
+      // Ensure price is set from basePrice - virtual getters don't serialize properly
+      serviceObj.price = service.basePrice || 0;
+      return serviceObj;
+    });
+
+    res.json({ success: true, services: servicesWithPrice });
   } catch (error) {
     next(error);
   }
@@ -101,7 +129,12 @@ router.get('/:id', async (req, res, next) => {
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
-    res.json({ success: true, service });
+
+    // Ensure price is properly set from basePrice
+    const serviceObj = service.toObject();
+    serviceObj.price = service.basePrice || 0;
+
+    res.json({ success: true, service: serviceObj });
   } catch (error) {
     next(error);
   }
@@ -134,6 +167,23 @@ router.post('/', adminMiddleware, upload.fields([
       leadTime
     } = req.body;
 
+    // Validate required fields
+    if (!name || !description) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service name and description are required'
+      });
+    }
+
+    // Validate and parse price
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service price must be a valid positive number'
+      });
+    }
+
     const serviceData = {
       name,
       description,
@@ -141,7 +191,7 @@ router.post('/', adminMiddleware, upload.fields([
       category,
       serviceType: serviceType || 'service',
       eventTypes: eventTypes ? (Array.isArray(eventTypes) ? eventTypes : [eventTypes]) : [],
-      price: parseFloat(price),
+      price: parsedPrice,
       priceType: priceType || 'flat-rate',
       location: location || 'both',
       tags: tags ? (Array.isArray(tags) ? tags : [tags]) : [],
@@ -151,6 +201,16 @@ router.post('/', adminMiddleware, upload.fields([
       minOrder: minOrder ? parseInt(minOrder) : 1,
       leadTime: leadTime ? parseInt(leadTime) : 24,
     };
+
+    // Validate inclusions
+    const inclusionsValidation = validateInclusions(serviceData.includedItems);
+    if (!inclusionsValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: inclusionsValidation.message
+      });
+    }
+    serviceData.includedItems = inclusionsValidation.inclusions;
 
     // Handle duration for services
     if (serviceType === 'service' && duration) {

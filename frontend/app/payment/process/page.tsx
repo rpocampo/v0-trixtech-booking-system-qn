@@ -270,7 +270,7 @@ function PaymentProcessContent() {
               <div className="border-t pt-2 mt-3">
                 <div className="flex justify-between font-semibold text-lg">
                   <span>Total:</span>
-                  <span className="text-green-600">₱{booking.totalPrice}</span>
+                  <span className="text-green-600">₱{isNaN(booking.totalPrice) ? '0.00' : booking.totalPrice.toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -323,7 +323,7 @@ function PaymentProcessContent() {
                 </div>
                 <div>
                   <span className="font-medium text-gray-600">Amount:</span>
-                  <div className="font-bold text-green-600">₱{qrPayment.instructions.amount}</div>
+                  <div className="font-bold text-green-600">₱{isNaN(qrPayment.instructions.amount) ? '0.00' : qrPayment.instructions.amount.toFixed(2)}</div>
                 </div>
               </div>
             </div>

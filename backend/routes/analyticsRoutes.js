@@ -26,7 +26,7 @@ const getRecommendations = async (serviceId, limit = 3) => {
       { $lookup: { from: 'services', localField: '_id', foreignField: '_id', as: 'service' } },
       { $unwind: '$service' },
       { $match: { 'service.isAvailable': true, 'service._id': { $ne: serviceId } } },
-      { $project: { _id: '$service._id', name: '$service.name', description: '$service.description', price: '$service.price', category: '$service.category', image: '$service.image' } }
+      { $project: { _id: '$service._id', name: '$service.name', description: '$service.description', price: '$service.basePrice', category: '$service.category', image: '$service.image', basePrice: '$service.basePrice' } }
     ]);
 
     // Combine and deduplicate
@@ -35,7 +35,14 @@ const getRecommendations = async (serviceId, limit = 3) => {
       arr.findIndex(i => i._id.toString() === item._id.toString()) === index
     );
 
-    return unique.slice(0, limit);
+    // Ensure price is properly set for all recommendations
+    const recommendationsWithPrice = unique.slice(0, limit).map(rec => {
+      const recObj = rec.toObject ? rec.toObject() : rec;
+      recObj.price = rec.basePrice || rec.price || 0;
+      return recObj;
+    });
+
+    return recommendationsWithPrice;
   } catch (error) {
     console.error('Recommendation error:', error);
     return [];

@@ -251,10 +251,10 @@ export default function ServiceDetailPage() {
             </div>
           )}
 
-          {/* What's Included */}
+          {/* Service Inclusions */}
           {service.includedItems && service.includedItems.length > 0 && (
             <div className="card p-6">
-              <h3 className="text-lg font-semibold mb-4">What's Included</h3>
+              <h3 className="text-lg font-semibold mb-4">Service Inclusions</h3>
               <ul className="space-y-2">
                 {service.includedItems.map((item, index) => (
                   <li key={index} className="flex items-start gap-2">

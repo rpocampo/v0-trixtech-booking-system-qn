@@ -167,12 +167,6 @@ export default function Register() {
           </div>
         </form>
 
-        <p className="text-center mt-6 text-[var(--muted)]">
-          Already have an account?{' '}
-          <Link href="/login" className="text-[var(--primary)] font-semibold hover:underline">
-            Login
-          </Link>
-        </p>
       </div>
     </div>
   );

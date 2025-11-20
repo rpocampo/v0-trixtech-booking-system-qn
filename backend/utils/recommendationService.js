@@ -56,7 +56,9 @@ const findAlternativeServices = async (originalServiceId, bookingDate, requested
 
       // Calculate similarity score (simple implementation)
       let similarityScore = 0;
-      if (service.price <= originalService.price * 1.2 && service.price >= originalService.price * 0.8) {
+      const servicePrice = service.basePrice || 0;
+      const originalPrice = originalService.basePrice || 0;
+      if (servicePrice <= originalPrice * 1.2 && servicePrice >= originalPrice * 0.8) {
         similarityScore += 30; // Price similarity
       }
       if (service.duration && originalService.duration &&
@@ -70,7 +72,7 @@ const findAlternativeServices = async (originalServiceId, bookingDate, requested
       alternatives.push({
         serviceId: service._id,
         name: service.name,
-        price: service.price,
+        price: service.basePrice || 0,
         duration: service.duration,
         quantity: service.quantity,
         availableQuantity,

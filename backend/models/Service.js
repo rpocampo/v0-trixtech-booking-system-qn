@@ -149,8 +149,14 @@ const serviceSchema = new mongoose.Schema(
 
 // Add instance method to calculate price based on days before checkout
 serviceSchema.methods.calculatePrice = function(daysBeforeCheckout = 0) {
+  // Ensure basePrice is valid
+  if (!this.basePrice || this.basePrice <= 0 || isNaN(this.basePrice)) {
+    console.error(`Invalid basePrice for service ${this._id}: ${this.basePrice}`);
+    return 0; // Return 0 to indicate invalid pricing
+  }
+
   if (!this.pricingTiers || this.pricingTiers.length === 0) {
-    return this.basePrice;
+    return Math.round(this.basePrice);
   }
 
   // Sort tiers by daysBefore descending to find the most specific tier
@@ -159,12 +165,13 @@ serviceSchema.methods.calculatePrice = function(daysBeforeCheckout = 0) {
   // Find the applicable tier
   const applicableTier = sortedTiers.find(tier => daysBeforeCheckout >= tier.daysBefore);
 
-  if (applicableTier) {
-    return Math.round(this.basePrice * applicableTier.multiplier);
+  if (applicableTier && applicableTier.multiplier && !isNaN(applicableTier.multiplier)) {
+    const calculatedPrice = this.basePrice * applicableTier.multiplier;
+    return Math.round(calculatedPrice);
   }
 
-  // If no tier applies, use base price
-  return this.basePrice;
+  // If no tier applies or invalid tier, use base price
+  return Math.round(this.basePrice);
 };
 
 // Add static method to get pricing information

@@ -113,12 +113,19 @@ const monitor = new SystemMonitor();
 
 // Middleware for request monitoring
 const monitoringMiddleware = (req, res, next) => {
+  // Skip monitoring during testing
+  if (process.env.NODE_ENV === 'test') {
+    return next();
+  }
+
   monitor.recordRequest();
 
   // Monitor response
   const originalSend = res.send;
   res.send = function(data) {
-    if (res.statusCode >= 400) {
+    // Don't log 400 errors for root path since they're handled with helpful messages
+    // Also don't log 401 (unauthorized) errors as they're normal authentication failures
+    if (res.statusCode >= 400 && !(res.statusCode === 400 && req.path === '/') && res.statusCode !== 401) {
       monitor.recordError(new Error(`HTTP ${res.statusCode}`), req.path);
     }
     return originalSend.call(this, data);

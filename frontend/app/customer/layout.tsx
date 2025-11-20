@@ -4,7 +4,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useSocket } from '../../components/SocketProvider';
-import { CartProvider } from '../../components/CartContext';
 import CartIcon from '../../components/CartIcon';
 
 interface User {
@@ -121,8 +120,7 @@ export default function CustomerLayout({
   }
 
   return (
-    <CartProvider>
-      <div className="min-h-screen flex flex-col bg-gradient-to-br from-[var(--background)] to-[var(--surface-secondary)]">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[var(--background)] to-[var(--surface-secondary)]">
         {/* Navigation */}
         <nav className="bg-white/80 backdrop-blur-lg border-b border-[var(--border)] sticky top-0 z-50 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
@@ -375,6 +373,5 @@ export default function CustomerLayout({
         </div>
       </footer>
     </div>
-    </CartProvider>
   );
 }

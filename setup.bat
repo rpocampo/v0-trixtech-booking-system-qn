@@ -429,11 +429,20 @@ echo      • MAINTENANCE_GUIDE.md - System maintenance
 echo      • UAT_GUIDE.md - Testing procedures
 echo      • API_REFERENCE.md - API documentation
 echo.
+echo   ⚡ AUTO-UPDATING FEATURES:
+echo   ────────────────────────
+echo   🔄 Real-time Updates: Services refresh every 30 seconds
+echo   📡 WebSocket Sync: Instant notifications and status updates
+echo   🔄 Data Sync: Automatic background data synchronization
+echo   📱 Auto-Refresh: UI updates without manual page refresh
+echo   🎯 Optimistic UI: Immediate feedback with server sync
+echo.
 echo   🛠️  Development Tools:
 echo      • Testing: cd backend && npm test
 echo      • Linting: Check individual package.json scripts
 echo      • Backup: scripts\backup.sh
 echo      • Monitoring: http://localhost:5000/api/health
+echo      • Auto-Update: Built-in real-time synchronization
 echo.
 echo   🆘 Need Help?
 echo      • Check logs: backend/logs/ and frontend/.next/

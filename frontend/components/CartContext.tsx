@@ -12,6 +12,8 @@ export interface CartItem {
   image?: string;
   maxOrder?: number;
   availableQuantity?: number;
+  isAvailable?: boolean;
+  lastStockCheck?: number; // timestamp of last stock validation
 }
 
 interface CartContextType {
@@ -24,6 +26,9 @@ interface CartContextType {
   getTotalPrice: () => number;
   isInCart: (id: string) => boolean;
   getItemQuantity: (id: string) => number;
+  validateStockAvailability: () => Promise<{ valid: boolean; issues: string[] }>;
+  refreshStockData: () => Promise<void>;
+  canCheckout: () => boolean;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -120,6 +125,107 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     return item ? item.quantity : 0;
   };
 
+  const validateStockAvailability = async (): Promise<{ valid: boolean; issues: string[] }> => {
+    const issues: string[] = [];
+    let valid = true;
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        issues.push('Please log in to validate stock availability');
+        return { valid: false, issues };
+      }
+
+      // Check each item in cart
+      for (const item of items) {
+        try {
+          const response = await fetch(`http://localhost:5000/api/services/${item.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (response.ok) {
+            const serviceData = await response.json();
+            if (serviceData.success) {
+              const service = serviceData.service;
+
+              // Check if service is available
+              if (!service.isAvailable) {
+                issues.push(`${item.name} is no longer available`);
+                valid = false;
+              }
+
+              // Check stock for equipment/supply items
+              if ((service.serviceType === 'equipment' || service.serviceType === 'supply') &&
+                  service.quantity !== undefined) {
+                if (service.quantity === 0) {
+                  issues.push(`${item.name} is out of stock`);
+                  valid = false;
+                } else if (service.quantity < item.quantity) {
+                  issues.push(`Only ${service.quantity} ${item.name} available (you have ${item.quantity} in cart)`);
+                  valid = false;
+                }
+              }
+            }
+          }
+        } catch (error) {
+          issues.push(`Failed to check availability for ${item.name}`);
+          valid = false;
+        }
+      }
+    } catch (error) {
+      issues.push('Failed to validate stock availability');
+      valid = false;
+    }
+
+    return { valid, issues };
+  };
+
+  const refreshStockData = async (): Promise<void> => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const updatedItems = await Promise.all(
+        items.map(async (item) => {
+          try {
+            const response = await fetch(`http://localhost:5000/api/services/${item.id}`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (response.ok) {
+              const serviceData = await response.json();
+              if (serviceData.success) {
+                const service = serviceData.service;
+                return {
+                  ...item,
+                  isAvailable: service.isAvailable,
+                  availableQuantity: service.quantity,
+                  lastStockCheck: Date.now(),
+                };
+              }
+            }
+          } catch (error) {
+            console.error(`Failed to refresh stock data for ${item.name}:`, error);
+          }
+          return item;
+        })
+      );
+
+      setItems(updatedItems);
+    } catch (error) {
+      console.error('Failed to refresh stock data:', error);
+    }
+  };
+
+  const canCheckout = (): boolean => {
+    // Basic validation - check if all items have valid quantities and are available
+    return items.length > 0 && items.every(item =>
+      item.quantity > 0 &&
+      item.isAvailable !== false &&
+      (item.availableQuantity === undefined || item.availableQuantity >= item.quantity)
+    );
+  };
+
   const value: CartContextType = {
     items,
     addToCart,
@@ -130,6 +236,9 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     getTotalPrice,
     isInCart,
     getItemQuantity,
+    validateStockAvailability,
+    refreshStockData,
+    canCheckout,
   };
 
   return (

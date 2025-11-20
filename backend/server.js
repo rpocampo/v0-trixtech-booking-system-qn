@@ -55,6 +55,24 @@ app.use('/api/payments', paymentRoutes);
 // Enhanced health check with monitoring
 app.get('/api/health', healthCheckHandler);
 
+// Handle root path requests
+app.all('/', (req, res) => {
+  res.status(400).json({
+    success: false,
+    message: 'Invalid request. API endpoints are available under /api/*',
+    availableEndpoints: [
+      '/api/auth',
+      '/api/services',
+      '/api/bookings',
+      '/api/users',
+      '/api/analytics',
+      '/api/notifications',
+      '/api/payments',
+      '/api/health'
+    ]
+  });
+});
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);

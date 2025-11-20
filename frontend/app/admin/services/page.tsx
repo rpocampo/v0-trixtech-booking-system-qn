@@ -284,9 +284,10 @@ export default function AdminServices() {
                   onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                   required
                   className="input-field"
-                  min="0"
+                  min="0.01"
                   step="0.01"
                 />
+                <p className="text-xs text-[var(--muted)] mt-1">Must be greater than ₱0.00</p>
               </div>
 
               <div>
@@ -438,7 +439,7 @@ export default function AdminServices() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">What's Included (one per line)</label>
+                <label className="block text-sm font-medium mb-2">Service Inclusions (one per line)</label>
                 <textarea
                   value={formData.includedItems.join('\n')}
                   onChange={(e) => setFormData({

@@ -54,8 +54,8 @@ const logPerformance = (req, res, responseTime) => {
     console.warn('\x1b[33m[SLOW REQUEST]\x1b[0m', JSON.stringify(perfLog));
   }
 
-  // Log all requests in development
-  if (process.env.NODE_ENV !== 'production') {
+  // Log all requests in development (but not during testing)
+  if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
     console.log('\x1b[36m[REQUEST]\x1b[0m', `${req.method} ${req.url} - ${res.statusCode} (${responseTime}ms)`);
   }
 };

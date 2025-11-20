@@ -27,9 +27,6 @@ export default function Home() {
           <div className="flex gap-4">
             {!isLoggedIn ? (
               <>
-                <Link href="/login" className="text-[var(--foreground)] hover:text-[var(--primary)] transition-colors">
-                  Login
-                </Link>
                 <Link href="/register" className="btn-primary">
                   Sign Up
                 </Link>

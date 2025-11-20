@@ -142,13 +142,6 @@ export default function Login() {
         </form>
 
 
-        {/* Register Link */}
-        <p className="text-center text-[var(--muted)] text-sm">
-          Don't have an account?{' '}
-          <Link href="/register" className="text-[var(--primary)] font-semibold hover:text-[var(--primary-dark)] transition-colors">
-            Create one
-          </Link>
-        </p>
       </div>
     </div>
   );

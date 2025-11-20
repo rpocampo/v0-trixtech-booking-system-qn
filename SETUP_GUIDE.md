@@ -394,6 +394,7 @@ mongosh mongodb://localhost:27017/trixtech --eval "db.dropDatabase()"
 2. **Login as Customer** → Browse services and make bookings
 3. **Test Notifications** → Check email delivery
 4. **Verify Reports** → Check admin analytics
+5. **Test Auto-Updates** → Check real-time data synchronization
 
 ### 🔄 Development Workflow
 ```bash
@@ -403,6 +404,46 @@ mongosh mongodb://localhost:27017/trixtech --eval "db.dropDatabase()"
 
 # Check health after changes
 curl http://localhost:5000/api/health
+
+# Test auto-updating features
+# Frontend will automatically refresh data every 30 seconds
+# Real-time updates via WebSocket for instant notifications
+```
+
+### ⚡ Auto-Updating Features
+
+The system includes several auto-updating capabilities:
+
+#### 🔄 Real-Time Data Synchronization
+- **Auto-refresh**: Services and bookings update every 30 seconds
+- **WebSocket updates**: Instant notifications for status changes
+- **Inventory sync**: Real-time stock level updates
+- **Booking status**: Automatic status updates without page refresh
+
+#### 📱 Auto-Update Service
+- **Version checking**: Automatic check for application updates
+- **Background sync**: Data synchronization with server
+- **Optimistic updates**: Immediate UI feedback with server sync
+- **Error recovery**: Automatic retry on failed updates
+
+#### 🎛️ Configuration
+```javascript
+// Auto-refresh intervals (customizable)
+const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
+const DATA_SYNC_INTERVAL = 300000;   // 5 minutes
+const UPDATE_CHECK_INTERVAL = 3600000; // 1 hour
+```
+
+#### 🔧 Manual Controls
+```javascript
+// Force refresh data
+import { useAutoRefresh } from '@/hooks/useAutoRefresh';
+const { refresh } = useAutoRefresh({ interval: 30000 });
+
+// Check for updates
+import AutoUpdateService from '@/services/autoUpdateService';
+const updateService = AutoUpdateService.getInstance();
+await updateService.checkForUpdates();
 ```
 
 ### 📈 Production Deployment

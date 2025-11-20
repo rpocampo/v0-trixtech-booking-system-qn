@@ -472,7 +472,7 @@ export default function Services() {
                       <span className="text-[var(--muted)] flex items-center gap-1">
                         <span>💰</span> {(service.priceType || 'flat-rate').replace('-', ' ')}
                       </span>
-                      <span className="text-2xl font-bold text-[var(--primary)]">₱{service.price}</span>
+                      <span className="text-2xl font-bold text-[var(--primary)]">₱{isNaN(service.price) ? '0.00' : service.price.toFixed(2)}</span>
                     </div>
 
                     {service.location && (
@@ -639,7 +639,7 @@ export default function Services() {
                     <div className="space-y-3">
                       <div className="flex justify-between items-center">
                         <span className="text-[var(--muted)]">Price:</span>
-                        <span className="text-3xl font-bold text-[var(--primary)]">₱{selectedService.price}</span>
+                        <span className="text-3xl font-bold text-[var(--primary)]">₱{isNaN(selectedService.price) ? '0.00' : selectedService.price.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-[var(--muted)]">Price Type:</span>

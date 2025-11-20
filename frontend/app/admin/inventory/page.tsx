@@ -162,7 +162,10 @@ export default function InventoryManagement() {
   const totalItems = inventory.length;
   const lowStockItems = inventory.filter(item => item.quantity <= 5 && item.quantity > 0).length;
   const outOfStockItems = inventory.filter(item => item.quantity === 0).length;
-  const totalValue = inventory.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalValue = inventory.reduce((sum, item) => {
+    const price = isNaN(item.price) ? 0 : item.price;
+    return sum + (price * item.quantity);
+  }, 0);
 
   return (
     <div className="space-y-8">
@@ -283,8 +286,8 @@ export default function InventoryManagement() {
                           {stockStatus.status}
                         </span>
                       </td>
-                      <td className="py-4 px-4 text-right font-semibold text-[var(--primary)]">₱{item.price}</td>
-                      <td className="py-4 px-4 text-right font-semibold text-green-600">₱{(item.price * item.quantity).toFixed(2)}</td>
+                      <td className="py-4 px-4 text-right font-semibold text-[var(--primary)]">₱{isNaN(item.price) ? '0.00' : item.price.toFixed(2)}</td>
+                      <td className="py-4 px-4 text-right font-semibold text-green-600">₱{isNaN(item.price) ? '0.00' : (item.price * item.quantity).toFixed(2)}</td>
                       <td className="py-4 px-4 text-center">
                         <button
                           onClick={() => openUpdateModal(item)}
