@@ -44,6 +44,8 @@ export default function BookingPage() {
     availableQuantity: number;
     reason?: string;
   } | null>(null);
+  const [calculatedPrice, setCalculatedPrice] = useState<number>(0);
+  const [pricingInfo, setPricingInfo] = useState<any>(null);
   const [showPayment, setShowPayment] = useState(false);
   const [qrPayment, setQrPayment] = useState<{
     qrCode: string;
@@ -165,8 +167,35 @@ export default function BookingPage() {
     return false;
   };
 
+  const calculateDynamicPrice = async (bookingDate: Date) => {
+    if (!service) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const daysBefore = Math.ceil((bookingDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      const daysBeforeCheckout = Math.max(0, daysBefore);
+
+      const response = await fetch(`http://localhost:5000/api/services/pricing/${service._id}?daysBefore=${daysBeforeCheckout}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setCalculatedPrice(data.calculatedPrice);
+          setPricingInfo(data);
+        }
+      }
+    } catch (error) {
+      console.error('Error calculating price:', error);
+    }
+  };
+
   const handleDateSelect = (date: Date) => {
     setSelectedDate(date);
+    calculateDynamicPrice(date);
   };
 
   const handleTimeConfirm = async () => {
@@ -471,9 +500,28 @@ export default function BookingPage() {
                     <span>{booking.quantity}</span>
                   </div>
                 )}
+                {selectedDate && (
+                  <div className="flex justify-between">
+                    <span>Days before event:</span>
+                    <span>{Math.max(0, Math.ceil((selectedDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} days</span>
+                  </div>
+                )}
+                {pricingInfo && pricingInfo.discount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount applied:</span>
+                    <span>-{pricingInfo.discount}%</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-semibold pt-2 border-t">
                   <span>Total Price:</span>
-                  <span className="text-[var(--primary)]">₱{service.price * booking.quantity}</span>
+                  <span className="text-[var(--primary)]">
+                    ₱{(calculatedPrice || service.price) * booking.quantity}
+                    {pricingInfo && pricingInfo.discount > 0 && (
+                      <span className="text-sm text-gray-500 ml-2">
+                        (was ₱{service.price * booking.quantity})
+                      </span>
+                    )}
+                  </span>
                 </div>
               </div>
             </div>

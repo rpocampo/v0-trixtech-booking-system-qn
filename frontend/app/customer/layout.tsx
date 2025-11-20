@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useSocket } from '../../components/SocketProvider';
+import { CartProvider } from '../../components/CartContext';
+import CartIcon from '../../components/CartIcon';
 
 interface User {
   id: string;
@@ -119,16 +121,17 @@ export default function CustomerLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[var(--background)] to-[var(--surface-secondary)]">
-      {/* Navigation */}
-      <nav className="bg-white/80 backdrop-blur-lg border-b border-[var(--border)] sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-          <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent hover:scale-105 transition-transform duration-200">
-            TRIXTECH
-          </Link>
+    <CartProvider>
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-[var(--background)] to-[var(--surface-secondary)]">
+        {/* Navigation */}
+        <nav className="bg-white/80 backdrop-blur-lg border-b border-[var(--border)] sticky top-0 z-50 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent hover:scale-105 transition-transform duration-200">
+              TRIXTECH
+            </Link>
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center gap-1">
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-1">
             <Link
               href="/customer/dashboard"
               className="px-4 py-2 rounded-lg text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200 font-medium"
@@ -158,6 +161,8 @@ export default function CustomerLayout({
                 </span>
               )}
             </Link>
+
+            <CartIcon />
 
             {/* User Menu Dropdown */}
             <div className="relative ml-2">
@@ -214,6 +219,7 @@ export default function CustomerLayout({
 
           {/* Mobile Menu Button */}
           <div className="md:hidden flex items-center gap-2">
+            <CartIcon />
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="p-2 rounded-lg text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200"
@@ -369,5 +375,6 @@ export default function CustomerLayout({
         </div>
       </footer>
     </div>
+    </CartProvider>
   );
 }

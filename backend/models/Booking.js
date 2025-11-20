@@ -27,6 +27,18 @@ const bookingSchema = new mongoose.Schema(
       enum: ['pending', 'confirmed', 'completed', 'cancelled'],
       default: 'pending',
     },
+    basePrice: {
+      type: Number,
+      required: true,
+    },
+    appliedMultiplier: {
+      type: Number,
+      default: 1.0,
+    },
+    daysBeforeCheckout: {
+      type: Number,
+      default: 0,
+    },
     totalPrice: {
       type: Number,
       required: true,

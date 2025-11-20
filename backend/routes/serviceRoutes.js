@@ -229,4 +229,26 @@ router.delete('/:id', adminMiddleware, async (req, res, next) => {
   }
 });
 
+// Get pricing information for a service
+router.get('/pricing/:serviceId', authMiddleware, async (req, res) => {
+  try {
+    const { serviceId } = req.params;
+    const { daysBefore = 0 } = req.query;
+
+    const pricingInfo = await Service.getPricingInfo(serviceId, parseInt(daysBefore));
+
+    if (!pricingInfo) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+
+    res.json({
+      success: true,
+      ...pricingInfo
+    });
+  } catch (error) {
+    console.error('Error getting pricing info:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
 module.exports = router;

@@ -222,19 +222,38 @@ router.post('/', authMiddleware, async (req, res, next) => {
           });
         }
 
+        // Calculate dynamic price based on days before checkout
+        const bookingDateTime = new Date(bookingDate);
+        const now = new Date();
+        const daysBeforeCheckout = Math.ceil((bookingDateTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+        const calculatedPrice = service.calculatePrice(Math.max(0, daysBeforeCheckout));
+        const totalPrice = calculatedPrice * requestedQuantity;
+
         // Create booking with pending status (will be confirmed after payment)
         const booking = new Booking({
           customerId: req.user.id,
           serviceId,
           quantity: requestedQuantity,
-          bookingDate: new Date(bookingDate),
-          totalPrice: service.price * requestedQuantity,
+          bookingDate: bookingDateTime,
+          totalPrice,
+          basePrice: service.basePrice,
+          appliedMultiplier: calculatedPrice / service.basePrice,
+          daysBeforeCheckout: Math.max(0, daysBeforeCheckout),
           status: 'pending', // Changed from 'confirmed' to 'pending'
           paymentStatus: 'unpaid', // Explicitly set payment status
           notes,
         });
 
         await booking.save();
+
+        // Decrease inventory if it's equipment or supply
+        // NOTE: Inventory management is handled automatically here when bookings are confirmed
+        // The Inventory module provides the interface for manual stock adjustments
+        if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+          service.quantity = Math.max(0, service.quantity - requestedQuantity);
+          await service.save();
+        }
 
         await booking.populate('serviceId');
         await booking.populate('customerId', 'name email');

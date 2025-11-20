@@ -15,12 +15,19 @@ interface Booking {
   status: string;
 }
 
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+}
+
 function PaymentProcessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const bookingId = searchParams.get('bookingId');
 
   const [booking, setBooking] = useState<Booking | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [creatingPayment, setCreatingPayment] = useState(false);
@@ -70,6 +77,20 @@ function PaymentProcessContent() {
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('Please log in to continue');
+      }
+
+      // Get user profile first
+      const userResponse = await fetch('http://localhost:5000/api/users/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        if (userData.success) {
+          setUser(userData.user);
+        }
       }
 
       // First, get the booking details to get the amount
@@ -261,16 +282,24 @@ function PaymentProcessContent() {
           <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
             <div className="text-center mb-6">
               <h3 className="text-xl font-bold text-gray-800 mb-2">Scan QR Code to Pay</h3>
-              <p className="text-gray-600">Open your GCash app and scan the QR code below</p>
+              <p className="text-gray-600 mb-2">Scan on the GCash app</p>
+              {user && (
+                <p className="text-sm text-gray-500">Payment for: {user.name.split(' ').map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()).join(' ')}</p>
+              )}
             </div>
 
             <div className="flex justify-center mb-6">
-              <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+              <div className="bg-white p-4 rounded-lg border-2 border-gray-200 relative">
                 <img
                   src={qrPayment.qrCode}
                   alt="GCash QR Code"
                   className="w-64 h-64"
                 />
+                {user && (
+                  <div className="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-sm rounded px-2 py-1 text-xs text-center font-medium">
+                    {user.name.split(' ').map(n => n.charAt(0).toUpperCase()).join(' ')}
+                  </div>
+                )}
               </div>
             </div>
 

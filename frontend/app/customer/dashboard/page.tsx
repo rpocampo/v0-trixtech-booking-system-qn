@@ -29,7 +29,6 @@ export default function CustomerDashboard() {
     totalBookings: 0,
     upcomingBookings: 0,
     completedBookings: 0,
-    totalSpent: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -69,13 +68,11 @@ export default function CustomerDashboard() {
           const bookings = bookingsData.bookings;
           const upcoming = bookings.filter((b: any) => b.status === 'confirmed');
           const completed = bookings.filter((b: any) => b.status === 'completed');
-          const totalSpent = bookings.reduce((sum: number, b: any) => sum + b.totalPrice, 0);
 
           setStats({
             totalBookings: bookings.length,
             upcomingBookings: upcoming.length,
             completedBookings: completed.length,
-            totalSpent,
           });
 
           // Transform bookings to match the expected interface
@@ -130,7 +127,7 @@ export default function CustomerDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         <div className="card-elevated p-6 hover:shadow-xl transition-all duration-300 animate-fade-in">
           <div className="flex items-center justify-between">
             <div>
@@ -170,22 +167,58 @@ export default function CustomerDashboard() {
           </div>
         </div>
 
-        <div className="card-elevated p-6 hover:shadow-xl transition-all duration-300 animate-fade-in" style={{ animationDelay: '300ms' }}>
-          <div className="flex items-center justify-between">
+      </div>
+
+      {/* Quick Actions - Browse Services First */}
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in" style={{ animationDelay: '400ms' }}>
+        <Link href="/customer/services" className="card-interactive group p-6 border-l-4 border-l-[var(--primary)]">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="text-4xl group-hover:scale-110 transition-transform duration-300">🎪</div>
             <div>
-              <div className="text-3xl font-bold text-[var(--primary)] mb-1">₱{stats.totalSpent.toFixed(0)}</div>
-              <div className="text-sm text-[var(--muted)] font-medium">Total Spent</div>
+              <h3 className="text-xl font-bold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">
+                Browse Services
+              </h3>
+              <p className="text-[var(--muted)] text-sm">Discover amazing event services</p>
             </div>
-            <div className="text-4xl opacity-20">💰</div>
           </div>
-          <div className="mt-4 flex items-center text-sm">
-            <span className="text-[var(--primary)] font-medium">💎 Premium</span>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-[var(--primary)] font-medium">Explore now →</span>
           </div>
-        </div>
+        </Link>
+
+        <Link href="/customer/profile" className="card-interactive group p-6 border-l-4 border-l-blue-500">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="text-4xl group-hover:scale-110 transition-transform duration-300">👤</div>
+            <div>
+              <h3 className="text-xl font-bold text-[var(--foreground)] group-hover:text-blue-600 transition-colors">
+                Profile Settings
+              </h3>
+              <p className="text-[var(--muted)] text-sm">Update your information</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-blue-600 font-medium">Edit profile →</span>
+          </div>
+        </Link>
+
+        <Link href="/customer/bookings" className="card-interactive group p-6 border-l-4 border-l-[var(--accent)] sm:col-span-2 lg:col-span-1">
+          <div className="flex items-center gap-4 mb-4">
+            <div className="text-4xl group-hover:scale-110 transition-transform duration-300">📋</div>
+            <div>
+              <h3 className="text-xl font-bold text-[var(--foreground)] group-hover:text-[var(--accent)] transition-colors">
+                My Bookings
+              </h3>
+              <p className="text-[var(--muted)] text-sm">Manage your reservations</p>
+            </div>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-[var(--accent)] font-medium">View bookings →</span>
+          </div>
+        </Link>
       </div>
 
       {/* Recent Bookings */}
-      <div className="card-elevated p-6 animate-fade-in" style={{ animationDelay: '400ms' }}>
+      <div className="card-elevated p-6 animate-fade-in" style={{ animationDelay: '600ms' }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-[var(--foreground)] flex items-center gap-2">
             <span className="text-2xl">📅</span>
@@ -202,7 +235,7 @@ export default function CustomerDashboard() {
               <div
                 key={booking.id}
                 className="flex items-center justify-between p-4 rounded-xl border border-[var(--border)] hover:border-[var(--primary)] hover:shadow-md transition-all duration-200 animate-fade-in"
-                style={{ animationDelay: `${500 + index * 100}ms` }}
+                style={{ animationDelay: `${700 + index * 100}ms` }}
               >
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 flex items-center justify-center text-xl">
@@ -250,54 +283,6 @@ export default function CustomerDashboard() {
             </Link>
           </div>
         )}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in" style={{ animationDelay: '600ms' }}>
-        <Link href="/customer/services" className="card-interactive group p-6 border-l-4 border-l-[var(--primary)]">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="text-4xl group-hover:scale-110 transition-transform duration-300">🎪</div>
-            <div>
-              <h3 className="text-xl font-bold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">
-                Browse Services
-              </h3>
-              <p className="text-[var(--muted)] text-sm">Discover amazing event services</p>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-[var(--primary)] font-medium">Explore now →</span>
-          </div>
-        </Link>
-
-        <Link href="/customer/bookings" className="card-interactive group p-6 border-l-4 border-l-[var(--accent)]">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="text-4xl group-hover:scale-110 transition-transform duration-300">📋</div>
-            <div>
-              <h3 className="text-xl font-bold text-[var(--foreground)] group-hover:text-[var(--accent)] transition-colors">
-                My Bookings
-              </h3>
-              <p className="text-[var(--muted)] text-sm">Manage your reservations</p>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-[var(--accent)] font-medium">View bookings →</span>
-          </div>
-        </Link>
-
-        <Link href="/customer/profile" className="card-interactive group p-6 border-l-4 border-l-blue-500 sm:col-span-2 lg:col-span-1">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="text-4xl group-hover:scale-110 transition-transform duration-300">👤</div>
-            <div>
-              <h3 className="text-xl font-bold text-[var(--foreground)] group-hover:text-blue-600 transition-colors">
-                Profile Settings
-              </h3>
-              <p className="text-[var(--muted)] text-sm">Update your information</p>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-blue-600 font-medium">Edit profile →</span>
-          </div>
-        </Link>
       </div>
     </div>
   );

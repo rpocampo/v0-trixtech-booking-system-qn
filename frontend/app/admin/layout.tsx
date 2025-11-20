@@ -128,13 +128,6 @@ export default function AdminLayout({
               Dashboard
             </Link>
             <Link
-              href="/admin/services"
-              className="block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Services
-            </Link>
-            <Link
               href="/admin/bookings"
               className="block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
               onClick={() => setIsMenuOpen(false)}
@@ -142,18 +135,25 @@ export default function AdminLayout({
               Bookings
             </Link>
             <Link
+              href="/admin/inventory"
+              className="block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Inventory
+            </Link>
+            <Link
+              href="/admin/services"
+              className="block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Services
+            </Link>
+            <Link
               href="/admin/customers"
               className="block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
               onClick={() => setIsMenuOpen(false)}
             >
               Customers
-            </Link>
-            <Link
-              href="/admin/reports"
-              className="block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
-              onClick={() => setIsMenuOpen(false)}
-            >
-              Reports
             </Link>
             <Link
               href="/admin/notifications"
@@ -166,6 +166,13 @@ export default function AdminLayout({
                   {unreadNotifications > 99 ? '99+' : unreadNotifications}
                 </span>
               )}
+            </Link>
+            <Link
+              href="/admin/reports"
+              className="block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Reports
             </Link>
             <button
               onClick={() => {
@@ -206,17 +213,17 @@ export default function AdminLayout({
             <Link href="/admin/dashboard" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
               {isSidebarCollapsed ? '🏠' : 'Dashboard'}
             </Link>
-            <Link href="/admin/services" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
-              {isSidebarCollapsed ? '⚙️' : 'Services'}
-            </Link>
             <Link href="/admin/bookings" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
               {isSidebarCollapsed ? '📅' : 'Bookings'}
             </Link>
+            <Link href="/admin/inventory" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+              {isSidebarCollapsed ? '📦' : 'Inventory'}
+            </Link>
+            <Link href="/admin/services" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+              {isSidebarCollapsed ? '⚙️' : 'Services'}
+            </Link>
             <Link href="/admin/customers" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
               {isSidebarCollapsed ? '👥' : 'Customers'}
-            </Link>
-            <Link href="/admin/reports" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
-              {isSidebarCollapsed ? '📊' : 'Reports'}
             </Link>
             <Link href="/admin/notifications" className={`relative block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
               {isSidebarCollapsed ? '🔔' : 'Notifications'}
@@ -225,6 +232,9 @@ export default function AdminLayout({
                   {unreadNotifications > 99 ? '99+' : unreadNotifications}
                 </span>
               )}
+            </Link>
+            <Link href="/admin/reports" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+              {isSidebarCollapsed ? '📊' : 'Reports'}
             </Link>
             <button
               onClick={() => {

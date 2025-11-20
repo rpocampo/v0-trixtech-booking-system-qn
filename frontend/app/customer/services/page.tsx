@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSocket } from '../../../components/SocketProvider';
+import { useCart } from '../../../components/CartContext';
 
 interface Service {
   _id: string;
@@ -30,6 +31,7 @@ interface Service {
 
 export default function Services() {
   const { socket } = useSocket();
+  const { addToCart, isInCart, getItemQuantity } = useCart();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -107,6 +109,19 @@ export default function Services() {
   const viewServiceDetails = (service: Service) => {
     setSelectedService(service);
     setShowServiceModal(true);
+  };
+
+  const handleAddToCart = (service: Service) => {
+    addToCart({
+      id: service._id,
+      name: service.name,
+      price: service.price,
+      serviceType: service.serviceType,
+      category: service.category,
+      image: service.image,
+      maxOrder: service.maxOrder,
+      availableQuantity: service.quantity,
+    });
   };
 
   useEffect(() => {
@@ -478,13 +493,29 @@ export default function Services() {
                     >
                       View Details
                     </button>
-                    <Link
-                      href={`/customer/booking/${service._id}`}
-                      className="btn-primary flex-1 text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300"
-                    >
-                      Book Now
-                      <span className="ml-2 group-hover:translate-x-1 transition-transform duration-200">→</span>
-                    </Link>
+                    {isInCart(service._id) ? (
+                      <div className="flex gap-2 flex-1">
+                        <button
+                          onClick={() => handleAddToCart(service)}
+                          className="btn-secondary flex-1 text-center text-green-600 border-green-200 hover:bg-green-50"
+                        >
+                          + Add More
+                        </button>
+                        <Link
+                          href="/customer/cart"
+                          className="btn-primary flex-1 text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300"
+                        >
+                          View Cart ({getItemQuantity(service._id)})
+                        </Link>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => handleAddToCart(service)}
+                        className="btn-primary flex-1 text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300"
+                      >
+                        Add to Cart
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

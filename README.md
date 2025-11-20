@@ -38,6 +38,27 @@ trixtech/
 - View all customer information
 - Service availability management
 
+### Module Roles & Responsibilities
+
+#### 📦 Inventory Management Module
+**Primary Controller of Stock Data**
+- **Exclusive Authority**: Acts as the single source of truth for all stock quantities
+- **Stock Operations**: Responsible for editing, updating, adding, and reducing stock quantities
+- **Data Integrity**: Ensures all stock changes are accurately reflected across the system
+- **Record Keeping**: Maintains official and authoritative inventory records
+- **Real-time Updates**: Provides live inventory synchronization via WebSocket
+- **Stock Monitoring**: Tracks inventory levels, low stock alerts, and out-of-stock items
+- **Financial Tracking**: Calculates total inventory value and stock worth
+
+#### ⚙️ Services Module
+**Viewer of Inventory Availability**
+- **Read-Only Access**: Displays real-time stock availability pulled from Inventory module
+- **No Stock Editing**: Strictly read-only regarding stock quantities (no modifications allowed)
+- **Service Management**: Handles service definitions, descriptions, pricing, and configurations
+- **Availability Display**: Shows current stock status with visual indicators (In Stock/Low Stock/Out of Stock)
+- **User Guidance**: Directs administrators to Inventory module for stock management
+- **Data Separation**: Maintains clear boundary between service configuration and inventory control
+
 ### Technical Features
 - JWT-based authentication with token expiry
 - Bcrypt password hashing

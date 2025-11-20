@@ -1,3 +1,24 @@
+/**
+ * SERVICES MODULE
+ *
+ * VIEWER OF INVENTORY AVAILABILITY
+ * ================================
+ *
+ * ROLE: Acts as a viewer of inventory availability
+ * - Displays real-time stock availability pulled from the Inventory module
+ * - Must be read-only regarding stock quantities (no editing or modifications allowed)
+ * - Ensures users only see available stock without altering inventory data
+ * - Handles service definitions, descriptions, pricing, and configurations
+ * - Shows current stock status with visual indicators (In Stock/Low Stock/Out of Stock)
+ * - Directs administrators to Inventory module for stock management
+ *
+ * RESTRICTIONS: This module has NO authority over stock quantity modifications
+ * - Stock data is READ-ONLY - cannot edit, update, or modify quantities
+ * - All stock changes MUST be made through the Inventory module
+ * - Maintains clear boundary between service configuration and inventory control
+ * - Prevents data conflicts by enforcing read-only access to stock data
+ */
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -51,8 +72,6 @@ export default function AdminServices() {
     image: null as File | null,
     gallery: [] as File[],
   });
-  const [editingQuantity, setEditingQuantity] = useState<string | null>(null);
-  const [quantityValue, setQuantityValue] = useState(1);
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -103,8 +122,9 @@ export default function AdminServices() {
         formDataToSend.append('duration', formData.duration.toString());
       }
 
-      if ((formData.serviceType === 'equipment' || formData.serviceType === 'supply') && formData.quantity) {
-        formDataToSend.append('quantity', formData.quantity.toString());
+      if ((formData.serviceType === 'equipment' || formData.serviceType === 'supply')) {
+        // Quantity is managed in Inventory module, set to 0 initially
+        formDataToSend.append('quantity', '0');
         if (formData.maxOrder > 0) {
           formDataToSend.append('maxOrder', formData.maxOrder.toString());
         }
@@ -174,29 +194,6 @@ export default function AdminServices() {
     }
   };
 
-  const updateQuantity = async (id: string, newQuantity: number) => {
-    const token = localStorage.getItem('token');
-
-    try {
-      const response = await fetch(`http://localhost:5000/api/services/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ quantity: newQuantity }),
-      });
-
-      if (response.ok) {
-        setServices(services.map((s) =>
-          s._id === id ? { ...s, quantity: newQuantity } : s
-        ));
-        setEditingQuantity(null);
-      }
-    } catch (error) {
-      console.error('Failed to update quantity:', error);
-    }
-  };
 
   if (loading) return <div>Loading services...</div>;
 
@@ -206,6 +203,9 @@ export default function AdminServices() {
         <div>
           <h1 className="text-4xl font-bold mb-2">Manage Services</h1>
           <p className="text-[var(--muted)]">Create and manage your services</p>
+          <p className="text-xs text-blue-600 mt-1">
+            💡 Stock quantities are managed in the <a href="/admin/inventory" className="underline hover:text-blue-800">Inventory</a> module
+          </p>
         </div>
         <button onClick={() => setShowForm(!showForm)} className="btn-primary">
           {showForm ? 'Cancel' : 'Add Service'}
@@ -321,30 +321,19 @@ export default function AdminServices() {
               )}
 
               {(formData.serviceType === 'equipment' || formData.serviceType === 'supply') && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Quantity Available</label>
-                    <input
-                      type="number"
-                      value={formData.quantity}
-                      onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 1 })}
-                      required
-                      className="input-field"
-                      min="1"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Max Order (0 = unlimited)</label>
-                    <input
-                      type="number"
-                      value={formData.maxOrder}
-                      onChange={(e) => setFormData({ ...formData, maxOrder: parseInt(e.target.value) || 0 })}
-                      className="input-field"
-                      min="0"
-                    />
-                  </div>
-                </>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Max Order (0 = unlimited)</label>
+                  <input
+                    type="number"
+                    value={formData.maxOrder}
+                    onChange={(e) => setFormData({ ...formData, maxOrder: parseInt(e.target.value) || 0 })}
+                    className="input-field"
+                    min="0"
+                  />
+                  <p className="text-xs text-blue-600 mt-1">
+                    💡 Initial stock quantity will be set to 0. Use Inventory module to manage stock levels.
+                  </p>
+                </div>
               )}
 
               <div>
@@ -523,45 +512,18 @@ export default function AdminServices() {
                   <span>Category: <span className="font-semibold capitalize">{service.category}</span></span>
                   <span>Duration: <span className="font-semibold">{service.duration} min</span></span>
                   <span>Price: <span className="font-semibold text-[var(--primary)]">₱{service.price}</span></span>
-                  {service.category === 'equipment' && (
+                  {(service.serviceType === 'equipment' || service.serviceType === 'supply') && (
                     <span className="flex items-center gap-2">
-                      Quantity:
-                      {editingQuantity === service._id ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            value={quantityValue}
-                            onChange={(e) => setQuantityValue(parseInt(e.target.value))}
-                            className="w-16 px-2 py-1 text-sm border rounded"
-                            min="0"
-                          />
-                          <button
-                            onClick={() => updateQuantity(service._id, quantityValue)}
-                            className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => setEditingQuantity(null)}
-                            className="px-2 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="font-semibold text-green-600 flex items-center gap-2">
-                          {service.quantity || 0}
-                          <button
-                            onClick={() => {
-                              setEditingQuantity(service._id);
-                              setQuantityValue(service.quantity || 1);
-                            }}
-                            className="text-xs text-blue-600 hover:text-blue-800 underline"
-                          >
-                            Edit
-                          </button>
+                      Stock:
+                      <span className={`font-semibold flex items-center gap-2 ${
+                        (service.quantity || 0) === 0 ? 'text-red-600' :
+                        (service.quantity || 0) <= 5 ? 'text-yellow-600' : 'text-green-600'
+                      }`}>
+                        {service.quantity || 0} available
+                        <span className="text-xs text-gray-500">
+                          (Manage in Inventory)
                         </span>
-                      )}
+                      </span>
                     </span>
                   )}
                 </div>

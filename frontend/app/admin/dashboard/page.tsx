@@ -9,10 +9,9 @@ export default function AdminDashboard() {
   const router = useRouter();
   const { socket } = useSocket();
   const [stats, setStats] = useState({
-    availableServices: 0,
-    availableEquipment: 0,
     totalBookings: 0,
-    totalCustomers: 0,
+    bookedCustomers: 0,
+    totalInventory: 0,
     revenue: 0,
   });
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
@@ -48,13 +47,19 @@ export default function AdminDashboard() {
       const servicesData = await servicesRes.json();
       const customersData = await customersRes.json();
 
+      const totalInventory = servicesData.services?.reduce((sum: number, s: any) => {
+        if (s.serviceType === 'equipment' || s.serviceType === 'supply') {
+          return sum + (s.quantity || 0);
+        }
+        return sum;
+      }, 0) || 0;
+
       const lowStock = servicesData.services?.filter((s: any) => s.category === 'equipment' && s.quantity <= 5) || [];
 
       setStats({
-        availableServices: servicesData.services?.filter((s: any) => s.isAvailable).length || 0,
-        availableEquipment: servicesData.services?.filter((s: any) => s.category === 'equipment' && s.isAvailable).length || 0,
         totalBookings: 0, // Will be updated by fetchRecentBookings
-        totalCustomers: customersData.users?.filter((u: any) => u.role === 'customer').length || 0,
+        bookedCustomers: customersData.users?.filter((u: any) => u.role === 'customer').length || 0,
+        totalInventory,
         revenue: 0, // Will be updated by fetchRecentBookings
       });
 
@@ -191,21 +196,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-6">
-        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
-          <div className="stat-label flex items-center gap-2">
-            <span className="text-lg">✅</span>
-            Available Services
-          </div>
-          <div className="stat-value text-green-600">{stats.availableServices}</div>
-        </div>
-        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
-          <div className="stat-label flex items-center gap-2">
-            <span className="text-lg">🎒</span>
-            Available Equipment
-          </div>
-          <div className="stat-value text-purple-600">{stats.availableEquipment}</div>
-        </div>
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="stat-box hover:shadow-lg transition-shadow duration-300">
           <div className="stat-label flex items-center gap-2">
             <span className="text-lg">📅</span>
@@ -216,9 +207,16 @@ export default function AdminDashboard() {
         <div className="stat-box hover:shadow-lg transition-shadow duration-300">
           <div className="stat-label flex items-center gap-2">
             <span className="text-lg">👥</span>
-            Total Customers
+            Booked Customers
           </div>
-          <div className="stat-value text-blue-600">{stats.totalCustomers}</div>
+          <div className="stat-value text-blue-600">{stats.bookedCustomers}</div>
+        </div>
+        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
+          <div className="stat-label flex items-center gap-2">
+            <span className="text-lg">📦</span>
+            Total Inventory
+          </div>
+          <div className="stat-value text-purple-600">{stats.totalInventory}</div>
         </div>
         <div className="stat-box hover:shadow-lg transition-shadow duration-300">
           <div className="stat-label flex items-center gap-2">
