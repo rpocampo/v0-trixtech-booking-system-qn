@@ -3,55 +3,49 @@
 @tailwind utilities;
 
 :root {
-  /* TRIXTECH VIBRANT PARTY THEME - LIVELY & ENERGETIC */
-  --background: #ffffff;
-  --background-secondary: #fefefe;
-  --foreground: #0f172a;
-  --foreground-secondary: #334155;
+  /* TRIXTECH MODERN PROFESSIONAL THEME */
+  --background: #fafbfc;
+  --background-secondary: #ffffff;
+  --foreground: #1e293b;
+  --foreground-secondary: #475569;
 
-  /* PRIMARY BRAND COLORS - ELECTRIC PARTY BLUE */
-  --primary: #0066ff;
-  --primary-light: #3385ff;
-  --primary-dark: #0044cc;
-  --primary-50: #e6f2ff;
-  --primary-100: #cce5ff;
-  --primary-500: #0066ff;
-  --primary-600: #0044cc;
-  --primary-700: #003399;
+  /* PRIMARY BRAND COLORS - DEEP PROFESSIONAL BLUE */
+  --primary: #1e40af;
+  --primary-light: #3b82f6;
+  --primary-dark: #1e3a8a;
+  --primary-50: #eff6ff;
+  --primary-100: #dbeafe;
+  --primary-500: #1e40af;
+  --primary-600: #1e3a8a;
+  --primary-700: #1e293b;
 
-  /* SECONDARY COLORS - VIBRANT PARTY PURPLE */
-  --secondary: #9333ea;
-  --secondary-light: #a855f7;
-  --secondary-dark: #7c2d12;
+  /* SECONDARY COLORS - SOPHISTICATED GRAY */
+  --secondary: #64748b;
+  --secondary-light: #94a3b8;
+  --secondary-dark: #475569;
 
-  /* ACCENT COLORS - BRIGHT PARTY GOLD */
-  --accent: #ffb300;
-  --accent-light: #ffcc00;
-  --accent-dark: #e69500;
+  /* ACCENT COLORS - MODERN TEAL */
+  --accent: #0891b2;
+  --accent-light: #22d3ee;
+  --accent-dark: #0e7490;
 
-  /* PARTY COLORS - HIGH ENERGY */
-  --celebration-gold: #ffb300;
-  --celebration-purple: #9333ea;
-  --celebration-cyan: #00ffff;
-  --celebration-pink: #ff1493;
-  --celebration-green: #32cd32;
+  /* PROFESSIONAL STATUS COLORS */
+  --success: #059669;
+  --success-light: #10b981;
+  --success-dark: #047857;
+  --warning: #d97706;
+  --warning-light: #f59e0b;
+  --warning-dark: #b45309;
+  --danger: #dc2626;
+  --danger-light: #ef4444;
+  --danger-dark: #b91c1c;
 
-  /* Status Colors */
-  --success: #10b981;
-  --success-light: #34d399;
-  --success-dark: #059669;
-  --warning: #f59e0b;
-  --warning-light: #fbbf24;
-  --warning-dark: #d97706;
-  --danger: #ef4444;
-  --danger-light: #f87171;
-  --danger-dark: #dc2626;
-
-  /* Legacy support - map old variables to new ones */
-  --border: #e5e7eb;
-  --border-light: #f3f4f6;
-  --muted: #6b7280;
-  --muted-light: #9ca3af;
+  /* PROFESSIONAL BORDERS & SURFACES */
+  --border: #e2e8f0;
+  --border-light: #f1f5f9;
+  --border-focus: #1e40af;
+  --muted: #64748b;
+  --muted-light: #94a3b8;
 
   /* Surface Colors with Celebration Tint */
   --surface: #ffffff;
@@ -139,7 +133,7 @@ body {
   position: relative;
 }
 
-/* TRIXTECH Celebration Background System */
+/* TRIXTECH MODERN PROFESSIONAL BACKGROUND SYSTEM */
 body::before {
   content: '';
   position: fixed;
@@ -148,30 +142,32 @@ body::before {
   width: 100%;
   height: 100%;
   background:
-    /* Enhanced readability overlay with celebration tint */
+    /* Professional gradient overlay for depth */
     linear-gradient(135deg,
-      rgba(254, 254, 254, 0.95) 0%,
-      rgba(254, 243, 199, 0.92) 25%,
-      rgba(252, 231, 243, 0.88) 50%,
-      rgba(236, 253, 245, 0.85) 75%,
-      rgba(240, 249, 255, 0.82) 100%
+      rgba(250, 251, 252, 0.98) 0%,
+      rgba(255, 255, 255, 0.95) 25%,
+      rgba(248, 250, 252, 0.92) 50%,
+      rgba(241, 245, 249, 0.88) 75%,
+      rgba(255, 255, 255, 0.85) 100%
     ),
-    /* Celebration background image */
-    url('/theme-background.svg') center/cover no-repeat fixed,
-    /* Celebration fallback gradient */
+    /* Subtle geometric pattern */
+    radial-gradient(circle at 25% 25%, rgba(30, 64, 175, 0.02) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(8, 145, 178, 0.02) 0%, transparent 50%),
+    radial-gradient(circle at 50% 10%, rgba(5, 150, 105, 0.01) 0%, transparent 40%),
+    /* Professional fallback gradient */
     linear-gradient(135deg,
-      #fefefe 0%,
-      #fef3c7 25%,
-      #fce7f3 50%,
-      #ecfdf5 75%,
-      #f0f9ff 100%
+      #fafbfc 0%,
+      #ffffff 25%,
+      #f8fafc 50%,
+      #f1f5f9 75%,
+      #ffffff 100%
     );
   background-attachment: fixed;
   z-index: -2;
   pointer-events: none;
 }
 
-/* Celebration animated pattern overlay */
+/* Professional subtle pattern overlay */
 body::after {
   content: '';
   position: fixed;
@@ -180,20 +176,20 @@ body::after {
   width: 100%;
   height: 100%;
   background-image:
-    /* Celebration glow effects */
-    radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.04) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(139, 92, 246, 0.04) 0%, transparent 50%),
-    radial-gradient(circle at 50% 10%, rgba(245, 158, 11, 0.03) 0%, transparent 40%),
-    radial-gradient(circle at 10% 90%, rgba(6, 182, 212, 0.03) 0%, transparent 40%),
-    radial-gradient(circle at 85% 40%, rgba(236, 72, 153, 0.02) 0%, transparent 35%),
-    /* Subtle confetti pattern */
-    radial-gradient(circle at 15% 85%, rgba(16, 185, 129, 0.02) 0%, transparent 30%);
-  background-size: 450px 450px, 350px 350px, 550px 550px, 400px 400px, 300px 300px, 250px 250px;
+    /* Professional geometric patterns */
+    radial-gradient(circle at 25% 25%, rgba(30, 64, 175, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(8, 145, 178, 0.02) 0%, transparent 50%),
+    radial-gradient(circle at 50% 10%, rgba(5, 150, 105, 0.02) 0%, transparent 40%),
+    radial-gradient(circle at 10% 90%, rgba(217, 119, 6, 0.01) 0%, transparent 40%),
+    radial-gradient(circle at 85% 40%, rgba(220, 38, 38, 0.01) 0%, transparent 35%),
+    /* Subtle dot pattern */
+    radial-gradient(circle at 15% 85%, rgba(100, 116, 139, 0.02) 0%, transparent 30%);
+  background-size: 400px 400px, 300px 300px, 500px 500px, 350px 350px, 250px 250px, 200px 200px;
   background-position: 0% 0%, 100% 100%, 50% 0%, 0% 100%, 85% 40%, 15% 85%;
   background-repeat: no-repeat;
   pointer-events: none;
   z-index: -1;
-  animation: celebration-float 30s ease-in-out infinite;
+  opacity: 0.6;
 }
 
 @keyframes celebration-float {
@@ -291,12 +287,11 @@ button, a, input, textarea, select {
   animation: scaleIn 0.3s ease-out;
 }
 
-/* TRIXTECH Celebration Button System */
+/* TRIXTECH MODERN PROFESSIONAL BUTTON SYSTEM */
 .btn-primary {
-  @apply bg-gradient-to-r from-[var(--trixtech-blue)] to-[var(--trixtech-purple)] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-[var(--trixtech-blue)] relative overflow-hidden;
+  @apply bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-[var(--primary)] relative overflow-hidden;
   background-size: 200% 200%;
-  animation: celebration-shift 4s ease infinite;
-  box-shadow: 0 4px 15px rgb(59 130 246 / 0.3);
+  box-shadow: 0 4px 15px rgb(30, 64, 175, 0.2);
 }
 
 .btn-primary::before {
@@ -624,14 +619,13 @@ button, a, input, textarea, select {
   }
 }
 
-/* TRIXTECH Celebration Card System */
+/* TRIXTECH MODERN PROFESSIONAL CARD SYSTEM */
 .card {
-  @apply bg-white backdrop-blur-sm border border-gray-200 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 animate-fade-in;
+  @apply bg-white backdrop-blur-sm border border-[var(--border)] rounded-xl shadow-[var(--shadow)] hover:shadow-[var(--shadow-md)] transition-all duration-300 animate-fade-in;
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  box-shadow: 0 10px 15px -3px rgb(59 130 246 / 0.08), 0 4px 6px -4px rgb(59 130 246 / 0.05);
-  border: 1px solid rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(30, 64, 175, 0.08);
 }
 
 .card-elevated {
@@ -680,13 +674,13 @@ button, a, input, textarea, select {
   @apply card border-l-4 border-l-[var(--accent)] bg-gradient-to-r from-yellow-50 to-white;
 }
 
-/* TRIXTECH Celebration Form Elements */
+/* TRIXTECH MODERN PROFESSIONAL FORM ELEMENTS */
 .input-field {
-  @apply w-full px-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-30 focus:border-blue-500 bg-white backdrop-blur-sm transition-all duration-200 text-gray-800 placeholder-gray-400 shadow-sm;
+  @apply w-full px-4 py-3 border border-[var(--border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-30 focus:border-[var(--primary)] bg-white backdrop-blur-sm transition-all duration-200 text-[var(--foreground)] placeholder-[var(--muted)] shadow-[var(--shadow-sm)];
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(30, 64, 175, 0.15);
 }
 
 .input-field:hover {
