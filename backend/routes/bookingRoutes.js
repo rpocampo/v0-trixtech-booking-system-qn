@@ -304,8 +304,10 @@ router.post('/', authMiddleware, async (req, res, next) => {
         
                   // Admin notification for new pending booking
                   const adminUsers = await User.find({ role: 'admin' });
+                  console.log('Found admin users for pending booking notification:', adminUsers.length);
         
                   for (const admin of adminUsers) {
+                    console.log('Sending pending booking notification to admin:', admin._id);
                     await sendTemplateNotification(admin._id, 'NEW_PENDING_BOOKING_ADMIN', {
                       message: `New pending booking received from customer for ${service.name}.`,
                       metadata: {
@@ -314,6 +316,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
                         amount: booking.totalPrice,
                       },
                     });
+                    console.log('Admin pending booking notification sent successfully');
                   }
 
           // Emit real-time events for pending booking
