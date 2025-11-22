@@ -47,9 +47,6 @@ const generateQRCodeDataURL = async (paymentData) => {
   try {
     // Always generate dynamic QR code for payments to include payment-specific data
     const qrData = generateGCashQRData(paymentData);
-    console.log('Generated dynamic QR code for payment');
-
-    console.log('QR data to encode:', qrData.substring(0, 50) + '...');
 
     const options = {
       errorCorrectionLevel: 'M',
@@ -64,11 +61,9 @@ const generateQRCodeDataURL = async (paymentData) => {
     };
 
     const dataURL = await QRCode.toDataURL(qrData, options);
-    console.log('QR code generated successfully, dataURL length:', dataURL.length);
     return dataURL;
   } catch (error) {
     console.error('Error generating QR code:', error);
-    console.error('Error details:', error.message);
     throw error;
   }
 };

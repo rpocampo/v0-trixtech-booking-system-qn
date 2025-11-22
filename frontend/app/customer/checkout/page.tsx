@@ -79,31 +79,16 @@ export default function CheckoutPage() {
 
   // Auto-generate QR code when payment step is reached
   useEffect(() => {
-    console.log('🔄 Payment step effect triggered:', {
-      currentStep,
-      hasPaymentBooking: !!paymentBooking,
-      paymentBookingId: paymentBooking?._id,
-      checkoutTotal,
-      hasQrPayment: !!qrPayment,
-      creatingPayment
-    });
-
     if (currentStep === 'payment' && paymentBooking && !qrPayment && !creatingPayment) {
-      console.log('🚀 Auto-generating QR code for payment');
       // Small delay to ensure state is settled
       const timer = setTimeout(() => {
         // Double-check conditions before generating
         if (currentStep === 'payment' && paymentBooking && !qrPayment && !creatingPayment) {
-          console.log('⚡ Executing QR code generation');
           createPaymentForBooking();
-        } else {
-          console.log('⏭️ QR generation skipped - conditions not met after delay');
         }
       }, 1000); // Increased delay
 
       return () => clearTimeout(timer);
-    } else {
-      console.log('⏸️ Auto-generation conditions not met');
     }
   }, [currentStep, paymentBooking, checkoutTotal]); // Include checkoutTotal
 
@@ -134,29 +119,20 @@ export default function CheckoutPage() {
   };
 
   const createPaymentForBooking = async () => {
-    console.log('createPaymentForBooking called');
-    console.log('paymentBooking:', paymentBooking);
-    console.log('checkoutTotal:', checkoutTotal);
-    console.log('creatingPayment:', creatingPayment);
-
     if (!paymentBooking) {
-      console.log('❌ No payment booking available');
       setPaymentError('No booking found. Please go back and try again.');
       return;
     }
 
     if (creatingPayment) {
-      console.log('⚠️ QR generation already in progress');
       return;
     }
 
     if (!checkoutTotal || checkoutTotal <= 0) {
-      console.log('❌ Invalid checkout total:', checkoutTotal);
       setPaymentError('Invalid payment amount. Please go back and try again.');
       return;
     }
 
-    console.log('✅ Starting QR payment creation for booking:', paymentBooking._id, 'amount:', checkoutTotal);
     setCreatingPayment(true);
     setPaymentError('');
     setQrPayment(null);
@@ -167,7 +143,6 @@ export default function CheckoutPage() {
         throw new Error('Please log in to continue');
       }
 
-      console.log('📡 Making API call to create QR payment...');
       const response = await fetch('http://localhost:5000/api/payments/create-qr', {
         method: 'POST',
         headers: {
@@ -181,23 +156,18 @@ export default function CheckoutPage() {
         }),
       });
 
-      console.log('📡 API response status:', response.status);
-
       if (response.status === 401) {
         throw new Error('Your session has expired. Please log in again.');
       }
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.log('❌ API error response:', errorText);
         throw new Error(`Server error: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('📡 API response data:', data);
 
       if (data.success && data.qrCode) {
-        console.log('✅ QR payment created successfully');
         setQrPayment({
           qrCode: data.qrCode,
           instructions: data.instructions,
@@ -207,14 +177,12 @@ export default function CheckoutPage() {
         setCreatingPayment(false);
 
         // Start polling for payment status
-        console.log('🔄 Starting payment polling for reference:', data.referenceNumber);
         startPaymentPolling(data.referenceNumber, token);
       } else {
-        console.log('❌ Invalid API response:', data);
         throw new Error(data.message || 'Failed to generate QR code');
       }
     } catch (error) {
-      console.error('❌ QR payment creation failed:', error);
+      console.error('QR payment creation failed:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to generate QR code';
       setPaymentError(errorMessage);
       setCreatingPayment(false);
@@ -301,38 +269,28 @@ export default function CheckoutPage() {
       });
 
       const results = await Promise.all(bookingPromises);
-      console.log('Booking creation results:', results);
 
       // Check if any bookings require payment
       const paymentRequiredBookings = results.filter(result => result.requiresPayment);
-      console.log('Payment required bookings:', paymentRequiredBookings);
 
       if (paymentRequiredBookings.length > 0) {
         // Store the checkout total for display in payment step
         const totalAmount = getTotalPrice();
-        console.log('💰 Calculated checkout total:', totalAmount);
-        console.log('📦 Cart items:', checkoutItems);
         setCheckoutTotal(totalAmount);
 
         // For now, handle the first payment-required booking
         // In a full implementation, this could handle bulk payment
         const firstPaymentBooking = paymentRequiredBookings[0];
-        console.log('📋 First payment booking:', firstPaymentBooking);
-        console.log('🎫 Booking object:', firstPaymentBooking.booking);
-        console.log('💵 Checkout total:', totalAmount);
 
         if (firstPaymentBooking && firstPaymentBooking.booking) {
-          console.log('✅ Setting payment booking and moving to payment type selection');
           setPaymentBooking(firstPaymentBooking.booking);
           setCurrentStep('payment-type');
         } else {
-          console.error('❌ Invalid payment booking data:', firstPaymentBooking);
           alert('Error: Invalid booking data. Please try again.');
         }
         // Don't clear cart yet - wait for payment completion
       } else {
         // All bookings completed successfully
-        console.log('✅ No payment required, redirecting to success');
         clearCart();
         router.push('/customer/bookings?success=true');
       }
@@ -939,7 +897,6 @@ export default function CheckoutPage() {
                       src={qrPayment.qrCode}
                       alt="GCash QR Code"
                       className="w-64 h-64"
-                      onLoad={() => console.log('QR code loaded successfully')}
                       onError={(e) => {
                         console.error('QR code failed to load, src:', qrPayment.qrCode);
                         e.currentTarget.style.display = 'none';

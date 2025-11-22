@@ -18,8 +18,6 @@ const { monitoringMiddleware, healthCheckHandler } = require('./utils/monitoring
 
 dotenv.config();
 
-console.log('GCASH_QR_CODE loaded:', process.env.GCASH_QR_CODE ? 'YES' : 'NO');
-
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
@@ -75,22 +73,14 @@ app.all('/', (req, res) => {
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-
   // Join user-specific room for targeted updates
   socket.on('join', (userId) => {
     socket.join(`user_${userId}`);
-    console.log(`User ${userId} joined room`);
   });
 
   // Join admin room for admin-specific updates
   socket.on('join-admin', () => {
     socket.join('admin');
-    console.log('Admin joined admin room');
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
   });
 });
 
@@ -108,10 +98,7 @@ app.use((req, res) => {
 // Process reservation queue every 5 minutes
 setInterval(async () => {
   try {
-    const processed = await processReservationQueue();
-    if (processed > 0) {
-      console.log(`Processed ${processed} queued reservations`);
-    }
+    await processReservationQueue();
   } catch (error) {
     console.error('Error processing reservation queue:', error);
   }
@@ -120,10 +107,7 @@ setInterval(async () => {
 // Clean up expired reservations daily
 setInterval(async () => {
   try {
-    const cleaned = await cleanupExpiredReservations();
-    if (cleaned > 0) {
-      console.log(`Cleaned up ${cleaned} expired reservations`);
-    }
+    await cleanupExpiredReservations();
   } catch (error) {
     console.error('Error cleaning up expired reservations:', error);
   }

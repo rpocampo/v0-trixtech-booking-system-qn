@@ -33,8 +33,6 @@ export default function SocketProvider({ children }: SocketProviderProps) {
     const socket = socketRef.current;
 
     socket.on('connect', () => {
-      console.log('Connected to server:', socket.id);
-
       // Join user room if logged in
       const token = localStorage.getItem('token');
       const role = localStorage.getItem('role');
@@ -54,10 +52,6 @@ export default function SocketProvider({ children }: SocketProviderProps) {
           console.error('Error parsing token:', error);
         }
       }
-    });
-
-    socket.on('disconnect', () => {
-      console.log('Disconnected from server');
     });
 
     // Cleanup on unmount

@@ -20,7 +20,6 @@ const generateReferenceNumber = () => {
 // Create QR code-based payment for GCash
 const createQRPayment = async (bookingId, amount, userId, paymentType = 'full') => {
   try {
-    console.log('Creating QR payment for booking:', bookingId, 'amount:', amount, 'user:', userId, 'type:', paymentType);
     const transactionId = generateTransactionId();
     const referenceNumber = generateReferenceNumber();
 
@@ -49,7 +48,6 @@ const createQRPayment = async (bookingId, amount, userId, paymentType = 'full') 
     });
 
     await payment.save();
-    console.log('Payment record created:', payment._id, 'type:', paymentType);
 
     // Generate QR code data
     const paymentDescription = isDownPayment
@@ -184,11 +182,6 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
 
     if (payment.status === 'completed') {
       return { success: true, message: 'Payment already completed', payment };
-    }
-
-    // For test payments, allow verification without full validation
-    if (paymentData.test) {
-      console.log('Processing test QR payment verification');
     }
 
     // Update payment status

@@ -291,35 +291,30 @@ router.post('/', authMiddleware, async (req, res, next) => {
         await booking.populate('customerId', 'name email');
 
         // Send pending booking notification
-        try {
-          console.log('Creating pending booking:', booking._id);
-
-          // Customer notification for pending booking
-          const customerNotification = await sendTemplateNotification(req.user.id, 'BOOKING_PENDING', {
-            message: `Your booking for ${service.name} has been created and is pending payment.`,
-            metadata: {
-              bookingId: booking._id,
-              serviceId: service._id,
-              amount: booking.totalPrice,
-            },
-          });
-          console.log('Pending booking notification created:', customerNotification?._id);
-
-          // Admin notification for new pending booking
-          const adminUsers = await User.find({ role: 'admin' });
-          console.log('Found admin users:', adminUsers.length);
-
-          for (const admin of adminUsers) {
-            const adminNotification = await sendTemplateNotification(admin._id, 'NEW_PENDING_BOOKING_ADMIN', {
-              message: `New pending booking received from customer for ${service.name}.`,
-              metadata: {
-                bookingId: booking._id,
-                serviceId: service._id,
-                amount: booking.totalPrice,
-              },
-            });
-            console.log('Admin pending booking notification created for', admin._id, ':', adminNotification?._id);
-          }
+                try {
+                  // Customer notification for pending booking
+                  await sendTemplateNotification(req.user.id, 'BOOKING_PENDING', {
+                    message: `Your booking for ${service.name} has been created and is pending payment.`,
+                    metadata: {
+                      bookingId: booking._id,
+                      serviceId: service._id,
+                      amount: booking.totalPrice,
+                    },
+                  });
+        
+                  // Admin notification for new pending booking
+                  const adminUsers = await User.find({ role: 'admin' });
+        
+                  for (const admin of adminUsers) {
+                    await sendTemplateNotification(admin._id, 'NEW_PENDING_BOOKING_ADMIN', {
+                      message: `New pending booking received from customer for ${service.name}.`,
+                      metadata: {
+                        bookingId: booking._id,
+                        serviceId: service._id,
+                        amount: booking.totalPrice,
+                      },
+                    });
+                  }
 
           // Emit real-time events for pending booking
           const io = global.io;
@@ -445,16 +440,13 @@ router.post('/', authMiddleware, async (req, res, next) => {
 // Get single booking by ID
 router.get('/:id', authMiddleware, async (req, res, next) => {
   try {
-    console.log('Fetching booking:', req.params.id, 'for user:', req.user.id);
     const booking = await Booking.findById(req.params.id)
       .populate('serviceId')
       .populate('customerId', 'name email');
 
     if (!booking) {
-      console.log('Booking not found:', req.params.id);
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
-
 
     // Check if user owns this booking or is admin
     // Handle case where customerId might be null (user deleted or populate failed)
@@ -464,20 +456,16 @@ router.get('/:id', authMiddleware, async (req, res, next) => {
     const isDeletedUserBooking = bookingOwnerId === null; // User was deleted
 
     if (!isOwner && !isAdmin && !isDeletedUserBooking) {
-      console.log('Not authorized - booking customer:', bookingOwnerId, 'request user:', req.user.id);
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
     // If user was deleted, only allow admin access
     if (isDeletedUserBooking && !isAdmin) {
-      console.log('Booking belongs to deleted user, admin access only');
       return res.status(403).json({ success: false, message: 'This booking is no longer accessible' });
     }
 
-    console.log('Booking fetch successful');
     res.json({ success: true, booking });
   } catch (error) {
-    console.error('Error fetching booking:', error);
     next(error);
   }
 });
@@ -896,6 +884,7 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     res.status(201).json({
       success: true,
       booking,
+      cartCleared: true, // Flag to indicate cart should be cleared on frontend
       message: 'Booking confirmed successfully!'
     });
 

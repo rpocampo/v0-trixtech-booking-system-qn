@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useCart } from '../../../components/CartContext';
 
 interface Booking {
   _id: string;
@@ -24,6 +25,7 @@ interface User {
 function PaymentProcessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { clearCart } = useCart();
   const bookingId = searchParams.get('bookingId');
   const amountParam = searchParams.get('amount');
   const paymentTypeParam = searchParams.get('paymentType');
@@ -246,6 +248,8 @@ function PaymentProcessContent() {
               clearInterval(pollInterval);
               // Clean up pending payment data
               localStorage.removeItem('pendingPayment');
+              // Clear the cart after successful payment
+              clearCart();
               // Redirect to success page after a short delay
               setTimeout(() => {
                 router.push('/customer/bookings?payment=success');
@@ -461,6 +465,8 @@ function PaymentProcessContent() {
 
                           if (response.ok) {
                             setPaymentStatus('completed');
+                            // Clear the cart after successful test payment
+                            clearCart();
                             setTimeout(() => {
                               router.push('/customer/bookings?payment=success');
                             }, 2000);
