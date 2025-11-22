@@ -54,6 +54,7 @@ export default function AdminServices() {
     name: '',
     description: '',
     category: 'event-planning',
+    serviceType: 'service', // Allow selection between service, equipment, supply
     price: 0,
     image: null as File | null,
   });
@@ -115,8 +116,14 @@ export default function AdminServices() {
       formDataToSend.append('category', formData.category);
       formDataToSend.append('price', formData.price.toString());
       formDataToSend.append('priceType', 'flat-rate'); // Default to flat-rate for simplicity
-      formDataToSend.append('serviceType', 'service'); // Default to service for simplicity
-      formDataToSend.append('duration', '120'); // Default 2 hours for services
+      formDataToSend.append('serviceType', formData.serviceType);
+
+      // Add duration for services, quantity for equipment/supply
+      if (formData.serviceType === 'service') {
+        formDataToSend.append('duration', '120'); // Default 2 hours for services
+      } else {
+        formDataToSend.append('quantity', '10'); // Default quantity for inventory items
+      }
 
       // Add default inclusions for simplified form
       formDataToSend.append('includedItems', 'Professional service delivery');
@@ -143,6 +150,7 @@ export default function AdminServices() {
           name: '',
           description: '',
           category: 'event-planning',
+          serviceType: 'service',
           price: 0,
           image: null,
         });
@@ -218,6 +226,25 @@ export default function AdminServices() {
                   placeholder="e.g., Professional Photography Service"
                 />
                 {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
+              </div>
+
+              {/* Service Type */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Service Type *
+                </label>
+                <select
+                  value={formData.serviceType}
+                  onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="service">Service (Professional Service)</option>
+                  <option value="equipment">Equipment (Rental Item)</option>
+                  <option value="supply">Supply (Consumable Item)</option>
+                </select>
+                <p className="text-xs text-blue-600 mt-1">
+                  💡 Equipment & Supply items will appear in Inventory management
+                </p>
               </div>
 
               {/* Category */}

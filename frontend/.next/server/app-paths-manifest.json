@@ -1,7 +1,9 @@
 {
   "/payment/process/page": "app/payment/process/page.js",
-  "/customer/checkout/page": "app/customer/checkout/page.js",
   "/customer/services/page": "app/customer/services/page.js",
-  "/customer/cart/page": "app/customer/cart/page.js",
-  "/admin/services/page": "app/admin/services/page.js"
+  "/customer/bookings/page": "app/customer/bookings/page.js",
+  "/admin/services/page": "app/admin/services/page.js",
+  "/customer/checkout/page": "app/customer/checkout/page.js",
+  "/admin/inventory/page": "app/admin/inventory/page.js",
+  "/customer/cart/page": "app/customer/cart/page.js"
 }
