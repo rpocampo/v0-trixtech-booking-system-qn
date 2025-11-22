@@ -1,10 +1,7 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
   "/payment/process/page": "app/payment/process/page.js",
-  "/admin/notifications/page": "app/admin/notifications/page.js",
-  "/customer/cart/page": "app/customer/cart/page.js",
-  "/customer/bookings/page": "app/customer/bookings/page.js",
-  "/customer/services/page": "app/customer/services/page.js",
   "/customer/checkout/page": "app/customer/checkout/page.js",
-  "/admin/bookings/page": "app/admin/bookings/page.js"
+  "/customer/services/page": "app/customer/services/page.js",
+  "/customer/cart/page": "app/customer/cart/page.js",
+  "/admin/services/page": "app/admin/services/page.js"
 }

@@ -11,6 +11,9 @@ const userRoutes = require('./routes/userRoutes');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const deliveryRoutes = require('./routes/deliveryRoutes');
+const packageRoutes = require('./routes/packageRoutes');
+const eventTypeRoutes = require('./routes/eventTypeRoutes');
 const { initializeEmailService } = require('./utils/emailService');
 const { processReservationQueue, cleanupExpiredReservations } = require('./utils/recommendationService');
 const { errorHandler, requestLogger } = require('./middleware/errorHandler');
@@ -49,6 +52,9 @@ app.use('/api/users', userRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/deliveries', deliveryRoutes);
+app.use('/api/packages', packageRoutes);
+app.use('/api/event-types', eventTypeRoutes);
 
 // Enhanced health check with monitoring
 app.get('/api/health', healthCheckHandler);
@@ -66,6 +72,9 @@ app.all('/', (req, res) => {
       '/api/analytics',
       '/api/notifications',
       '/api/payments',
+      '/api/deliveries',
+      '/api/packages',
+      '/api/event-types',
       '/api/health'
     ]
   });

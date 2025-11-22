@@ -143,6 +143,18 @@ const serviceSchema = new mongoose.Schema(
       type: Number, // hours required for preparation
       default: 24,
     },
+    deliveryRequired: {
+      type: Boolean,
+      default: function() {
+        // Equipment and supplies typically require delivery
+        return this.serviceType === 'equipment' || this.serviceType === 'supply';
+      },
+    },
+    deliveryFee: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   { timestamps: true }
 );

@@ -53,25 +53,11 @@ export default function AdminServices() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    shortDescription: '',
     category: 'event-planning',
-    serviceType: 'service',
-    eventTypes: [] as string[],
     price: 0,
-    priceType: 'flat-rate',
-    duration: 60,
-    quantity: 1,
-    location: 'both',
-    tags: [] as string[],
-    features: [] as string[],
-    includedItems: [] as string[],
-    requirements: [] as string[],
-    minOrder: 1,
-    maxOrder: 0,
-    leadTime: 24,
     image: null as File | null,
-    gallery: [] as File[],
   });
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -94,41 +80,47 @@ export default function AdminServices() {
     fetchServices();
   }, []);
 
+  const validateForm = () => {
+    const newErrors: {[key: string]: string} = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Service name is required';
+    }
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description is required';
+    }
+    if (formData.price <= 0) {
+      newErrors.price = 'Price must be greater than ₱0.00';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
     const token = localStorage.getItem('token');
 
     try {
       const formDataToSend = new FormData();
 
-      // Add all form fields
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('description', formData.description);
-      formDataToSend.append('shortDescription', formData.shortDescription);
+      // Add essential form fields only
+      formDataToSend.append('name', formData.name.trim());
+      formDataToSend.append('description', formData.description.trim());
       formDataToSend.append('category', formData.category);
-      formDataToSend.append('serviceType', formData.serviceType);
-      formData.eventTypes.forEach(type => formDataToSend.append('eventTypes', type));
       formDataToSend.append('price', formData.price.toString());
-      formDataToSend.append('priceType', formData.priceType);
-      formDataToSend.append('location', formData.location);
-      formData.tags.forEach(tag => formDataToSend.append('tags', tag));
-      formData.features.forEach(feature => formDataToSend.append('features', feature));
-      formData.includedItems.forEach(item => formDataToSend.append('includedItems', item));
-      formData.requirements.forEach(req => formDataToSend.append('requirements', req));
-      formDataToSend.append('minOrder', formData.minOrder.toString());
-      formDataToSend.append('leadTime', formData.leadTime.toString());
+      formDataToSend.append('priceType', 'flat-rate'); // Default to flat-rate for simplicity
+      formDataToSend.append('serviceType', 'service'); // Default to service for simplicity
+      formDataToSend.append('duration', '120'); // Default 2 hours for services
 
-      if (formData.serviceType === 'service' && formData.duration) {
-        formDataToSend.append('duration', formData.duration.toString());
-      }
-
-      if ((formData.serviceType === 'equipment' || formData.serviceType === 'supply')) {
-        // Quantity is managed in Inventory module, set to 0 initially
-        formDataToSend.append('quantity', '0');
-        if (formData.maxOrder > 0) {
-          formDataToSend.append('maxOrder', formData.maxOrder.toString());
-        }
-      }
+      // Add default inclusions for simplified form
+      formDataToSend.append('includedItems', 'Professional service delivery');
+      formDataToSend.append('includedItems', 'Standard setup and preparation');
 
       // Add image if exists
       if (formData.image) {
@@ -150,29 +142,18 @@ export default function AdminServices() {
         setFormData({
           name: '',
           description: '',
-          shortDescription: '',
           category: 'event-planning',
-          serviceType: 'service',
-          eventTypes: [],
           price: 0,
-          priceType: 'flat-rate',
-          duration: 60,
-          quantity: 1,
-          location: 'both',
-          tags: [],
-          features: [],
-          includedItems: [],
-          requirements: [],
-          minOrder: 1,
-          maxOrder: 0,
-          leadTime: 24,
           image: null,
-          gallery: [],
         });
+        setErrors({});
         setShowForm(false);
+      } else {
+        setErrors({ submit: data.message || 'Failed to create service' });
       }
     } catch (error) {
       console.error('Failed to create service:', error);
+      setErrors({ submit: 'Network error. Please try again.' });
     }
   };
 
@@ -215,35 +196,35 @@ export default function AdminServices() {
       {showForm && (
         <div className="card p-6 mb-8">
           <h2 className="text-2xl font-bold mb-4">Create New Service</h2>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid md:grid-cols-2 gap-4">
+
+          {errors.submit && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-700">{errors.submit}</p>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              {/* Service Name */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-2">Service Name</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Service Name *
+                </label>
                 <input
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  className="input-field"
-                  placeholder="e.g., Professional Event Planning Service"
+                  className={`input-field ${errors.name ? 'border-red-300 focus:border-red-500' : ''}`}
+                  placeholder="e.g., Professional Photography Service"
                 />
+                {errors.name && <p className="text-sm text-red-600 mt-1">{errors.name}</p>}
               </div>
 
+              {/* Category */}
               <div>
-                <label className="block text-sm font-medium mb-2">Service Type</label>
-                <select
-                  value={formData.serviceType}
-                  onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
-                  className="input-field"
-                >
-                  <option value="service">Service</option>
-                  <option value="equipment">Equipment</option>
-                  <option value="supply">Supply</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Category</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Category
+                </label>
                 <select
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
@@ -266,238 +247,70 @@ export default function AdminServices() {
                     <option value="linens-tableware">Linens & Tableware</option>
                     <option value="party-supplies">Party Supplies</option>
                   </optgroup>
-                  <optgroup label="Events">
-                    <option value="wedding">Wedding</option>
-                    <option value="corporate">Corporate</option>
-                    <option value="birthday">Birthday</option>
-                    <option value="graduation">Graduation</option>
-                    <option value="party">Party</option>
-                  </optgroup>
                 </select>
               </div>
 
+              {/* Price */}
               <div>
-                <label className="block text-sm font-medium mb-2">Price (₱)</label>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Price (₱) *
+                </label>
                 <input
                   type="number"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                  required
-                  className="input-field"
+                  className={`input-field ${errors.price ? 'border-red-300 focus:border-red-500' : ''}`}
                   min="0.01"
                   step="0.01"
+                  placeholder="0.00"
                 />
-                <p className="text-xs text-[var(--muted)] mt-1">Must be greater than ₱0.00</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Price Type</label>
-                <select
-                  value={formData.priceType}
-                  onChange={(e) => setFormData({ ...formData, priceType: e.target.value })}
-                  className="input-field"
-                >
-                  <option value="flat-rate">Flat Rate</option>
-                  <option value="per-hour">Per Hour</option>
-                  <option value="per-day">Per Day</option>
-                  <option value="per-event">Per Event</option>
-                  <option value="per-person">Per Person</option>
-                  <option value="per-item">Per Item</option>
-                </select>
-              </div>
-
-              {formData.serviceType === 'service' && (
-                <div>
-                  <label className="block text-sm font-medium mb-2">Duration (minutes)</label>
-                  <input
-                    type="number"
-                    value={formData.duration}
-                    onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 60 })}
-                    required
-                    className="input-field"
-                    min="15"
-                    step="15"
-                  />
-                </div>
-              )}
-
-              {(formData.serviceType === 'equipment' || formData.serviceType === 'supply') && (
-                <div>
-                  <label className="block text-sm font-medium mb-2">Max Order (0 = unlimited)</label>
-                  <input
-                    type="number"
-                    value={formData.maxOrder}
-                    onChange={(e) => setFormData({ ...formData, maxOrder: parseInt(e.target.value) || 0 })}
-                    className="input-field"
-                    min="0"
-                  />
-                  <p className="text-xs text-blue-600 mt-1">
-                    💡 Initial stock quantity will be set to 0. Use Inventory module to manage stock levels.
-                  </p>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Location</label>
-                <select
-                  value={formData.location}
-                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                  className="input-field"
-                >
-                  <option value="indoor">Indoor Only</option>
-                  <option value="outdoor">Outdoor Only</option>
-                  <option value="both">Indoor & Outdoor</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Lead Time (hours)</label>
-                <input
-                  type="number"
-                  value={formData.leadTime}
-                  onChange={(e) => setFormData({ ...formData, leadTime: parseInt(e.target.value) || 24 })}
-                  className="input-field"
-                  min="1"
-                />
+                {errors.price && <p className="text-sm text-red-600 mt-1">{errors.price}</p>}
+                <p className="text-xs text-gray-500 mt-1">Enter the service price in Philippine Pesos</p>
               </div>
             </div>
 
+            {/* Description */}
             <div>
-              <label className="block text-sm font-medium mb-2">Short Description</label>
-              <input
-                type="text"
-                value={formData.shortDescription}
-                onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-                className="input-field"
-                placeholder="Brief description for listings..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Full Description</label>
+              <label className="block text-sm font-medium mb-2 text-gray-700">
+                Description *
+              </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                required
-                className="input-field"
+                className={`input-field ${errors.description ? 'border-red-300 focus:border-red-500' : ''}`}
                 rows={4}
-                placeholder="Detailed service description..."
+                placeholder="Describe what this service includes and what customers can expect..."
               />
+              {errors.description && <p className="text-sm text-red-600 mt-1">{errors.description}</p>}
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Suitable Event Types</label>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {['wedding', 'corporate', 'birthday', 'graduation', 'party', 'conference'].map((eventType) => (
-                    <label key={eventType} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={formData.eventTypes.includes(eventType)}
-                        onChange={(e) => {
-                          const updated = e.target.checked
-                            ? [...formData.eventTypes, eventType]
-                            : formData.eventTypes.filter(t => t !== eventType);
-                          setFormData({ ...formData, eventTypes: updated });
-                        }}
-                        className="mr-2"
-                      />
-                      <span className="capitalize">{eventType}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Tags (comma-separated)</label>
-                <input
-                  type="text"
-                  value={formData.tags.join(', ')}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    tags: e.target.value.split(',').map(t => t.trim()).filter(t => t)
-                  })}
-                  className="input-field"
-                  placeholder="professional, premium, luxury..."
-                />
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Features (one per line)</label>
-                <textarea
-                  value={formData.features.join('\n')}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    features: e.target.value.split('\n').filter(f => f.trim())
-                  })}
-                  className="input-field"
-                  rows={4}
-                  placeholder="Professional staff&#10;High-quality equipment&#10;Flexible scheduling..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Service Inclusions (one per line)</label>
-                <textarea
-                  value={formData.includedItems.join('\n')}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    includedItems: e.target.value.split('\n').filter(i => i.trim())
-                  })}
-                  className="input-field"
-                  rows={4}
-                  placeholder="Setup and teardown&#10;Basic decorations&#10;Sound system..."
-                />
-              </div>
-            </div>
-
+            {/* Image Upload */}
             <div>
-              <label className="block text-sm font-medium mb-2">Requirements (one per line)</label>
-              <textarea
-                value={formData.requirements.join('\n')}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  requirements: e.target.value.split('\n').filter(r => r.trim())
-                })}
+              <label className="block text-sm font-medium mb-2 text-gray-700">
+                Service Image
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setFormData({ ...formData, image: e.target.files?.[0] || null })}
                 className="input-field"
-                rows={3}
-                placeholder="Power outlet access&#10;Parking space&#10;Advance booking..."
               />
+              <p className="text-xs text-gray-500 mt-1">Optional: Upload an image to represent this service</p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Main Service Image</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setFormData({ ...formData, image: e.target.files?.[0] || null })}
-                  className="input-field"
-                />
-                <p className="text-xs text-[var(--muted)] mt-1">Primary image for the service</p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-2">Gallery Images</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    gallery: Array.from(e.target.files || [])
-                  })}
-                  className="input-field"
-                />
-                <p className="text-xs text-[var(--muted)] mt-1">Additional images (max 10)</p>
-              </div>
+            {/* Submit Button */}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="mr-3 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button type="submit" className="btn-primary">
+                Create Service
+              </button>
             </div>
-
-            <button type="submit" className="btn-primary">
-              Create Service
-            </button>
           </form>
         </div>
       )}
