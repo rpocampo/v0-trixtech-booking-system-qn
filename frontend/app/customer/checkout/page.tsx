@@ -832,8 +832,15 @@ export default function CheckoutPage() {
             <button
               onClick={() => {
                 const paymentAmount = paymentType === 'full' ? checkoutTotal : Math.round(checkoutTotal * 0.3);
-                setCheckoutTotal(paymentAmount);
-                setCurrentStep('payment');
+                // Store payment info in localStorage for the payment process page
+                localStorage.setItem('pendingPayment', JSON.stringify({
+                  bookingId: paymentBooking._id,
+                  amount: paymentAmount,
+                  paymentType: paymentType,
+                  totalAmount: checkoutTotal
+                }));
+                // Redirect to payment process page
+                router.push(`/payment/process?bookingId=${paymentBooking._id}&amount=${paymentAmount}&paymentType=${paymentType}`);
               }}
               className="btn-primary"
             >

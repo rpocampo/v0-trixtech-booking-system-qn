@@ -50,8 +50,11 @@ export default function CustomerLayout({
         }
 
         const data = await response.json();
-        if (data.success) {
+        if (data.success && data.user) {
           setUser(data.user);
+        } else {
+          console.warn('User fetch returned success but no user data');
+          setUser(null);
         }
       } catch (error) {
         console.error('Failed to fetch user:', error);
@@ -238,11 +241,11 @@ export default function CustomerLayout({
               {user && (
                 <div className="flex items-center gap-3 p-3 mb-4 bg-gradient-to-r from-[var(--primary-50)] to-[var(--accent)]/10 rounded-lg">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-semibold">
-                    {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                   </div>
                   <div>
-                    <p className="font-semibold text-[var(--foreground)] text-sm">{user.name}</p>
-                    <p className="text-xs text-[var(--muted)]">{user.email}</p>
+                    <p className="font-semibold text-[var(--foreground)] text-sm">{user?.name}</p>
+                    <p className="text-xs text-[var(--muted)]">{user?.email}</p>
                   </div>
                 </div>
               )}

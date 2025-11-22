@@ -42,7 +42,7 @@ export default function Profile() {
         }
 
         const data = await response.json();
-        if (data.success) {
+        if (data.success && data.user) {
           setUser(data.user);
           setFormData({
             name: data.user.name || '',
@@ -125,7 +125,7 @@ export default function Profile() {
 
           <div>
             <label className="block text-sm font-medium mb-2">Email</label>
-            <input type="email" value={user.email} disabled className="input-field bg-gray-100" />
+            <input type="email" value={user?.email || ''} disabled className="input-field bg-gray-100" />
             <p className="text-xs text-[var(--muted)] mt-1">Email cannot be changed</p>
           </div>
 

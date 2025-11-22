@@ -455,12 +455,23 @@ router.get('/:id', authMiddleware, async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    console.log('Booking found, customerId:', booking.customerId, 'user id:', req.user.id);
 
     // Check if user owns this booking or is admin
-    if (booking.customerId._id.toString() !== req.user.id && req.user.role !== 'admin') {
-      console.log('Not authorized - booking customer:', booking.customerId._id.toString(), 'request user:', req.user.id);
+    // Handle case where customerId might be null (user deleted or populate failed)
+    const bookingOwnerId = booking.customerId ? booking.customerId._id?.toString() : null;
+    const isOwner = bookingOwnerId === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+    const isDeletedUserBooking = bookingOwnerId === null; // User was deleted
+
+    if (!isOwner && !isAdmin && !isDeletedUserBooking) {
+      console.log('Not authorized - booking customer:', bookingOwnerId, 'request user:', req.user.id);
       return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    // If user was deleted, only allow admin access
+    if (isDeletedUserBooking && !isAdmin) {
+      console.log('Booking belongs to deleted user, admin access only');
+      return res.status(403).json({ success: false, message: 'This booking is no longer accessible' });
     }
 
     console.log('Booking fetch successful');
@@ -550,7 +561,7 @@ router.put('/:id', adminMiddleware, async (req, res, next) => {
 
       // Emit real-time event for status update
       const io = global.io;
-      if (io) {
+      if (io && booking.customerId) {
         io.to(`user_${booking.customerId._id}`).emit('booking-updated', {
           booking: {
             id: booking._id,
@@ -580,7 +591,7 @@ router.put('/:id/cancel', authMiddleware, async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
-    if (booking.customerId.toString() !== req.user.id && req.user.role !== 'admin') {
+    if (booking.customerId && booking.customerId.toString() !== req.user.id && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 

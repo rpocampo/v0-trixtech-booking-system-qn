@@ -25,6 +25,8 @@ function PaymentProcessContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const bookingId = searchParams.get('bookingId');
+  const amountParam = searchParams.get('amount');
+  const paymentTypeParam = searchParams.get('paymentType');
 
   const [booking, setBooking] = useState<Booking | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -39,15 +41,38 @@ function PaymentProcessContent() {
     transactionId: string;
   } | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed' | 'failed'>('pending');
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
+  const [paymentType, setPaymentType] = useState<string>('full');
 
   useEffect(() => {
-    if (bookingId) {
+    if (bookingId && amountParam && paymentTypeParam) {
+      // Parameters provided via URL - use them directly
+      setPaymentAmount(parseFloat(amountParam));
+      setPaymentType(paymentTypeParam);
+      fetchBookingDetails();
+    } else if (bookingId) {
+      // Fallback: try to get from localStorage
+      const pendingPayment = localStorage.getItem('pendingPayment');
+      if (pendingPayment) {
+        try {
+          const paymentData = JSON.parse(pendingPayment);
+          if (paymentData.bookingId === bookingId) {
+            setPaymentAmount(paymentData.amount);
+            setPaymentType(paymentData.paymentType);
+            fetchBookingDetails();
+            return;
+          }
+        } catch (e) {
+          console.error('Error parsing pending payment data:', e);
+        }
+      }
+      // Fallback to old behavior
       fetchBookingDetails();
     } else {
       setError('No booking ID provided');
       setLoading(false);
     }
-  }, [bookingId]);
+  }, [bookingId, amountParam, paymentTypeParam]);
 
   const fetchBookingDetails = async () => {
     try {
@@ -81,7 +106,7 @@ function PaymentProcessContent() {
       }
 
       // Get user profile first
-      const userResponse = await fetch('http://localhost:5000/api/users/profile', {
+      const userResponse = await fetch('http://localhost:5000/api/auth/me', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -89,10 +114,16 @@ function PaymentProcessContent() {
 
       if (userResponse.ok) {
         const userData = await userResponse.json();
-        if (userData.success) {
+        if (userData.success && userData.user) {
           setUser(userData.user);
           console.log('User profile loaded:', userData.user.name);
+        } else {
+          console.warn('User profile fetch returned success but no user data');
+          setUser(null);
         }
+      } else {
+        console.warn('User profile fetch failed:', userResponse.status);
+        setUser(null);
       }
 
       // First, get the booking details to get the amount
@@ -107,6 +138,10 @@ function PaymentProcessContent() {
         throw new Error('Your session has expired. Please log in again.');
       }
 
+      if (bookingResponse.status === 403) {
+        throw new Error('This booking is no longer accessible. Please create a new booking.');
+      }
+
       if (!bookingResponse.ok) {
         throw new Error('Failed to load booking details');
       }
@@ -119,13 +154,14 @@ function PaymentProcessContent() {
       console.log('Booking data loaded:', bookingData.booking);
       setBooking(bookingData.booking);
 
-      // Create QR payment (only payment method available)
-      console.log('Creating QR payment for amount:', bookingData.booking.totalPrice);
-      await createQRPayment(bookingData.booking.totalPrice, token);
+      // Create QR payment using the payment amount (may be different from total price for down payments)
+      console.log('Creating QR payment for amount:', paymentAmount, 'payment type:', paymentType);
+      await createQRPayment(paymentAmount, token);
     } catch (error) {
       console.error('Error creating payment:', error);
       setError(error instanceof Error ? error.message : 'Failed to initiate payment');
       setCreatingPayment(false);
+      setLoading(false); // Set loading to false on error
     }
   };
 
@@ -141,6 +177,7 @@ function PaymentProcessContent() {
         body: JSON.stringify({
           bookingId,
           amount,
+          paymentType,
         }),
       });
 
@@ -166,6 +203,7 @@ function PaymentProcessContent() {
           transactionId: data.transactionId,
         });
         setCreatingPayment(false);
+        setLoading(false); // Set loading to false when QR payment is ready
 
         // Start polling for payment status
         console.log('Starting payment polling for reference:', data.referenceNumber);
@@ -184,6 +222,7 @@ function PaymentProcessContent() {
         }, Math.pow(2, retryCount) * 1000); // 1s, 2s, 4s delays
       } else {
         setCreatingPayment(false);
+        setLoading(false); // Set loading to false when all retries fail
         setError(error instanceof Error ? error.message : 'Failed to generate QR code after multiple attempts');
       }
     }
@@ -205,6 +244,8 @@ function PaymentProcessContent() {
             if (data.payment.status === 'completed') {
               setPaymentStatus('completed');
               clearInterval(pollInterval);
+              // Clean up pending payment data
+              localStorage.removeItem('pendingPayment');
               // Redirect to success page after a short delay
               setTimeout(() => {
                 router.push('/customer/bookings?payment=success');
@@ -295,9 +336,14 @@ function PaymentProcessContent() {
               )}
               <div className="border-t pt-2 mt-3">
                 <div className="flex justify-between font-semibold text-lg">
-                  <span>Total:</span>
-                  <span className="text-green-600">₱{isNaN(booking.totalPrice) ? '0.00' : booking.totalPrice.toFixed(2)}</span>
+                  <span>Payment Amount:</span>
+                  <span className="text-green-600">₱{paymentAmount.toFixed(2)}</span>
                 </div>
+                {paymentType === 'down_payment' && booking && (
+                  <div className="text-sm text-gray-600 mt-1">
+                    Down payment (30% of ₱{booking.totalPrice.toFixed(2)})
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -309,7 +355,7 @@ function PaymentProcessContent() {
             <div className="text-center mb-6">
               <h3 className="text-xl font-bold text-gray-800 mb-2">Scan QR Code to Pay</h3>
               <p className="text-gray-600 mb-2">Scan on the GCash app</p>
-              {user && (
+              {user && user.name && (
                 <p className="text-sm text-gray-500">Payment for: {user.name.split(' ').map(n => n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()).join(' ')}</p>
               )}
             </div>
@@ -352,7 +398,7 @@ function PaymentProcessContent() {
                     </div>
                   </div>
                 )}
-                {user && qrPayment.qrCode && (
+                {user && user.name && qrPayment.qrCode && (
                   <div className="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-sm rounded px-2 py-1 text-xs text-center font-medium">
                     {user.name.split(' ').map(n => n.charAt(0).toUpperCase()).join(' ')}
                   </div>
@@ -380,7 +426,7 @@ function PaymentProcessContent() {
                 </div>
                 <div>
                   <span className="font-medium text-gray-600">Amount:</span>
-                  <div className="font-bold text-green-600">₱{isNaN(qrPayment.instructions.amount) ? '0.00' : qrPayment.instructions.amount.toFixed(2)}</div>
+                  <div className="font-bold text-green-600">₱{paymentAmount.toFixed(2)}</div>
                 </div>
               </div>
             </div>
