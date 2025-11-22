@@ -55,6 +55,7 @@ export default function BookingPage() {
   } | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed' | 'failed'>('pending');
   const [currentBookingId, setCurrentBookingId] = useState<string>('');
+  const [currentBookingIntent, setCurrentBookingIntent] = useState<any>(null);
 
   // Reset and check availability when selections change
   useEffect(() => {
@@ -240,6 +241,8 @@ export default function BookingPage() {
   };
 
   const createQRPayment = async (bookingId: string, amount: number, token: string) => {
+    console.log('createQRPayment called with:', { bookingId, amount, token: token ? 'present' : 'missing' });
+
     try {
       const response = await fetch('http://localhost:5000/api/payments/create-qr', {
         method: 'POST',
@@ -253,17 +256,21 @@ export default function BookingPage() {
         }),
       });
 
+      console.log('QR payment API response status:', response.status);
+
       if (response.status === 401) {
         throw new Error('Your session has expired. Please log in again.');
       }
 
       const data = await response.json();
+      console.log('QR payment API response data:', data);
 
       if (!response.ok) {
         throw new Error(data.message || 'Failed to create QR payment');
       }
 
       if (data.success) {
+        console.log('QR payment created successfully:', data);
         setQrPayment({
           qrCode: data.qrCode,
           instructions: data.instructions,
@@ -279,6 +286,52 @@ export default function BookingPage() {
     } catch (error) {
       console.error('Error creating QR payment:', error);
       setError(error instanceof Error ? error.message : 'Failed to create QR payment');
+      throw error; // Re-throw to be caught by caller
+    }
+  };
+
+  const confirmBookingAfterPayment = async (paymentReference: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please log in to confirm booking');
+        return;
+      }
+
+      const response = await fetch('http://localhost:5000/api/bookings/confirm', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          paymentReference,
+          bookingIntent: currentBookingIntent,
+        }),
+      });
+
+      if (response.status === 401) {
+        setError('Your session has expired. Please log in again.');
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.message || 'Failed to confirm booking');
+        return;
+      }
+
+      if (data.success) {
+        // Booking confirmed successfully
+        console.log('Booking confirmed successfully');
+        router.push('/customer/bookings?payment=success');
+      } else {
+        setError('Failed to confirm booking. Please contact support.');
+      }
+    } catch (err) {
+      console.error('Error confirming booking:', err);
+      setError('An error occurred while confirming booking. Please contact support.');
     }
   };
 
@@ -297,10 +350,8 @@ export default function BookingPage() {
             if (data.payment.status === 'completed') {
               setPaymentStatus('completed');
               clearInterval(pollInterval);
-              // Redirect to success page after a short delay
-              setTimeout(() => {
-                router.push('/customer/bookings?payment=success');
-              }, 2000);
+              // Confirm booking after successful payment
+              await confirmBookingAfterPayment(referenceNumber);
             } else if (data.payment.status === 'failed') {
               setPaymentStatus('failed');
               clearInterval(pollInterval);
@@ -337,7 +388,8 @@ export default function BookingPage() {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/bookings', {
+      // Step 1: Create booking intent (payment-first approach)
+      const intentResponse = await fetch('http://localhost:5000/api/bookings/create-intent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -351,32 +403,36 @@ export default function BookingPage() {
         }),
       });
 
-      if (response.status === 401) {
+      if (intentResponse.status === 401) {
         setError('Your session has expired. Please log in again.');
+        setSubmitting(false);
         return;
       }
 
-      const data = await response.json();
+      const intentData = await intentResponse.json();
 
-      if (!response.ok) {
-        setError(data.message || 'Booking failed');
+      if (!intentResponse.ok) {
+        setError(intentData.message || 'Failed to create booking intent');
+        setSubmitting(false);
         return;
       }
 
-      if (data.queued) {
+      if (intentData.queued) {
         // Item was queued, show alternatives
         setQueued(true);
-        setAlternatives(data.alternatives || []);
+        setAlternatives(intentData.alternatives || []);
         setError('');
-      } else if (data.requiresPayment) {
-        // Booking created, generate QR code immediately
-        console.log('Booking created, generating QR code:', data.booking._id);
-        setCurrentBookingId(data.booking._id);
-        await createQRPayment(data.booking._id, data.booking.totalPrice, token);
+        setSubmitting(false);
+      } else if (intentData.success && intentData.payment) {
+        // Payment intent created successfully, show QR code
+        console.log('Booking intent created, showing payment QR code');
+        setQrPayment(intentData.payment);
+        setCurrentBookingIntent(intentData.bookingIntent);
         setShowPayment(true);
+        setSubmitting(false);
       } else {
-        // Booking confirmed successfully (fallback for old behavior)
-        router.push('/customer/bookings');
+        setError('Failed to initiate payment. Please try again.');
+        setSubmitting(false);
       }
     } catch (err) {
       setError('An error occurred. Please try again.');

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSocket } from '../../../components/SocketProvider';
 
 interface Notification {
   _id: string;
@@ -15,6 +16,7 @@ interface Notification {
 }
 
 export default function AdminNotificationsPage() {
+  const { socket } = useSocket();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
@@ -22,6 +24,22 @@ export default function AdminNotificationsPage() {
   useEffect(() => {
     fetchNotifications();
   }, []);
+
+  // Real-time notification updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewNotification = (notification: Notification) => {
+      console.log('New admin notification received:', notification);
+      setNotifications(prev => [notification, ...prev]);
+    };
+
+    socket.on('admin-notification', handleNewNotification);
+
+    return () => {
+      socket.off('new-admin-notification', handleNewNotification);
+    };
+  }, [socket]);
 
   const fetchNotifications = async () => {
     try {

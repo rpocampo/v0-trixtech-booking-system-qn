@@ -69,6 +69,7 @@ function PaymentProcessContent() {
   const createPaymentIntent = async () => {
     if (!bookingId) return;
 
+    console.log('Creating payment intent for booking:', bookingId);
     setCreatingPayment(true);
     setError('');
     setQrPayment(null);
@@ -90,10 +91,12 @@ function PaymentProcessContent() {
         const userData = await userResponse.json();
         if (userData.success) {
           setUser(userData.user);
+          console.log('User profile loaded:', userData.user.name);
         }
       }
 
       // First, get the booking details to get the amount
+      console.log('Fetching booking details for ID:', bookingId);
       const bookingResponse = await fetch(`http://localhost:5000/api/bookings/${bookingId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -113,9 +116,11 @@ function PaymentProcessContent() {
         throw new Error('Invalid booking data');
       }
 
+      console.log('Booking data loaded:', bookingData.booking);
       setBooking(bookingData.booking);
 
       // Create QR payment (only payment method available)
+      console.log('Creating QR payment for amount:', bookingData.booking.totalPrice);
       await createQRPayment(bookingData.booking.totalPrice, token);
     } catch (error) {
       console.error('Error creating payment:', error);
@@ -124,42 +129,63 @@ function PaymentProcessContent() {
     }
   };
 
-  const createQRPayment = async (amount: number, token: string) => {
-    const response = await fetch('http://localhost:5000/api/payments/create-qr', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        bookingId,
-        amount,
-      }),
-    });
-
-    if (response.status === 401) {
-      throw new Error('Your session has expired. Please log in again.');
-    }
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to create QR payment');
-    }
-
-    if (data.success) {
-      setQrPayment({
-        qrCode: data.qrCode,
-        instructions: data.instructions,
-        referenceNumber: data.referenceNumber,
-        transactionId: data.transactionId,
+  const createQRPayment = async (amount: number, token: string, retryCount = 0) => {
+    try {
+      console.log(`Creating QR payment (attempt ${retryCount + 1}) for amount:`, amount);
+      const response = await fetch('http://localhost:5000/api/payments/create-qr', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          bookingId,
+          amount,
+        }),
       });
-      setCreatingPayment(false);
 
-      // Start polling for payment status
-      startPaymentPolling(data.referenceNumber, token);
-    } else {
-      throw new Error('Invalid QR payment response');
+      console.log('QR payment API response status:', response.status);
+
+      if (response.status === 401) {
+        throw new Error('Your session has expired. Please log in again.');
+      }
+
+      const data = await response.json();
+      console.log('QR payment API response data:', data);
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create QR payment');
+      }
+
+      if (data.success) {
+        console.log('QR payment created successfully:', data);
+        setQrPayment({
+          qrCode: data.qrCode,
+          instructions: data.instructions,
+          referenceNumber: data.referenceNumber,
+          transactionId: data.transactionId,
+        });
+        setCreatingPayment(false);
+
+        // Start polling for payment status
+        console.log('Starting payment polling for reference:', data.referenceNumber);
+        startPaymentPolling(data.referenceNumber, token);
+      } else {
+        throw new Error('Invalid QR payment response');
+      }
+    } catch (error) {
+      console.error('QR payment creation failed:', error);
+
+      // Retry up to 2 times with exponential backoff
+      if (retryCount < 2) {
+        console.log(`Retrying QR payment creation (attempt ${retryCount + 1})...`);
+        setTimeout(() => {
+          createQRPayment(amount, token, retryCount + 1);
+        }, Math.pow(2, retryCount) * 1000); // 1s, 2s, 4s delays
+      } else {
+        setCreatingPayment(false);
+        setError(error instanceof Error ? error.message : 'Failed to generate QR code after multiple attempts');
+      }
     }
   };
 
@@ -290,12 +316,43 @@ function PaymentProcessContent() {
 
             <div className="flex justify-center mb-6">
               <div className="bg-white p-4 rounded-lg border-2 border-gray-200 relative">
-                <img
-                  src={qrPayment.qrCode}
-                  alt="GCash QR Code"
-                  className="w-64 h-64"
-                />
-                {user && (
+                {qrPayment.qrCode ? (
+                  <img
+                    src={qrPayment.qrCode}
+                    alt="GCash QR Code"
+                    className="w-64 h-64"
+                    onLoad={() => console.log('QR code loaded successfully')}
+                    onError={(e) => {
+                      console.error('QR code failed to load, src:', qrPayment.qrCode);
+                      e.currentTarget.style.display = 'none';
+                      // Show error message instead
+                      const errorDiv = document.createElement('div');
+                      errorDiv.className = 'w-64 h-64 flex items-center justify-center bg-red-50 border-2 border-red-200 rounded-lg';
+                      errorDiv.innerHTML = `
+                        <div class="text-center text-red-600">
+                          <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                          </svg>
+                          <p class="text-sm font-medium">QR Code Failed to Load</p>
+                          <button onclick="window.location.reload()" class="mt-2 text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">
+                            Retry
+                          </button>
+                        </div>
+                      `;
+                      e.currentTarget.parentNode?.replaceChild(errorDiv, e.currentTarget);
+                    }}
+                  />
+                ) : (
+                  <div className="w-64 h-64 flex items-center justify-center bg-gray-100 border-2 border-gray-300 rounded-lg">
+                    <div className="text-center text-gray-500">
+                      <svg className="w-12 h-12 mx-auto mb-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <p className="text-sm">Loading QR Code...</p>
+                    </div>
+                  </div>
+                )}
+                {user && qrPayment.qrCode && (
                   <div className="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-sm rounded px-2 py-1 text-xs text-center font-medium">
                     {user.name.split(' ').map(n => n.charAt(0).toUpperCase()).join(' ')}
                   </div>

@@ -88,7 +88,7 @@ export default function Register() {
               onChange={handleChange}
               required
               className="input-field"
-              placeholder="John Doe"
+              placeholder="Full Name"
             />
           </div>
 
@@ -101,7 +101,7 @@ export default function Register() {
               onChange={handleChange}
               required
               className="input-field"
-              placeholder="john@example.com"
+              placeholder="@example.com"
             />
           </div>
 

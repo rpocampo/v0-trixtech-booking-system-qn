@@ -110,16 +110,44 @@ export default function NotificationProvider({ children }: NotificationProviderP
       }
     };
 
+    const handleNotification = (data: any) => {
+      showNotification({
+        id: data.id,
+        title: data.title,
+        message: data.message,
+        type: data.type,
+        priority: data.priority,
+      });
+    };
+
+    const handleAdminNotification = (data: any) => {
+      // Only show to admins
+      const role = localStorage.getItem('role');
+      if (role === 'admin') {
+        showNotification({
+          id: data.id,
+          title: data.title,
+          message: data.message,
+          type: data.type,
+          priority: data.priority,
+        });
+      }
+    };
+
     socket.on('booking-created', handleBookingCreated);
     socket.on('booking-updated', handleBookingUpdated);
-    socket.on('new-booking', handleNewBooking);
+    socket.on('new-confirmed-booking', handleNewBooking);
     socket.on('new-pending-booking', handleNewPendingBooking);
+    socket.on('notification', handleNotification);
+    socket.on('admin-notification', handleAdminNotification);
 
     return () => {
       socket.off('booking-created', handleBookingCreated);
       socket.off('booking-updated', handleBookingUpdated);
-      socket.off('new-booking', handleNewBooking);
+      socket.off('new-confirmed-booking', handleNewBooking);
       socket.off('new-pending-booking', handleNewPendingBooking);
+      socket.off('notification', handleNotification);
+      socket.off('admin-notification', handleAdminNotification);
     };
   }, [socket]);
 

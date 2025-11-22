@@ -95,20 +95,41 @@ reservationQueueSchema.methods.fulfill = async function() {
     throw new Error('Service not found');
   }
 
-  // Create the booking
+  // Calculate dynamic price based on days before checkout
+  const bookingDateTime = new Date(this.bookingDate);
+  const now = new Date();
+  const daysBeforeCheckout = Math.ceil((bookingDateTime.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+  const calculatedPrice = service.calculatePrice(Math.max(0, daysBeforeCheckout));
+  const totalPrice = calculatedPrice * this.requestedQuantity;
+
+  // Calculate applied multiplier safely
+  const appliedMultiplier = service.basePrice > 0 ? calculatedPrice / service.basePrice : 1.0;
+
+  // Create the booking with all required fields
   const booking = new Booking({
     customerId: this.customerId,
     serviceId: this.serviceId,
     quantity: this.requestedQuantity,
-    bookingDate: this.bookingDate,
-    totalPrice: service.price * this.requestedQuantity,
+    bookingDate: bookingDateTime,
+    totalPrice,
+    basePrice: service.basePrice,
+    appliedMultiplier,
+    daysBeforeCheckout: Math.max(0, daysBeforeCheckout),
     status: 'confirmed', // Auto-confirm fulfilled reservations
+    paymentStatus: 'paid', // Reservations are fulfilled when available, assume paid
     notes: this.notes,
   });
 
   await booking.save();
   await booking.populate('serviceId');
   await booking.populate('customerId', 'name email');
+
+  // Decrease inventory for equipment/supply items
+  if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+    service.quantity = Math.max(0, service.quantity - this.requestedQuantity);
+    await service.save();
+  }
 
   // Update queue status
   this.status = 'fulfilled';

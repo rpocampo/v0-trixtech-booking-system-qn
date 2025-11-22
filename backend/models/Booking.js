@@ -45,8 +45,25 @@ const bookingSchema = new mongoose.Schema(
     },
     paymentStatus: {
       type: String,
-      enum: ['unpaid', 'paid'],
+      enum: ['unpaid', 'partial', 'paid'],
       default: 'unpaid',
+    },
+    paymentType: {
+      type: String,
+      enum: ['full', 'down_payment'],
+      default: 'full',
+    },
+    amountPaid: {
+      type: Number,
+      default: 0,
+    },
+    remainingBalance: {
+      type: Number,
+      default: 0,
+    },
+    downPaymentPercentage: {
+      type: Number,
+      default: 30, // Default 30% down payment
     },
     notes: {
       type: String,

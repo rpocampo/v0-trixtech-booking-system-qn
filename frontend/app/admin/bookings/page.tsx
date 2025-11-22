@@ -9,6 +9,9 @@ interface Booking {
   bookingDate: string;
   status: string;
   paymentStatus: string;
+  paymentType?: string;
+  amountPaid?: number;
+  remainingBalance?: number;
   totalPrice: number;
   createdAt?: string;
   updatedAt?: string;
@@ -157,6 +160,7 @@ export default function AdminBookings() {
             >
               <option value="">All Payments</option>
               <option value="unpaid">Unpaid</option>
+              <option value="partial">Partial</option>
               <option value="paid">Paid</option>
             </select>
           </div>
@@ -200,6 +204,7 @@ export default function AdminBookings() {
               <th className="px-6 py-3 text-left text-sm font-semibold">Service</th>
               <th className="px-6 py-3 text-left text-sm font-semibold">Date</th>
               <th className="px-6 py-3 text-left text-sm font-semibold">Price</th>
+              <th className="px-6 py-3 text-left text-sm font-semibold">Payment Type</th>
               <th className="px-6 py-3 text-left text-sm font-semibold">Status</th>
               <th className="px-6 py-3 text-left text-sm font-semibold">Payment</th>
               <th className="px-6 py-3 text-left text-sm font-semibold">Actions</th>
@@ -218,6 +223,17 @@ export default function AdminBookings() {
                 <td className="px-6 py-3 text-sm">{new Date(booking.bookingDate).toLocaleDateString()}</td>
                 <td className="px-6 py-3 font-semibold">₱{booking.totalPrice}</td>
                 <td className="px-6 py-3">
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    booking.paymentType === 'full' ? 'bg-green-100 text-green-800' :
+                    booking.paymentType === 'down_payment' ? 'bg-orange-100 text-orange-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {booking.paymentType === 'full' ? 'Full Payment' :
+                     booking.paymentType === 'down_payment' ? 'Down Payment' :
+                     'N/A'}
+                  </span>
+                </td>
+                <td className="px-6 py-3">
                   <select
                     value={booking.status}
                     onChange={(e) => updateBooking(booking._id, e.target.value, booking.paymentStatus)}
@@ -233,9 +249,14 @@ export default function AdminBookings() {
                   <select
                     value={booking.paymentStatus}
                     onChange={(e) => updateBooking(booking._id, booking.status, e.target.value)}
-                    className={`px-3 py-1 rounded text-sm font-semibold ${booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
+                    className={`px-3 py-1 rounded text-sm font-semibold ${
+                      booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                      booking.paymentStatus === 'partial' ? 'bg-orange-100 text-orange-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}
                   >
                     <option value="unpaid">Unpaid</option>
+                    <option value="partial">Partial</option>
                     <option value="paid">Paid</option>
                   </select>
                 </td>
@@ -364,7 +385,11 @@ export default function AdminBookings() {
                         <select
                           value={selectedBooking.paymentStatus}
                           onChange={(e) => updateBooking(selectedBooking._id, selectedBooking.status, e.target.value)}
-                          className={`px-3 py-1 rounded text-sm font-semibold ${selectedBooking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}
+                          className={`px-3 py-1 rounded text-sm font-semibold ${
+                            selectedBooking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                            selectedBooking.paymentStatus === 'partial' ? 'bg-orange-100 text-orange-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}
                         >
                           <option value="unpaid">Unpaid</option>
                           <option value="paid">Paid</option>

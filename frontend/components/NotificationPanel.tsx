@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSocket } from './SocketProvider';
 import Link from 'next/link';
 
 interface Notification {
@@ -25,6 +26,7 @@ interface NotificationPanelProps {
 }
 
 export default function NotificationPanel({ isOpen, onClose, position = 'default' }: NotificationPanelProps) {
+  const { socket } = useSocket();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -35,6 +37,35 @@ export default function NotificationPanel({ isOpen, onClose, position = 'default
       fetchUnreadCount();
     }
   }, [isOpen]);
+
+  // Listen for real-time notification updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNotification = () => {
+      // Refresh notifications when new notification arrives
+      if (isOpen) {
+        fetchNotifications();
+        fetchUnreadCount();
+      }
+    };
+
+    const handleAdminNotification = () => {
+      // Refresh notifications when admin notification arrives
+      if (isOpen) {
+        fetchNotifications();
+        fetchUnreadCount();
+      }
+    };
+
+    socket.on('notification', handleNotification);
+    socket.on('admin-notification', handleAdminNotification);
+
+    return () => {
+      socket.off('notification', handleNotification);
+      socket.off('admin-notification', handleAdminNotification);
+    };
+  }, [socket, isOpen]);
 
   const fetchNotifications = async () => {
     setLoading(true);
@@ -57,7 +88,7 @@ export default function NotificationPanel({ isOpen, onClose, position = 'default
 
       const data = await response.json();
       if (data.success) {
-        setNotifications(data.data);
+        setNotifications(data.notifications);
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);

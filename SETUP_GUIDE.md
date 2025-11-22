@@ -21,9 +21,9 @@ This automatically installs all dependencies, sets up environment files, and sta
 
 **Step 1: Install Dependencies**
 ```bash
-# Backend dependencies
+# Backend dependencies (includes automatic database seeding)
 cd backend
-npm install
+npm install  # This will also run database seeding automatically
 
 # Frontend dependencies
 cd ../frontend

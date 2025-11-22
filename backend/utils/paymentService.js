@@ -18,11 +18,15 @@ const generateReferenceNumber = () => {
 };
 
 // Create QR code-based payment for GCash
-const createQRPayment = async (bookingId, amount, userId) => {
+const createQRPayment = async (bookingId, amount, userId, paymentType = 'full') => {
   try {
-    console.log('Creating QR payment for booking:', bookingId, 'amount:', amount, 'user:', userId);
+    console.log('Creating QR payment for booking:', bookingId, 'amount:', amount, 'user:', userId, 'type:', paymentType);
     const transactionId = generateTransactionId();
     const referenceNumber = generateReferenceNumber();
+
+    // Determine payment type flags
+    const isDownPayment = paymentType === 'down_payment';
+    const isFinalPayment = paymentType === 'remaining_balance';
 
     // Create payment record first
     const payment = new Payment({
@@ -34,6 +38,9 @@ const createQRPayment = async (bookingId, amount, userId) => {
       transactionId,
       referenceNumber,
       status: 'pending',
+      paymentType,
+      isDownPayment,
+      isFinalPayment,
       paymentData: {
         createdAt: new Date(),
         qrGenerated: true,
@@ -42,15 +49,21 @@ const createQRPayment = async (bookingId, amount, userId) => {
     });
 
     await payment.save();
-    console.log('Payment record created:', payment._id);
+    console.log('Payment record created:', payment._id, 'type:', paymentType);
 
     // Generate QR code data
+    const paymentDescription = isDownPayment
+      ? `Down Payment - ${transactionId}`
+      : isFinalPayment
+        ? `Final Payment - ${transactionId}`
+        : `Full Payment - ${transactionId}`;
+
     const qrData = {
       amount,
       referenceNumber,
       merchantName: 'TRIXTECH',
       merchantId: 'TRIXTECH001',
-      description: `Booking Payment - ${transactionId}`,
+      description: paymentDescription,
       paymentId: payment._id.toString(),
       callbackUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/api/payments/verify-qr/${referenceNumber}`
     };
@@ -70,7 +83,8 @@ const createQRPayment = async (bookingId, amount, userId) => {
       referenceNumber,
       qrCode: qrCodeDataURL,
       instructions: paymentInstructions,
-      status: 'pending'
+      status: 'pending',
+      paymentType
     };
 
   } catch (error) {
@@ -183,32 +197,66 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
     payment.paymentData = { ...payment.paymentData, ...paymentData, verifiedAt: new Date() };
     await payment.save();
 
-    // Confirm the booking
+    // Update the booking based on payment type
     const booking = payment.bookingId;
     if (booking) {
-      booking.status = 'confirmed';
-      booking.paymentStatus = 'paid';
+      // Update payment tracking
+      booking.amountPaid += payment.amount;
+      booking.paymentType = payment.paymentType;
+
+      if (payment.paymentType === 'full') {
+        // Full payment - booking is confirmed and fully paid
+        booking.status = 'confirmed';
+        booking.paymentStatus = 'paid';
+        booking.remainingBalance = 0;
+      } else if (payment.paymentType === 'down_payment') {
+        // Down payment - booking is confirmed but partially paid
+        booking.status = 'confirmed';
+        booking.paymentStatus = 'partial';
+        booking.remainingBalance = booking.totalPrice - booking.amountPaid;
+      } else if (payment.paymentType === 'remaining_balance') {
+        // Final payment - booking becomes fully paid
+        booking.paymentStatus = 'paid';
+        booking.remainingBalance = 0;
+      }
+
       await booking.save();
 
-      // Send confirmation notifications
+      // Send appropriate confirmation notifications
       try {
-        await sendTemplateNotification(payment.userId._id, 'BOOKING_CONFIRMED', {
+        const notificationType = payment.paymentType === 'down_payment'
+          ? 'BOOKING_DOWN_PAYMENT_CONFIRMED'
+          : payment.paymentType === 'remaining_balance'
+            ? 'BOOKING_FINAL_PAYMENT_CONFIRMED'
+            : 'BOOKING_CONFIRMED';
+
+        await sendTemplateNotification(payment.userId._id, notificationType, {
           metadata: {
             bookingId: booking._id,
             serviceId: booking.serviceId,
             amount: payment.amount,
+            paymentType: payment.paymentType,
+            remainingBalance: booking.remainingBalance,
           }
         });
 
         // Admin notification
         const User = require('../models/User');
         const adminUsers = await User.find({ role: 'admin' });
+        const adminNotificationType = payment.paymentType === 'down_payment'
+          ? 'NEW_DOWN_PAYMENT_ADMIN'
+          : payment.paymentType === 'remaining_balance'
+            ? 'FINAL_PAYMENT_ADMIN'
+            : 'NEW_BOOKING_ADMIN';
+
         for (const admin of adminUsers) {
-          await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
+          await sendTemplateNotification(admin._id, adminNotificationType, {
             metadata: {
               bookingId: booking._id,
               serviceId: booking.serviceId,
               amount: payment.amount,
+              paymentType: payment.paymentType,
+              remainingBalance: booking.remainingBalance,
             }
           });
         }
@@ -221,7 +269,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
       success: true,
       payment,
       booking: payment.bookingId,
-      message: 'QR payment verified and booking confirmed'
+      message: `QR payment verified and booking ${payment.paymentType === 'down_payment' ? 'partially confirmed' : 'confirmed'}`
     };
 
   } catch (error) {

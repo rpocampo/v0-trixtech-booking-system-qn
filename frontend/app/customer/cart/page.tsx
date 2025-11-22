@@ -115,11 +115,8 @@ export default function CartPage() {
         return;
       }
 
-      // If validation passes, proceed with checkout
-      // For now, redirect to the first item's booking page
-      // In a full implementation, this would create a bulk booking or checkout process
-      const firstItem = items[0];
-      router.push(`/customer/booking/${firstItem.id}`);
+      // If validation passes, proceed with unified checkout
+      router.push('/customer/checkout');
     } catch (error) {
       console.error('Checkout validation failed:', error);
       setStockValidationIssues(['Failed to validate stock availability. Please try again.']);
@@ -342,8 +339,8 @@ export default function CartPage() {
                   : isProcessing
                     ? 'Processing...'
                     : stockValidationIssues.length > 0
-                      ? 'Stock Issues - Cannot Checkout'
-                      : 'Proceed to Booking'
+                         ? 'Stock Issues - Cannot Checkout'
+                         : 'Unified Checkout'
                 }
               </button>
 
@@ -359,8 +356,8 @@ export default function CartPage() {
               <div className="flex items-center gap-2 text-blue-800 text-sm">
                 <span className="text-lg">ℹ️</span>
                 <div>
-                  <p className="font-semibold">Next Steps:</p>
-                  <p>Select dates and times for your bookings after checkout.</p>
+                  <p className="font-semibold">Unified Checkout Process:</p>
+                  <p>All items will be processed together. Schedule dates and times for each service in the next step.</p>
                 </div>
               </div>
             </div>

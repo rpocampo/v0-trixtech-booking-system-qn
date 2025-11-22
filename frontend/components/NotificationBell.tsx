@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSocket } from './SocketProvider';
 import NotificationPanel from './NotificationPanel';
 
 interface NotificationBellProps {
@@ -9,6 +10,7 @@ interface NotificationBellProps {
 }
 
 export default function NotificationBell({ variant = 'light', position = 'default' }: NotificationBellProps) {
+  const { socket } = useSocket();
   const [unreadCount, setUnreadCount] = useState(0);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
@@ -20,6 +22,29 @@ export default function NotificationBell({ variant = 'light', position = 'defaul
 
     return () => clearInterval(interval);
   }, []);
+
+  // Listen for real-time notification updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNotification = () => {
+      // Refresh unread count when new notification arrives
+      fetchUnreadCount();
+    };
+
+    const handleAdminNotification = () => {
+      // Refresh unread count when admin notification arrives
+      fetchUnreadCount();
+    };
+
+    socket.on('notification', handleNotification);
+    socket.on('admin-notification', handleAdminNotification);
+
+    return () => {
+      socket.off('notification', handleNotification);
+      socket.off('admin-notification', handleAdminNotification);
+    };
+  }, [socket]);
 
   const fetchUnreadCount = async () => {
     try {

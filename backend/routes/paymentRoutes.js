@@ -12,7 +12,7 @@ const router = express.Router();
 // Create QR code payment for booking
 router.post('/create-qr', authMiddleware, async (req, res) => {
   try {
-    const { bookingId, amount } = req.body;
+    const { bookingId, amount, paymentType } = req.body;
 
     if (!bookingId || !amount) {
       return res.status(400).json({
@@ -21,7 +21,7 @@ router.post('/create-qr', authMiddleware, async (req, res) => {
       });
     }
 
-    const result = await createQRPayment(bookingId, amount, req.user.id);
+    const result = await createQRPayment(bookingId, amount, req.user.id, paymentType || 'full');
 
     if (result.success) {
       res.json({

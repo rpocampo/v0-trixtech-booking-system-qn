@@ -104,6 +104,7 @@ echo   ────────────────────────�
 cd backend
 echo   📂 Working directory: %cd%
 echo   ⏳ Installing packages... (this may take a few minutes)
+echo   🌱 Note: Database seeding will run automatically after installation
 call npm install
 if %errorlevel% neq 0 (
     echo.
@@ -315,9 +316,9 @@ if not exist "start.bat" (
 )
 echo.
 
-echo   🎯 Step 9/9: Final Setup & Demo Data
+echo   🎯 Step 9/9: Final Setup & Verification
 echo   ──────────────────────────────────────────────────────────────
-REM Optional: Seed demo data if script exists
+REM Demo data seeding now happens automatically during npm install
 if exist "backend\scripts\seed.js" (
     echo   🌱 Seeding demo data...
     cd backend

@@ -45,19 +45,9 @@ const generateGCashQRData = (paymentData) => {
 // Generate QR code as data URL (for web display)
 const generateQRCodeDataURL = async (paymentData) => {
   try {
-    // Check if static QR code is configured
-    const staticQRCode = process.env.GCASH_QR_CODE;
-    let qrData;
-
-    if (staticQRCode) {
-      // Use static QR code
-      qrData = staticQRCode;
-      console.log('Using static GCash QR code for payment, length:', qrData.length);
-    } else {
-      // Generate dynamic QR code
-      qrData = generateGCashQRData(paymentData);
-      console.log('Generated dynamic QR code for payment');
-    }
+    // Always generate dynamic QR code for payments to include payment-specific data
+    const qrData = generateGCashQRData(paymentData);
+    console.log('Generated dynamic QR code for payment');
 
     console.log('QR data to encode:', qrData.substring(0, 50) + '...');
 
@@ -167,42 +157,21 @@ const validateQRData = (qrData) => {
 
 // Generate payment instructions for QR code
 const generatePaymentInstructions = (paymentData) => {
-  const staticQRCode = process.env.GCASH_QR_CODE;
-
-  if (staticQRCode) {
-    // Instructions for static QR code
-    return {
-      title: 'Pay with GCash QR Code',
-      instructions: [
-        '1. Open your GCash app',
-        '2. Tap the QR scanner icon or Pay QR',
-        '3. Scan the QR code below',
-        '4. Enter the exact amount: ₱' + paymentData.amount,
-        '5. Enter reference number: ' + paymentData.referenceNumber,
-        '6. Complete the payment'
-      ],
-      amount: paymentData.amount,
-      reference: paymentData.referenceNumber,
-      merchant: paymentData.merchantName || 'TRIXTECH',
-      note: 'Important: Enter the exact amount and reference number shown above. Payment will be verified automatically.'
-    };
-  } else {
-    // Instructions for dynamic QR code
-    return {
-      title: 'Pay with GCash QR Code',
-      instructions: [
-        '1. Open your GCash app',
-        '2. Tap the QR scanner icon',
-        '3. Point your camera at the QR code below',
-        '4. Review the payment details',
-        '5. Confirm and complete the payment'
-      ],
-      amount: paymentData.amount,
-      reference: paymentData.referenceNumber,
-      merchant: paymentData.merchantName || 'TRIXTECH',
-      note: 'Payment will be automatically verified and your booking will be confirmed.'
-    };
-  }
+  // Instructions for dynamic QR code (always used now)
+  return {
+    title: 'Pay with GCash QR Code',
+    instructions: [
+      '1. Open your GCash app',
+      '2. Tap the QR scanner icon',
+      '3. Point your camera at the QR code below',
+      '4. Review the payment details (amount and merchant should auto-populate)',
+      '5. Confirm and complete the payment'
+    ],
+    amount: paymentData.amount,
+    reference: paymentData.referenceNumber,
+    merchant: paymentData.merchantName || 'TRIXTECH',
+    note: 'Payment details are embedded in the QR code. Payment will be automatically verified and your booking will be confirmed.'
+  };
 };
 
 module.exports = {

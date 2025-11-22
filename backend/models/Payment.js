@@ -32,6 +32,19 @@ const paymentSchema = new mongoose.Schema(
       enum: ['gcash_qr'],
       default: 'gcash_qr',
     },
+    paymentType: {
+      type: String,
+      enum: ['full', 'down_payment', 'remaining_balance'],
+      default: 'full',
+    },
+    isDownPayment: {
+      type: Boolean,
+      default: false,
+    },
+    isFinalPayment: {
+      type: Boolean,
+      default: false,
+    },
     transactionId: {
       type: String,
       required: true,

@@ -270,6 +270,10 @@ router.post('/', authMiddleware, async (req, res, next) => {
           daysBeforeCheckout: Math.max(0, daysBeforeCheckout),
           status: 'pending', // Changed from 'confirmed' to 'pending'
           paymentStatus: 'unpaid', // Explicitly set payment status
+          paymentType: 'full', // Default to full payment
+          amountPaid: 0,
+          remainingBalance: totalPrice,
+          downPaymentPercentage: 30, // Default 30%
           notes,
         });
 
@@ -585,6 +589,307 @@ router.put('/:id/cancel', authMiddleware, async (req, res, next) => {
 
     res.json({ success: true, booking });
   } catch (error) {
+    next(error);
+  }
+});
+
+// Create booking intent (payment-first approach)
+router.post('/create-intent', authMiddleware, async (req, res, next) => {
+  try {
+    const { serviceId, quantity, bookingDate, notes } = req.body;
+
+    if (!serviceId || !bookingDate) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    const service = await Service.findById(serviceId);
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+
+    const requestedQuantity = quantity || 1;
+    const bookingDateObj = new Date(bookingDate);
+
+    // Check available quantity
+    if (service.quantity !== undefined && service.quantity < requestedQuantity) {
+      return res.status(409).json({
+        success: false,
+        message: `Only ${service.quantity} items available. Requested: ${requestedQuantity}`
+      });
+    }
+
+    // Check availability (only check confirmed bookings since we're payment-first)
+    let isAvailable = true;
+    let availableQuantity = service.quantity || 1;
+
+    if (service.category === 'equipment') {
+      const existingBookings = await Booking.find({
+        serviceId,
+        bookingDate: {
+          $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+          $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
+        },
+        status: 'confirmed', // Only confirmed bookings block availability
+      });
+
+      const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+      availableQuantity = Math.max(0, service.quantity - totalBooked);
+
+      if (availableQuantity < requestedQuantity) {
+        isAvailable = false;
+      }
+    } else {
+      // For non-equipment services, check for existing booking on the same day
+      const existingBooking = await Booking.findOne({
+        serviceId,
+        bookingDate: {
+          $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+          $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
+        },
+        status: 'confirmed', // Only confirmed bookings block availability
+      });
+
+      if (existingBooking) {
+        isAvailable = false;
+        availableQuantity = 0;
+      }
+    }
+
+    if (!isAvailable) {
+      // Add to reservation queue
+      const alternatives = await findAlternativeServices(serviceId, new Date(bookingDate), requestedQuantity);
+
+      const queueEntry = new ReservationQueue({
+        customerId: req.user.id,
+        serviceId,
+        requestedQuantity,
+        bookingDate: new Date(bookingDate),
+        notes,
+        alternativeSuggestions: alternatives.map(alt => ({
+          serviceId: alt.serviceId,
+          reason: alt.reason,
+          availability: alt.availableQuantity,
+        })),
+      });
+
+      await queueEntry.save();
+
+      return res.status(202).json({
+        success: true,
+        queued: true,
+        queueId: queueEntry._id,
+        alternatives: alternatives.slice(0, 3),
+        message: 'Item currently unavailable. Added to reservation queue with first-come, first-served priority.'
+      });
+    }
+
+    // Calculate price
+    const now = new Date();
+    const daysBeforeCheckout = Math.ceil((bookingDateObj.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const calculatedPrice = service.basePrice || service.price || 0;
+    const totalPrice = calculatedPrice * requestedQuantity;
+
+    // Create booking intent (temporary, not saved to database yet)
+    const bookingIntent = {
+      customerId: req.user.id,
+      serviceId: service._id,
+      quantity: requestedQuantity,
+      bookingDate: new Date(bookingDate),
+      totalPrice,
+      notes,
+      service: {
+        name: service.name,
+        category: service.category,
+        price: calculatedPrice
+      }
+    };
+
+    // Generate payment QR code first
+    const { createQRPayment } = require('../utils/paymentService');
+    const paymentResult = await createQRPayment(null, bookingIntent.totalPrice, req.user.id);
+
+    if (!paymentResult.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to create payment. Please try again.'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      bookingIntent,
+      payment: {
+        qrCode: paymentResult.qrCode,
+        instructions: paymentResult.instructions,
+        referenceNumber: paymentResult.referenceNumber,
+        transactionId: paymentResult.transactionId,
+      },
+      message: 'Payment required. Complete payment to confirm booking.'
+    });
+
+  } catch (error) {
+    console.error('Error creating booking intent:', error);
+    next(error);
+  }
+});
+
+// Confirm booking after successful payment
+router.post('/confirm', authMiddleware, async (req, res, next) => {
+  try {
+    const { paymentReference, bookingIntent } = req.body;
+
+    if (!paymentReference || !bookingIntent) {
+      return res.status(400).json({ success: false, message: 'Missing payment reference or booking intent' });
+    }
+
+    // Verify payment was successful
+    const Payment = require('../models/Payment');
+    const payment = await Payment.findOne({
+      referenceNumber: paymentReference,
+      userId: req.user.id,
+      status: 'completed'
+    });
+
+    if (!payment) {
+      return res.status(400).json({ success: false, message: 'Payment not found or not completed' });
+    }
+
+    // Double-check availability before creating booking
+    const service = await Service.findById(bookingIntent.serviceId);
+    if (!service) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+
+    const bookingDateObj = new Date(bookingIntent.bookingDate);
+    let isAvailable = true;
+
+    if (service.category === 'equipment') {
+      const existingBookings = await Booking.find({
+        serviceId: bookingIntent.serviceId,
+        bookingDate: {
+          $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+          $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
+        },
+        status: 'confirmed',
+      });
+
+      const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+      const availableQuantity = Math.max(0, service.quantity - totalBooked);
+
+      if (availableQuantity < bookingIntent.quantity) {
+        isAvailable = false;
+      }
+    } else {
+      const existingBooking = await Booking.findOne({
+        serviceId: bookingIntent.serviceId,
+        bookingDate: {
+          $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+          $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
+        },
+        status: 'confirmed',
+      });
+
+      if (existingBooking) {
+        isAvailable = false;
+      }
+    }
+
+    if (!isAvailable) {
+      return res.status(409).json({
+        success: false,
+        message: 'Service is no longer available for the selected date and time.'
+      });
+    }
+
+    // Create the actual booking now that payment is confirmed
+    const booking = new Booking({
+      customerId: req.user.id,
+      serviceId: bookingIntent.serviceId,
+      quantity: bookingIntent.quantity,
+      bookingDate: new Date(bookingIntent.bookingDate),
+      totalPrice: bookingIntent.totalPrice,
+      status: 'confirmed',
+      paymentStatus: 'paid',
+      paymentId: payment._id,
+      notes: bookingIntent.notes,
+    });
+
+    await booking.save();
+    await booking.populate('serviceId');
+    await booking.populate('customerId', 'name email');
+
+    // Update payment with booking reference
+    payment.bookingId = booking._id;
+    await payment.save();
+
+    // Decrease inventory for equipment/supply items
+    if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+      service.quantity = Math.max(0, service.quantity - bookingIntent.quantity);
+      await service.save();
+    }
+
+    // Send confirmation notifications
+    try {
+      await sendTemplateNotification(req.user.id, 'BOOKING_CONFIRMED', {
+        message: `Your booking for ${service.name} has been confirmed!`,
+        metadata: {
+          bookingId: booking._id,
+          serviceId: service._id,
+          amount: booking.totalPrice,
+        }
+      });
+
+      // Admin notification
+      const User = require('../models/User');
+      const adminUsers = await User.find({ role: 'admin' });
+      for (const admin of adminUsers) {
+        await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
+          message: `New confirmed booking from customer for ${service.name}.`,
+          metadata: {
+            bookingId: booking._id,
+            serviceId: service._id,
+            amount: booking.totalPrice,
+          }
+        });
+      }
+
+      // Emit real-time events
+      const io = global.io;
+      if (io) {
+        io.to(`user_${req.user.id}`).emit('booking-confirmed', {
+          booking: {
+            id: booking._id,
+            serviceName: service.name,
+            quantity: bookingIntent.quantity,
+            date: booking.bookingDate,
+            totalPrice: booking.totalPrice,
+            status: 'confirmed',
+          }
+        });
+
+        io.to('admin').emit('new-confirmed-booking', {
+          booking: {
+            id: booking._id,
+            serviceName: service.name,
+            quantity: bookingIntent.quantity,
+            date: booking.bookingDate,
+            totalPrice: booking.totalPrice,
+            status: 'confirmed',
+          }
+        });
+      }
+    } catch (notificationError) {
+      console.error('Error sending booking confirmation notifications:', notificationError);
+    }
+
+    res.status(201).json({
+      success: true,
+      booking,
+      message: 'Booking confirmed successfully!'
+    });
+
+  } catch (error) {
+    console.error('Error confirming booking:', error);
     next(error);
   }
 });
