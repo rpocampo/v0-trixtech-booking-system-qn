@@ -1,4 +1,4 @@
-const mongoose = require('./backend/models/User');
+const mongoose = require('mongoose');
 const User = require('./backend/models/User');
 const Service = require('./backend/models/Service');
 const Booking = require('./backend/models/Booking');

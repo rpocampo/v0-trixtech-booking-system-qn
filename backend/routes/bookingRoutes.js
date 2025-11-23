@@ -62,14 +62,15 @@ router.get('/check-availability/:serviceId', authMiddleware, async (req, res, ne
     }
 
     if (service.category === 'equipment') {
-      // For equipment, check total booked quantity on this date
+      // For equipment, check total booked quantity on this date (only paid bookings)
       const existingBookings = await Booking.find({
         serviceId,
         bookingDate: {
           $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
           $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
         },
-        status: { $in: ['pending', 'confirmed'] },
+        status: 'confirmed',
+        paymentStatus: { $in: ['partial', 'paid'] },
       });
 
       const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
@@ -80,14 +81,15 @@ router.get('/check-availability/:serviceId', authMiddleware, async (req, res, ne
         reason = `Only ${availableQuantity} items available for this date`;
       }
     } else {
-      // For services, check if any booking exists on this date
+      // For services, check if any booking exists on this date (only paid bookings)
       const existingBooking = await Booking.findOne({
         serviceId,
         bookingDate: {
           $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
           $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
         },
-        status: { $in: ['pending', 'confirmed'] },
+        status: 'confirmed',
+        paymentStatus: { $in: ['partial', 'paid'] },
       });
 
       if (existingBooking) {
@@ -219,7 +221,8 @@ router.post('/', authMiddleware, async (req, res, next) => {
               $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
               $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
             },
-            status: { $in: ['pending', 'confirmed'] },
+            status: 'confirmed',
+            paymentStatus: { $in: ['partial', 'paid'] },
           });
 
           const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
@@ -235,7 +238,8 @@ router.post('/', authMiddleware, async (req, res, next) => {
               $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
               $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
             },
-            status: { $in: ['pending', 'confirmed'] },
+            status: 'confirmed',
+            paymentStatus: { $in: ['partial', 'paid'] },
           });
 
           if (existingBooking) {
@@ -549,16 +553,21 @@ router.get('/', authMiddleware, async (req, res, next) => {
   }
 });
 
-// Get all bookings (admin only)
+// Get all bookings (admin only) - only show paid/partial bookings for transactions
 router.get('/admin/all', adminMiddleware, async (req, res, next) => {
   try {
-    const { limit } = req.query;
+    const { limit, includeUnpaid } = req.query;
     const limitNum = limit ? parseInt(limit) : undefined;
 
     let query = Booking.find()
       .populate('serviceId')
       .populate('customerId', 'name email phone')
       .sort({ createdAt: -1 });
+
+    // Only show paid or partially paid bookings unless explicitly requested
+    if (!includeUnpaid) {
+      query = query.where('paymentStatus').in(['partial', 'paid']);
+    }
 
     if (limitNum) {
       query = query.limit(limitNum);

@@ -26,7 +26,8 @@ const findAlternativeServices = async (originalServiceId, bookingDate, requested
         const existingBookings = await Booking.find({
           serviceId: service._id,
           bookingDate: bookingDate,
-          status: { $in: ['pending', 'confirmed'] },
+          status: 'confirmed',
+          paymentStatus: { $in: ['partial', 'paid'] },
         });
 
         const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
@@ -43,7 +44,8 @@ const findAlternativeServices = async (originalServiceId, bookingDate, requested
         const existingBooking = await Booking.findOne({
           serviceId: service._id,
           bookingDate: bookingDate,
-          status: { $in: ['pending', 'confirmed'] },
+          status: 'confirmed',
+          paymentStatus: { $in: ['partial', 'paid'] },
         });
 
         if (existingBooking) {

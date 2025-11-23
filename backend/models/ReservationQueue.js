@@ -67,7 +67,8 @@ reservationQueueSchema.methods.canFulfill = async function() {
     const existingBookings = await Booking.find({
       serviceId: this.serviceId,
       bookingDate: this.bookingDate,
-      status: { $in: ['pending', 'confirmed'] },
+      status: 'confirmed',
+      paymentStatus: { $in: ['partial', 'paid'] },
     });
 
     const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
@@ -78,7 +79,8 @@ reservationQueueSchema.methods.canFulfill = async function() {
   const existingBooking = await Booking.findOne({
     serviceId: this.serviceId,
     bookingDate: this.bookingDate,
-    status: { $in: ['pending', 'confirmed'] },
+    status: 'confirmed',
+    paymentStatus: { $in: ['partial', 'paid'] },
   });
 
   return !existingBooking;

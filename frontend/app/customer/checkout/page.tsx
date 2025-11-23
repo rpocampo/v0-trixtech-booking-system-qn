@@ -77,20 +77,16 @@ export default function CheckoutPage() {
     }
   }, [checkoutItems]);
 
-  // Auto-generate QR code when payment step is reached
+  // Auto-start payment polling when payment step is reached with QR code
   useEffect(() => {
-    if (currentStep === 'payment' && paymentBooking && !qrPayment && !creatingPayment) {
-      // Small delay to ensure state is settled
-      const timer = setTimeout(() => {
-        // Double-check conditions before generating
-        if (currentStep === 'payment' && paymentBooking && !qrPayment && !creatingPayment) {
-          createPaymentForBooking();
-        }
-      }, 1000); // Increased delay
-
-      return () => clearTimeout(timer);
+    if (currentStep === 'payment' && paymentBooking && qrPayment && !creatingPayment) {
+      // Start polling for payment status
+      const token = localStorage.getItem('token');
+      if (token) {
+        startPaymentPolling(qrPayment.referenceNumber, token);
+      }
     }
-  }, [currentStep, paymentBooking, checkoutTotal]); // Include checkoutTotal
+  }, [currentStep, paymentBooking, qrPayment]); // Include qrPayment
 
   const validateStock = async () => {
     setIsValidatingStock(true);
@@ -205,11 +201,39 @@ export default function CheckoutPage() {
             if (data.payment.status === 'completed') {
               setPaymentStatus('completed');
               clearInterval(pollInterval);
-              // Clear cart and redirect to success page after a short delay
-              setTimeout(() => {
-                clearCart();
-                router.push('/customer/bookings?payment=success');
-              }, 2000);
+
+              // Confirm the booking after successful payment
+              try {
+                const confirmResponse = await fetch('http://localhost:5000/api/bookings/confirm', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                  },
+                  body: JSON.stringify({
+                    paymentReference: referenceNumber,
+                    bookingIntent: paymentBooking,
+                  }),
+                });
+
+                if (confirmResponse.ok) {
+                  const confirmData = await confirmResponse.json();
+                  if (confirmData.success) {
+                    // Clear cart and redirect to success page after a short delay
+                    setTimeout(() => {
+                      clearCart();
+                      router.push('/customer/bookings?payment=success');
+                    }, 2000);
+                  } else {
+                    alert('Payment completed but booking confirmation failed. Please contact support.');
+                  }
+                } else {
+                  alert('Payment completed but booking confirmation failed. Please contact support.');
+                }
+              } catch (confirmError) {
+                console.error('Error confirming booking:', confirmError);
+                alert('Payment completed but booking confirmation failed. Please contact support.');
+              }
             } else if (data.payment.status === 'failed') {
               setPaymentStatus('failed');
               clearInterval(pollInterval);
@@ -238,61 +262,55 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Process each item in the cart
-      const bookingPromises = checkoutItems.map(async (item) => {
-        const scheduleData = scheduledItems[item.id];
-        if (!scheduleData?.date) {
-          throw new Error(`Please schedule a date for ${item.name}`);
-        }
+      // Check if multiple items - for now, only allow one booking at a time
+      if (checkoutItems.length > 1) {
+        alert('Payment processing currently supports one booking at a time. Please remove items from your cart and try again.');
+        return;
+      }
 
-        const response = await fetch('http://localhost:5000/api/bookings', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            serviceId: item.id,
-            quantity: item.quantity,
-            bookingDate: scheduleData.date,
-            notes: scheduleData.notes || '',
-          }),
-        });
+      // Process the single item in the cart
+      const firstItem = checkoutItems[0];
+      const scheduleData = scheduledItems[firstItem.id];
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(`Failed to book ${item.name}: ${errorData.message}`);
-        }
+      if (!scheduleData?.date) {
+        throw new Error(`Please schedule a date for ${firstItem.name}`);
+      }
 
-        const data = await response.json();
-        return data;
+      // Create booking intent (payment-first approach)
+      const response = await fetch('http://localhost:5000/api/bookings/create-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          serviceId: firstItem.id,
+          quantity: firstItem.quantity,
+          bookingDate: scheduleData.date,
+          notes: scheduleData.notes || '',
+        }),
       });
 
-      const results = await Promise.all(bookingPromises);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Failed to create booking intent: ${errorData.message}`);
+      }
 
-      // Check if any bookings require payment
-      const paymentRequiredBookings = results.filter(result => result.requiresPayment);
+      const data = await response.json();
 
-      if (paymentRequiredBookings.length > 0) {
-        // Store the checkout total for display in payment step
-        const totalAmount = getTotalPrice();
-        setCheckoutTotal(totalAmount);
-
-        // For now, handle the first payment-required booking
-        // In a full implementation, this could handle bulk payment
-        const firstPaymentBooking = paymentRequiredBookings[0];
-
-        if (firstPaymentBooking && firstPaymentBooking.booking) {
-          setPaymentBooking(firstPaymentBooking.booking);
-          setCurrentStep('payment-type');
-        } else {
-          alert('Error: Invalid booking data. Please try again.');
-        }
-        // Don't clear cart yet - wait for payment completion
+      if (data.success && data.bookingIntent) {
+        // Store booking intent and payment details
+        setCheckoutTotal(data.bookingIntent.totalPrice);
+        setPaymentBooking(data.bookingIntent);
+        setQrPayment({
+          qrCode: data.payment.qrCode,
+          instructions: data.payment.instructions,
+          referenceNumber: data.payment.referenceNumber,
+          transactionId: data.payment.transactionId,
+        });
+        setCurrentStep('payment-type');
       } else {
-        // All bookings completed successfully
-        clearCart();
-        router.push('/customer/bookings?success=true');
+        throw new Error(data.message || 'Failed to create booking intent');
       }
 
     } catch (error) {
@@ -789,16 +807,7 @@ export default function CheckoutPage() {
             </button>
             <button
               onClick={() => {
-                const paymentAmount = paymentType === 'full' ? checkoutTotal : Math.round(checkoutTotal * 0.3);
-                // Store payment info in localStorage for the payment process page
-                localStorage.setItem('pendingPayment', JSON.stringify({
-                  bookingId: paymentBooking._id,
-                  amount: paymentAmount,
-                  paymentType: paymentType,
-                  totalAmount: checkoutTotal
-                }));
-                // Redirect to payment process page
-                router.push(`/payment/process?bookingId=${paymentBooking._id}&amount=${paymentAmount}&paymentType=${paymentType}`);
+                setCurrentStep('payment');
               }}
               className="btn-primary"
             >

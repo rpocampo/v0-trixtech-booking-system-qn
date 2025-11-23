@@ -73,7 +73,7 @@ router.get('/inventory', auth, isAdmin, async (req, res) => {
     const inventoryReport = await Promise.all(
       services.map(async (service) => {
         const totalBooked = await Booking.aggregate([
-          { $match: { serviceId: service._id, status: { $in: ['pending', 'confirmed'] } } },
+          { $match: { serviceId: service._id, status: 'confirmed', paymentStatus: { $in: ['partial', 'paid'] } } },
           { $group: { _id: null, totalQuantity: { $sum: '$quantity' } } }
         ]);
 

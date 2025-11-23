@@ -21,10 +21,11 @@ const checkDeliveryTruckAvailability = async (requestedDateTime, duration = 60) 
     // Add 1-hour buffer after delivery
     const bufferEnd = new Date(requestedEnd.getTime() + 60 * 60 * 1000); // 1 hour buffer
 
-    // Find all bookings that require delivery truck and have overlapping time slots
+    // Find all bookings that require delivery truck and have overlapping time slots (only paid bookings)
     const conflictingBookings = await Booking.find({
       requiresDelivery: true,
-      status: { $in: ['pending', 'confirmed'] },
+      status: 'confirmed',
+      paymentStatus: { $in: ['partial', 'paid'] },
       $or: [
         // Case 1: Requested start time falls within existing delivery window
         {
@@ -103,7 +104,8 @@ const getDeliverySchedules = async (date = null) => {
   try {
     const query = {
       requiresDelivery: true,
-      status: { $in: ['pending', 'confirmed'] }
+      status: 'confirmed',
+      paymentStatus: { $in: ['partial', 'paid'] }
     };
 
     if (date) {
@@ -170,10 +172,11 @@ const getDeliveryTruckStatus = async () => {
       };
     }
 
-    // Find next scheduled delivery
+    // Find next scheduled delivery (only paid bookings)
     const nextDelivery = await Booking.findOne({
       requiresDelivery: true,
-      status: { $in: ['pending', 'confirmed'] },
+      status: 'confirmed',
+      paymentStatus: { $in: ['partial', 'paid'] },
       deliveryStartTime: { $gt: now }
     }).populate('serviceId', 'name').populate('customerId', 'name').sort({ deliveryStartTime: 1 });
 

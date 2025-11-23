@@ -114,17 +114,17 @@ router.get('/:id', async (req, res, next) => {
   try {
     const { eventType, guestCount } = req.query;
 
-    const package = await Package.getPackageWithAvailability(
+    const pkg = await Package.getPackageWithAvailability(
       req.params.id,
       eventType,
       guestCount ? parseInt(guestCount) : undefined
     );
 
-    if (!package) {
+    if (!pkg) {
       return res.status(404).json({ success: false, message: 'Package not found' });
     }
 
-    res.json({ success: true, package });
+    res.json({ success: true, package: pkg });
   } catch (error) {
     next(error);
   }
@@ -136,15 +136,15 @@ router.post('/', adminMiddleware, async (req, res, next) => {
     const packageData = req.body;
 
     // Calculate total price
-    const package = new Package(packageData);
-    package.totalPrice = package.calculateTotalPrice();
+    const pkg = new Package(packageData);
+    pkg.totalPrice = pkg.calculateTotalPrice();
 
-    await package.save();
+    await pkg.save();
 
     res.status(201).json({
       success: true,
       message: 'Package created successfully',
-      package
+      package: pkg
     });
   } catch (error) {
     next(error);
@@ -171,24 +171,24 @@ router.put('/:id', adminMiddleware, async (req, res, next) => {
       }
     });
 
-    const package = await Package.findByIdAndUpdate(
+    const pkg = await Package.findByIdAndUpdate(
       req.params.id,
       filteredUpdates,
       { new: true, runValidators: true }
     );
 
-    if (!package) {
+    if (!pkg) {
       return res.status(404).json({ success: false, message: 'Package not found' });
     }
 
     // Recalculate total price
-    package.totalPrice = package.calculateTotalPrice();
-    await package.save();
+    pkg.totalPrice = pkg.calculateTotalPrice();
+    await pkg.save();
 
     res.json({
       success: true,
       message: 'Package updated successfully',
-      package
+      package: pkg
     });
   } catch (error) {
     next(error);
@@ -198,9 +198,9 @@ router.put('/:id', adminMiddleware, async (req, res, next) => {
 // Delete package (admin only)
 router.delete('/:id', adminMiddleware, async (req, res, next) => {
   try {
-    const package = await Package.findByIdAndDelete(req.params.id);
+    const pkg = await Package.findByIdAndDelete(req.params.id);
 
-    if (!package) {
+    if (!pkg) {
       return res.status(404).json({ success: false, message: 'Package not found' });
     }
 
