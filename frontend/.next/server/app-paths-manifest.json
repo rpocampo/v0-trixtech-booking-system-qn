@@ -1,8 +1,10 @@
 {
-  "/payment/process/page": "app/payment/process/page.js",
   "/customer/services/page": "app/customer/services/page.js",
-  "/admin/notifications/page": "app/admin/notifications/page.js",
-  "/customer/checkout/page": "app/customer/checkout/page.js",
   "/customer/cart/page": "app/customer/cart/page.js",
-  "/customer/bookings/page": "app/customer/bookings/page.js"
+  "/customer/checkout/page": "app/customer/checkout/page.js",
+  "/admin/bookings/page": "app/admin/bookings/page.js",
+  "/customer/dashboard/page": "app/customer/dashboard/page.js",
+  "/admin/services/page": "app/admin/services/page.js",
+  "/admin/inventory/page": "app/admin/inventory/page.js",
+  "/customer/notifications/page": "app/customer/notifications/page.js"
 }

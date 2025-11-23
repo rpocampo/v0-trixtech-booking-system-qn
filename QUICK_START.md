@@ -1,67 +1,77 @@
-# ⚡ TRIXTECH - Quick Start Guide (2 Minutes!)
+# ⚡ TRIXTECH - Quick Start Guide (1 Minute!)
 
-## 🚀 One-Command Installation
+## 🚀 One-Command Installation & Start
 
-**Choose your operating system:**
+**Works on Windows, Mac, and Linux:**
 
-### 🪟 Windows
-```cmd
-setup.bat
-```
-
-### 🍎 Mac/Linux
 ```bash
-chmod +x setup.sh
-./setup.sh
+# Install everything and start the system
+npm run quickstart
+
+# OR step by step:
+npm install      # Install all dependencies
+npm run dev     # Start both servers
 ```
 
-**That's it!** 🎉 Your booking system will be running in under 2 minutes!
+**That's it!** 🎉 Your booking system will be running in under 1 minute!
+
+The system automatically:
+- ✅ Installs backend + frontend dependencies
+- ✅ Sets up environment configuration
+- ✅ Starts MongoDB (if available)
+- ✅ Seeds demo data
+- ✅ Launches both servers together
 
 ---
 
-## 📋 Manual Setup (If Auto-Setup Fails)
+## 📱 Access Your Application
 
-### Step 1: Install Dependencies
+- 🌐 **Customer Portal**: http://localhost:3000
+- 👑 **Admin Dashboard**: http://localhost:3000/admin
+- 🔌 **Backend API**: http://localhost:5000/api
+- ❤️ **Health Check**: http://localhost:5000/api/health
+
+---
+
+## 🔑 Demo Accounts
+
+**👑 Admin Access:**
+- Email: `admin@trixtech.com`
+- Password: `admin123`
+
+**👤 Customer Access:**
+- Email: `customer@trixtech.com`
+- Password: `customer123`
+
+---
+
+## 🛑 Stop the System
+
 ```bash
-# Backend (API server)
-cd backend
-npm install
-
-# Frontend (React app)
-cd ../frontend
-npm install
-
-cd ..  # Return to project root
+# Press Ctrl+C in the terminal
+# OR on Windows: taskkill /f /im node.exe
 ```
 
-### Step 2: Setup Environment
+---
+
+## 🛠️ Alternative Commands
+
 ```bash
-# Backend config
-cd backend
-cp .env.example .env
+# Install only dependencies
+npm run install:all
 
-# Frontend config
-cd ../frontend
-cp .env.example .env.local
+# Start only backend
+npm run dev:backend
+
+# Start only frontend
+npm run dev:frontend
+
+# Run tests
+npm test
+
+# Build for production
+npm run build
 ```
-
-### Step 3: Start Database
-**Easiest Option:** Download [MongoDB Compass](https://mongodb.com/products/tools/compass) and click "Connect"
-
-### Step 4: Start Application
-```bash
-# Terminal 1 - Backend
-cd backend
-npm run dev
-
-# Terminal 2 - Frontend (new terminal)
-cd frontend
-npm run dev
-```
-
-### Step 5: Access Your App
-- 🌐 **Main App**: http://localhost:3000
-- 🔧 **Admin Panel**: http://localhost:3000/admin
 
 ---
 

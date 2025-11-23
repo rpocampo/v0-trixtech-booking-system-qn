@@ -99,51 +99,21 @@ echo.
 echo   🔧 Installation Progress...
 echo   ──────────────────────────────────────────────────────────────
 echo.
-echo   📦 Step 1/9: Installing Backend Dependencies
+echo   📦 Step 1/9: Installing All Dependencies (Backend + Frontend)
 echo   ──────────────────────────────────────────────────────────────
-cd backend
 echo   📂 Working directory: %cd%
 echo   ⏳ Installing packages... (this may take a few minutes)
 echo   🌱 Note: Database seeding will run automatically after installation
-call npm install
+call npm run install:all
 if %errorlevel% neq 0 (
     echo.
-    echo   ❌ Failed to install backend dependencies
+    echo   ❌ Failed to install dependencies
     echo   💡 Try running: npm cache clean --force
     echo   💡 Then run this setup script again
-    cd ..
     pause
     exit /b 1
 )
-
-echo   🧪 Installing testing dependencies...
-call npm install --save-dev jest supertest mongodb-memory-server cross-env
-if %errorlevel% neq 0 (
-    echo   ⚠️  Testing dependencies installation failed (optional)
-) else (
-    echo   ✅ Testing dependencies installed
-)
-cd ..
-echo   ✅ Backend dependencies installed successfully
-echo.
-
-echo   🎨 Step 2/9: Installing Frontend Dependencies
-echo   ──────────────────────────────────────────────────────────────
-cd frontend
-echo   📂 Working directory: %cd%
-echo   ⏳ Installing packages... (this may take a few minutes)
-call npm install
-if %errorlevel% neq 0 (
-    echo.
-    echo   ❌ Failed to install frontend dependencies
-    echo   💡 Try running: npm cache clean --force
-    echo   💡 Then run this setup script again
-    cd ..
-    pause
-    exit /b 1
-)
-cd ..
-echo   ✅ Frontend dependencies installed successfully
+echo   ✅ All dependencies installed successfully
 echo.
 
 echo   🗄️  Step 3/9: Database Setup (MongoDB)

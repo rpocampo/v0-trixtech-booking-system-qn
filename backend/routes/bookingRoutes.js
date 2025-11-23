@@ -14,7 +14,7 @@ const router = express.Router();
 router.get('/check-availability/:serviceId', authMiddleware, async (req, res, next) => {
   try {
     const { serviceId } = req.params;
-    const { date, quantity = 1 } = req.query;
+    const { date, quantity = 1, deliveryTime } = req.query;
 
     if (!date) {
       return res.status(400).json({ success: false, message: 'Date is required' });
@@ -41,6 +41,25 @@ router.get('/check-availability/:serviceId', authMiddleware, async (req, res, ne
     let isAvailable = true;
     let availableQuantity = service.quantity || 1;
     let reason = '';
+    let deliveryTruckAvailable = true;
+    let deliveryTruckReason = '';
+    let nextAvailableDeliveryTime = null;
+
+    // Import delivery service
+    const { requiresDeliveryTruck, checkDeliveryTruckAvailability } = require('../utils/deliveryService');
+
+    // Check delivery truck availability if service requires delivery
+    const serviceRequiresDelivery = requiresDeliveryTruck(service);
+    if (serviceRequiresDelivery && deliveryTime) {
+      const deliveryDateTime = new Date(`${date}T${deliveryTime}`);
+      const deliveryCheck = await checkDeliveryTruckAvailability(deliveryDateTime, 60); // 60 minutes default
+
+      deliveryTruckAvailable = deliveryCheck.available;
+      if (!deliveryTruckAvailable) {
+        deliveryTruckReason = deliveryCheck.reason;
+        nextAvailableDeliveryTime = deliveryCheck.nextAvailableTime;
+      }
+    }
 
     if (service.category === 'equipment') {
       // For equipment, check total booked quantity on this date
@@ -78,14 +97,25 @@ router.get('/check-availability/:serviceId', authMiddleware, async (req, res, ne
       }
     }
 
+    // Overall availability combines service availability and delivery truck availability
+    const overallAvailable = isAvailable && deliveryTruckAvailable;
+    const finalReason = !overallAvailable
+      ? (!deliveryTruckAvailable ? deliveryTruckReason : reason)
+      : '';
+
     res.json({
       success: true,
-      available: isAvailable,
+      available: overallAvailable,
       availableQuantity,
       requestedQuantity,
-      reason,
+      reason: finalReason,
       serviceName: service.name,
-      maxQuantity: service.quantity || 1
+      maxQuantity: service.quantity || 1,
+      requiresDelivery: serviceRequiresDelivery,
+      deliveryTruckAvailable,
+      deliveryTruckReason: deliveryTruckReason || null,
+      nextAvailableDeliveryTime,
+      deliveryTime: deliveryTime || null
     });
   } catch (error) {
     next(error);
@@ -95,7 +125,7 @@ router.get('/check-availability/:serviceId', authMiddleware, async (req, res, ne
 // Create booking (customers only)
 router.post('/', authMiddleware, async (req, res, next) => {
   try {
-    const { serviceId, quantity, bookingDate, notes } = req.body;
+    const { serviceId, quantity, bookingDate, notes, deliveryTime } = req.body;
 
     if (!serviceId || !bookingDate) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -108,6 +138,26 @@ router.post('/', authMiddleware, async (req, res, next) => {
 
     const requestedQuantity = quantity || 1;
     const bookingDateObj = new Date(bookingDate);
+
+    // Import delivery service
+    const { requiresDeliveryTruck, checkDeliveryTruckAvailability } = require('../utils/deliveryService');
+    const serviceRequiresDelivery = requiresDeliveryTruck(service);
+
+    // Check delivery truck availability if service requires delivery
+    if (serviceRequiresDelivery && deliveryTime) {
+      const deliveryDateTime = new Date(`${bookingDate}T${deliveryTime}`);
+      const deliveryCheck = await checkDeliveryTruckAvailability(deliveryDateTime, 60); // 60 minutes default
+
+      if (!deliveryCheck.available) {
+        return res.status(409).json({
+          success: false,
+          message: deliveryCheck.reason,
+          deliveryTruckConflict: true,
+          nextAvailableTime: deliveryCheck.nextAvailableTime,
+          conflictingBookings: deliveryCheck.conflictingBookings
+        });
+      }
+    }
 
     // Check available quantity
     if (service.quantity !== undefined && service.quantity < requestedQuantity) {
@@ -259,7 +309,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
         const appliedMultiplier = service.basePrice > 0 ? calculatedPrice / service.basePrice : 1.0;
 
         // Create booking with pending status (will be confirmed after payment)
-        const booking = new Booking({
+        const bookingData = {
           customerId: req.user.id,
           serviceId,
           quantity: requestedQuantity,
@@ -275,7 +325,18 @@ router.post('/', authMiddleware, async (req, res, next) => {
           remainingBalance: totalPrice,
           downPaymentPercentage: 30, // Default 30%
           notes,
-        });
+          requiresDelivery: serviceRequiresDelivery,
+        };
+
+        // Add delivery time fields if service requires delivery
+        if (serviceRequiresDelivery && deliveryTime) {
+          const deliveryStartTime = new Date(`${bookingDate}T${deliveryTime}`);
+          bookingData.deliveryStartTime = deliveryStartTime;
+          bookingData.deliveryEndTime = new Date(deliveryStartTime.getTime() + 60 * 60 * 1000); // 1 hour duration
+          bookingData.deliveryDuration = 60; // 1 hour
+        }
+
+        const booking = new Booking(bookingData);
 
         await booking.save();
 
@@ -439,6 +500,8 @@ router.post('/', authMiddleware, async (req, res, next) => {
     next(error);
   }
 });
+
+
 
 // Get single booking by ID
 router.get('/:id', authMiddleware, async (req, res, next) => {
@@ -706,25 +769,37 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
       }
     };
 
-    // Generate payment QR code first
-    const { createQRPayment } = require('../utils/paymentService');
-    const paymentResult = await createQRPayment(null, bookingIntent.totalPrice, req.user.id);
+    // Generate payment QR code data (without creating payment record yet)
+    const { generateQRCodeDataURL, generatePaymentInstructions } = require('../utils/qrCodeService');
+    const { generateTransactionId, generateReferenceNumber } = require('../utils/paymentService');
 
-    if (!paymentResult.success) {
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to create payment. Please try again.'
-      });
-    }
+    const transactionId = generateTransactionId();
+    const referenceNumber = generateReferenceNumber();
+
+    // Generate QR code data
+    const paymentDescription = `Full Payment - ${transactionId}`;
+
+    const qrData = {
+      amount: bookingIntent.totalPrice,
+      referenceNumber,
+      merchantName: 'TRIXTECH',
+      merchantId: 'TRIXTECH001',
+      description: paymentDescription,
+      paymentId: `intent_${Date.now()}`, // Temporary ID for intent
+      callbackUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/api/payments/verify-qr/${referenceNumber}`
+    };
+
+    const qrCode = await generateQRCodeDataURL(qrData);
+    const instructions = generatePaymentInstructions(qrData);
 
     res.status(200).json({
       success: true,
       bookingIntent,
       payment: {
-        qrCode: paymentResult.qrCode,
-        instructions: paymentResult.instructions,
-        referenceNumber: paymentResult.referenceNumber,
-        transactionId: paymentResult.transactionId,
+        qrCode,
+        instructions,
+        referenceNumber,
+        transactionId,
       },
       message: 'Payment required. Complete payment to confirm booking.'
     });
@@ -893,6 +968,82 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
 
   } catch (error) {
     console.error('Error confirming booking:', error);
+    next(error);
+  }
+});
+
+// Get delivery schedules for admin (shows all delivery bookings)
+router.get('/admin/delivery-schedules', adminMiddleware, async (req, res, next) => {
+  try {
+    const { date } = req.query;
+    const { getDeliverySchedules } = require('../utils/deliveryService');
+
+    const schedules = await getDeliverySchedules(date ? new Date(date) : null);
+
+    res.json({
+      success: true,
+      schedules,
+      total: schedules.length
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get delivery truck status (available/busy)
+router.get('/admin/delivery-truck-status', adminMiddleware, async (req, res, next) => {
+  try {
+    const { getDeliveryTruckStatus } = require('../utils/deliveryService');
+
+    const status = await getDeliveryTruckStatus();
+
+    res.json({
+      success: true,
+      ...status
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get available delivery time slots for a specific date
+router.get('/delivery-slots/available', authMiddleware, async (req, res, next) => {
+  try {
+    const { date } = req.query;
+
+    if (!date) {
+      return res.status(400).json({ success: false, message: 'Date is required' });
+    }
+
+    const { checkDeliveryTruckAvailability } = require('../utils/deliveryService');
+
+    // Generate time slots from 8 AM to 6 PM (10 hours)
+    const timeSlots = [];
+    const startHour = 8; // 8 AM
+    const endHour = 18; // 6 PM
+
+    for (let hour = startHour; hour < endHour; hour++) {
+      const timeString = `${hour.toString().padStart(2, '0')}:00`;
+      const slotDateTime = new Date(`${date}T${timeString}`);
+
+      // Check if this time slot is available
+      const availability = await checkDeliveryTruckAvailability(slotDateTime, 60);
+
+      timeSlots.push({
+        time: timeString,
+        displayTime: `${hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`,
+        available: availability.available,
+        reason: availability.reason,
+        nextAvailableTime: availability.nextAvailableTime
+      });
+    }
+
+    res.json({
+      success: true,
+      date,
+      timeSlots
+    });
+  } catch (error) {
     next(error);
   }
 });

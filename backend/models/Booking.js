@@ -68,6 +68,21 @@ const bookingSchema = new mongoose.Schema(
     notes: {
       type: String,
     },
+    // Delivery truck availability fields
+    requiresDelivery: {
+      type: Boolean,
+      default: false,
+    },
+    deliveryStartTime: {
+      type: Date,
+    },
+    deliveryEndTime: {
+      type: Date,
+    },
+    deliveryDuration: {
+      type: Number, // in minutes
+      default: 60, // 1 hour default
+    },
   },
   { timestamps: true }
 );

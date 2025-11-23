@@ -167,12 +167,23 @@ npm run dev
 
 The frontend will run on `http://localhost:3000`
 
-## Quick Start
+## 🚀 Quick Start (1 Minute!)
 
-1. **Start MongoDB** (if not running)
-2. **Start Backend**: In `/backend` directory, run `npm start`
-3. **Start Frontend**: In `/frontend` directory, run `npm run dev`
-4. **Open Browser**: Visit `http://localhost:3000`
+```bash
+# Install and start everything automatically
+npm run quickstart
+
+# Access your application:
+# 🌐 Customer Portal: http://localhost:3000
+# 👑 Admin Dashboard: http://localhost:3000/admin
+# 🔌 Backend API: http://localhost:5000/api
+```
+
+### Manual Alternative
+```bash
+npm install      # Install all dependencies
+npm run dev     # Start both servers
+```
 
 ## Demo Credentials
 

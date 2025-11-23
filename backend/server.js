@@ -124,6 +124,5 @@ setInterval(async () => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
-  console.log(`TRIXTECH Backend running on port ${PORT}`);
-  console.log('Reservation queue processing enabled');
+  // Server started successfully
 });

@@ -25,6 +25,7 @@ export default function BookingPage() {
   const [booking, setBooking] = useState({
     quantity: 1,
     bookingDate: '',
+    deliveryTime: '',
     notes: '',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -43,6 +44,10 @@ export default function BookingPage() {
     available: boolean;
     availableQuantity: number;
     reason?: string;
+    requiresDelivery?: boolean;
+    deliveryTruckAvailable?: boolean;
+    deliveryTruckReason?: string;
+    nextAvailableDeliveryTime?: string;
   } | null>(null);
   const [calculatedPrice, setCalculatedPrice] = useState<number>(0);
   const [pricingInfo, setPricingInfo] = useState<any>(null);
@@ -129,7 +134,7 @@ export default function BookingPage() {
     setShowDateTimePicker(true);
   };
 
-  const checkAvailability = async (date: Date, quantity: number) => {
+  const checkAvailability = async (date: Date, quantity: number, deliveryTime?: string) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -137,7 +142,12 @@ export default function BookingPage() {
         return false;
       }
 
-      const response = await fetch(`http://localhost:5000/api/bookings/check-availability/${serviceId}?date=${date.toISOString()}&quantity=${quantity}`, {
+      let url = `http://localhost:5000/api/bookings/check-availability/${serviceId}?date=${date.toISOString().split('T')[0]}&quantity=${quantity}`;
+      if (deliveryTime) {
+        url += `&deliveryTime=${deliveryTime}`;
+      }
+
+      const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -154,6 +164,10 @@ export default function BookingPage() {
           available: data.available,
           availableQuantity: data.availableQuantity,
           reason: data.reason,
+          requiresDelivery: data.requiresDelivery,
+          deliveryTruckAvailable: data.deliveryTruckAvailable,
+          deliveryTruckReason: data.deliveryTruckReason,
+          nextAvailableDeliveryTime: data.nextAvailableDeliveryTime,
         });
         setAvailabilityChecked(true);
         return data.available;
@@ -399,6 +413,7 @@ export default function BookingPage() {
           serviceId,
           quantity: booking.quantity,
           bookingDate: booking.bookingDate,
+          deliveryTime: booking.deliveryTime,
           notes: booking.notes,
         }),
       });
@@ -531,6 +546,34 @@ export default function BookingPage() {
                 </p>
               )}
             </div>
+
+            {/* Delivery Time Selection - Only show for services that require delivery */}
+            {availabilityStatus?.requiresDelivery && (
+              <div>
+                <label className="block text-sm font-medium mb-2">Delivery Time</label>
+                <select
+                  value={booking.deliveryTime}
+                  onChange={(e) => setBooking({ ...booking, deliveryTime: e.target.value })}
+                  className="input-field"
+                  required
+                >
+                  <option value="">Select delivery time</option>
+                  {Array.from({ length: 10 }, (_, i) => {
+                    const hour = 8 + i; // 8 AM to 6 PM
+                    const timeString = `${hour.toString().padStart(2, '0')}:00`;
+                    const displayTime = hour <= 12 ? `${hour}:00 AM` : `${hour - 12}:00 PM`;
+                    return (
+                      <option key={timeString} value={timeString}>
+                        {displayTime}
+                      </option>
+                    );
+                  })}
+                </select>
+                <p className="text-sm text-[var(--muted)] mt-1">
+                  Delivery truck availability will be checked automatically
+                </p>
+              </div>
+            )}
 
             <div id="notes-section">
               <label className="block text-sm font-medium mb-2">Additional Notes (Optional)</label>
@@ -813,18 +856,42 @@ export default function BookingPage() {
                       ? 'bg-green-100 border border-green-300'
                       : 'bg-red-100 border border-red-300'
                   }`}>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-start gap-2">
                       <span className={availabilityStatus.available ? 'text-green-600' : 'text-red-600'}>
                         {availabilityStatus.available ? '✓' : '✗'}
                       </span>
-                      <span className={`text-sm font-medium ${
+                      <div className={`text-sm ${
                         availabilityStatus.available ? 'text-green-800' : 'text-red-800'
                       }`}>
-                        {availabilityStatus.available
-                          ? `Available (${availabilityStatus.availableQuantity} ${availabilityStatus.availableQuantity === 1 ? 'item' : 'items'} left)`
-                          : availabilityStatus.reason
-                        }
-                      </span>
+                        {availabilityStatus.available ? (
+                          <div>
+                            <div className="font-medium">Available</div>
+                            <div className="text-xs text-green-700">
+                              {availabilityStatus.availableQuantity} {availabilityStatus.availableQuantity === 1 ? 'item' : 'items'} left
+                              {availabilityStatus.requiresDelivery && availabilityStatus.deliveryTruckAvailable && (
+                                <span className="ml-2">• Delivery truck available</span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="font-medium">Not Available</div>
+                            <div className="text-xs mt-1">
+                              {availabilityStatus.reason}
+                              {availabilityStatus.deliveryTruckReason && (
+                                <div className="mt-1 p-2 bg-red-50 border border-red-200 rounded text-red-700">
+                                  🚚 <strong>Delivery Truck Unavailable:</strong> {availabilityStatus.deliveryTruckReason}
+                                  {availabilityStatus.nextAvailableDeliveryTime && (
+                                    <div className="mt-1 text-xs">
+                                      Next available: {new Date(availabilityStatus.nextAvailableDeliveryTime).toLocaleString()}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}

@@ -49,7 +49,7 @@ export default function SocketProvider({ children }: SocketProviderProps) {
             socket.emit('join-admin');
           }
         } catch (error) {
-          console.error('Error parsing token:', error);
+          // Token parsing failed, continue without joining room
         }
       }
     });

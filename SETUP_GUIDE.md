@@ -1,85 +1,73 @@
 # 🚀 TRIXTECH Booking System - Complete Setup Guide
 
-## ⚡ Quick Start (Recommended - 5 Minutes)
+## ⚡ Quick Start (Recommended - 2 Minutes)
 
-### Option 1: One-Command Automated Setup
+### 🚀 One-Command Setup & Start
 
 **Windows:**
 ```cmd
-setup.bat
+# Install everything and start
+npm run quickstart
+
+# OR step by step:
+npm install          # Install all dependencies
+npm run dev         # Start both servers
 ```
 
 **Mac/Linux:**
 ```bash
-chmod +x setup.sh
-./setup.sh
+# Install everything and start
+npm run quickstart
+
+# OR step by step:
+npm install          # Install all dependencies
+npm run dev         # Start both servers
 ```
 
-This automatically installs all dependencies, sets up environment files, and starts the system!
+**That's it!** The system automatically:
+- ✅ Installs backend + frontend dependencies
+- ✅ Sets up environment files
+- ✅ Starts MongoDB (if available)
+- ✅ Seeds demo data
+- ✅ Launches both servers simultaneously
 
-### Option 2: Manual Setup (If Scripts Don't Work)
+### 📱 Access Your Application
+- 🌐 **Customer Portal**: http://localhost:3000
+- 👑 **Admin Dashboard**: http://localhost:3000/admin
+- 🔌 **Backend API**: http://localhost:5000/api
+- ❤️ **Health Check**: http://localhost:5000/api/health
+
+### 🔑 Demo Accounts
+- **👑 Admin**: `admin@trixtech.com` / `admin123`
+- **👤 Customer**: `customer@trixtech.com` / `customer123`
+
+### 🛑 Stop the System
+```bash
+# Press Ctrl+C in the terminal running npm run dev
+# OR on Windows: taskkill /f /im node.exe
+```
+
+### 🔧 Manual Setup (If Auto-Setup Fails)
 
 **Step 1: Install Dependencies**
 ```bash
-# Backend dependencies (includes automatic database seeding)
-cd backend
-npm install  # This will also run database seeding automatically
-
-# Frontend dependencies
-cd ../frontend
-npm install
-
-# Return to root
-cd ..
+npm run install:all    # Installs both backend and frontend
 ```
 
-**Step 2: Setup Environment**
+**Step 2: Setup Environment (Auto-handled by setup.bat)**
 ```bash
-# Backend environment
-cd backend
-copy .env.example .env  # Windows
-# OR
-cp .env.example .env    # Mac/Linux
-
-# Frontend environment
-cd ../frontend
-copy .env.example .env.local  # Windows
-# OR
-cp .env.example .env.local    # Mac/Linux
+npm run setup:env      # Creates .env files from templates
 ```
 
 **Step 3: Start MongoDB**
-Choose your system:
+- **Windows**: Download MongoDB Compass → Click "Connect"
+- **Mac**: `brew services start mongodb-community`
+- **Linux**: `sudo systemctl start mongod`
 
-**Windows (MongoDB Compass):**
-- Download from: https://www.mongodb.com/products/tools/compass
-- Click "Connect" to start local MongoDB
-
-**Mac (Homebrew):**
+**Step 4: Start Application**
 ```bash
-brew services start mongodb-community
+npm run dev            # Starts both backend and frontend
 ```
-
-**Linux:**
-```bash
-sudo systemctl start mongod
-```
-
-**Step 4: Start the Application**
-```bash
-# Terminal 1 - Backend
-cd backend
-npm run dev
-
-# Terminal 2 - Frontend (new terminal)
-cd frontend
-npm run dev
-```
-
-**Step 5: Access Your App**
-- 🌐 **Frontend**: http://localhost:3000
-- 🔧 **Backend API**: http://localhost:5000/api
-- ❤️ **Health Check**: http://localhost:5000/api/health
 
 ## 📋 Prerequisites Checklist
 
