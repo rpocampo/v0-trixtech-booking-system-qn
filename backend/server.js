@@ -14,8 +14,10 @@ const paymentRoutes = require('./routes/paymentRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
 const packageRoutes = require('./routes/packageRoutes');
 const eventTypeRoutes = require('./routes/eventTypeRoutes');
+const otpRoutes = require('./routes/otpRoutes');
 const { initializeEmailService } = require('./utils/emailService');
 const { processReservationQueue, cleanupExpiredReservations } = require('./utils/recommendationService');
+const { cleanupExpiredOTPs } = require('./utils/otpService');
 const { errorHandler, requestLogger } = require('./middleware/errorHandler');
 const { monitoringMiddleware, healthCheckHandler } = require('./utils/monitoring');
 
@@ -55,6 +57,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/packages', packageRoutes);
 app.use('/api/event-types', eventTypeRoutes);
+app.use('/api/otp', otpRoutes);
 
 // Enhanced health check with monitoring
 app.get('/api/health', healthCheckHandler);
@@ -75,6 +78,7 @@ app.all('/', (req, res) => {
       '/api/deliveries',
       '/api/packages',
       '/api/event-types',
+      '/api/otp',
       '/api/health'
     ]
   });
@@ -121,6 +125,15 @@ setInterval(async () => {
     console.error('Error cleaning up expired reservations:', error);
   }
 }, 24 * 60 * 60 * 1000); // 24 hours
+
+// Clean up expired OTPs every hour
+setInterval(async () => {
+  try {
+    await cleanupExpiredOTPs();
+  } catch (error) {
+    console.error('Error cleaning up expired OTPs:', error);
+  }
+}, 60 * 60 * 1000); // 1 hour
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {

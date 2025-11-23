@@ -11,7 +11,7 @@ const router = express.Router();
 // Register
 router.post('/register', async (req, res, next) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password, role, emailVerified } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -27,6 +27,7 @@ router.post('/register', async (req, res, next) => {
       email,
       password,
       role: role || 'customer',
+      emailVerified: emailVerified || false,
     });
 
     await user.save();

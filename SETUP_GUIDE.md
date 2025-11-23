@@ -115,11 +115,32 @@ MONGODB_URI=mongodb://localhost:27017/trixtech
 # Security
 JWT_SECRET=your-super-secure-random-key-here-min-32-chars
 
-# Email (Optional - leave blank to disable)
-EMAIL_USER=your-email@gmail.com
-EMAIL_PASSWORD=your-gmail-app-password
+# Email Configuration (Required for OTP functionality)
+# Gmail SMTP (recommended)
 EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
+EMAIL_USER=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
+SENDER_EMAIL=noreply@trixtech.com
+
+# Alternative Email Providers:
+# Outlook/Hotmail
+# EMAIL_HOST=smtp-mail.outlook.com
+# EMAIL_PORT=587
+# EMAIL_USER=your-email@outlook.com
+# EMAIL_PASSWORD=your-app-password
+
+# Yahoo Mail
+# EMAIL_HOST=smtp.mail.yahoo.com
+# EMAIL_PORT=587
+# EMAIL_USER=your-email@yahoo.com
+# EMAIL_PASSWORD=your-app-password
+
+# Custom SMTP
+# EMAIL_HOST=your-smtp-server.com
+# EMAIL_PORT=587
+# EMAIL_USER=your-smtp-username
+# EMAIL_PASSWORD=your-smtp-password
 
 # Admin Configuration
 ADMIN_EMAIL=admin@trixtech.com
@@ -314,11 +335,31 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 **Symptoms:** No emails sent, but system works
 **Solutions:**
 ```bash
-# Email is OPTIONAL - system works without it
-# To enable Gmail:
+# Email is REQUIRED for OTP functionality
+# To enable Gmail SMTP:
 # 1. Enable 2-factor authentication on Gmail
 # 2. Generate App Password: https://myaccount.google.com/apppasswords
 # 3. Use App Password (not regular password) in EMAIL_PASSWORD
+# 4. Test with: node test_otp.js
+```
+
+#### ❌ OTP Emails Not Sending
+**Symptoms:** Registration fails at OTP step
+**Solutions:**
+```bash
+# Check email configuration
+cd backend
+node -e "
+const { initializeEmailService } = require('./utils/emailService');
+initializeEmailService();
+console.log('Email service initialized');
+"
+
+# Test OTP functionality
+node ../test_otp.js
+
+# Check email credentials in .env file
+# Ensure EMAIL_USER and EMAIL_PASSWORD are correct
 ```
 
 #### ❌ Frontend Shows "Loading..." Forever
