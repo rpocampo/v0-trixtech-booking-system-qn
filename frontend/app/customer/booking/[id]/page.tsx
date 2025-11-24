@@ -10,7 +10,8 @@ interface Service {
   name: string;
   description: string;
   category: string;
-  price: number;
+  basePrice: number;
+  price?: number; // For backward compatibility
   duration: number;
   quantity?: number;
   image?: string;
@@ -495,7 +496,7 @@ export default function BookingPage() {
             )}
             <div className="flex justify-between pb-3 border-b border-[var(--border)]">
               <span className="text-[var(--muted)]">Price per unit:</span>
-              <span className="text-[var(--primary)] font-bold">₱{service.price}</span>
+              <span className="text-[var(--primary)] font-bold">₱{service.basePrice}</span>
             </div>
           </div>
         </div>
@@ -614,10 +615,10 @@ export default function BookingPage() {
                 <div className="flex justify-between font-semibold pt-2 border-t">
                   <span>Total Price:</span>
                   <span className="text-[var(--primary)]">
-                    ₱{(calculatedPrice || service.price) * booking.quantity}
+                    ₱{(calculatedPrice || service.basePrice) * booking.quantity}
                     {pricingInfo && pricingInfo.discount > 0 && (
                       <span className="text-sm text-gray-500 ml-2">
-                        (was ₱{service.price * booking.quantity})
+                        (was ₱{service.basePrice * booking.quantity})
                       </span>
                     )}
                   </span>
@@ -759,7 +760,7 @@ export default function BookingPage() {
                 onClick={async () => {
                   const token = localStorage.getItem('token');
                   if (token && currentBookingId) {
-                    await createQRPayment(currentBookingId, qrPayment?.instructions.amount || service.price * booking.quantity, token);
+                    await createQRPayment(currentBookingId, qrPayment?.instructions.amount || service.basePrice * booking.quantity, token);
                     setPaymentStatus('pending');
                   }
                 }}

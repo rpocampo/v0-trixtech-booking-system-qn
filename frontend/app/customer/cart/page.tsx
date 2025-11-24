@@ -25,6 +25,7 @@ export default function CartPage() {
   const [stockValidationIssues, setStockValidationIssues] = useState<string[]>([]);
   const [isValidatingStock, setIsValidatingStock] = useState(false);
   const [lastStockUpdate, setLastStockUpdate] = useState<Date | null>(null);
+  const [scheduledItems, setScheduledItems] = useState<{ [key: string]: { date: string; notes: string } }>({});
 
   // Auto-validate stock when cart changes
   useEffect(() => {
@@ -94,8 +95,10 @@ export default function CartPage() {
   const handleClearCart = () => {
     if (confirm('Are you sure you want to clear your entire cart?')) {
       clearCart();
+      setScheduledItems({});
     }
   };
+
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
@@ -104,6 +107,8 @@ export default function CartPage() {
     setStockValidationIssues([]);
 
     try {
+      // Cart validation - no scheduling required here anymore
+
       // First, validate stock availability
       setIsValidatingStock(true);
       const validation = await validateStockAvailability();
@@ -119,7 +124,7 @@ export default function CartPage() {
       router.push('/customer/checkout');
     } catch (error) {
       console.error('Checkout validation failed:', error);
-      setStockValidationIssues(['Failed to validate stock availability. Please try again.']);
+      setStockValidationIssues(['Failed to validate cart. Please try again.']);
       setIsProcessing(false);
       setIsValidatingStock(false);
     }
@@ -259,6 +264,7 @@ export default function CartPage() {
                       </span>
                     )}
                   </div>
+
                 </div>
 
                 {/* Price and Actions */}
@@ -328,6 +334,7 @@ export default function CartPage() {
                </div>
              </div>
 
+
             <div className="space-y-3">
               <button
                 onClick={handleCheckout}
@@ -339,8 +346,8 @@ export default function CartPage() {
                   : isProcessing
                     ? 'Processing...'
                     : stockValidationIssues.length > 0
-                         ? 'Stock Issues - Cannot Checkout'
-                         : 'Unified Checkout'
+                         ? 'Issues Detected - Cannot Checkout'
+                         : 'Proceed to Checkout'
                 }
               </button>
 

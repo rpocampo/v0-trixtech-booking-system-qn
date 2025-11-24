@@ -46,7 +46,7 @@ This comprehensive testing guide validates the TrixTech Web-Based Booking and Re
 
 ### 3. 👑 Admin Management Features
 - [ ] **Dashboard Access**: Login to admin panel
-- [ ] **System Statistics**: View bookings, revenue, user metrics
+- [ ] **System Statistics**: View bookings, user metrics, inventory
 - [ ] **Service Management**: Create, edit, delete services
 - [ ] **Inventory Control**: Update stock quantities
 - [ ] **Low Stock Alerts**: View and manage inventory warnings

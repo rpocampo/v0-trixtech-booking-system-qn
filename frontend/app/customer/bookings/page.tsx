@@ -6,12 +6,13 @@ import { useSocket } from '../../../components/SocketProvider';
 
 interface Booking {
   _id: string;
-  serviceId: { name: string; price: number; category: string };
+  serviceId: { name: string; basePrice: number; category: string };
   quantity: number;
   bookingDate: string;
   status: string;
   totalPrice: number;
   paymentStatus: string;
+  paymentType?: string;
 }
 
 export default function Bookings() {
@@ -100,12 +101,28 @@ export default function Bookings() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleBookingCreated = (data: any) => {
+    const handleBookingCreated = async (data: any) => {
       console.log('New booking created:', data);
       setUpdating(true);
 
-      // Add the new booking to the list
-      setBookings(prev => [data.booking, ...prev]);
+      // Refetch bookings to get the complete booking data
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const response = await fetch('http://localhost:5000/api/bookings', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (response.ok) {
+            const bookingData = await response.json();
+            if (bookingData.success) {
+              setBookings(bookingData.bookings);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to refetch bookings:', error);
+      }
 
       setTimeout(() => setUpdating(false), 2000);
     };
@@ -201,9 +218,20 @@ export default function Bookings() {
               </div>
 
               <div className="flex gap-4 pt-4 border-t border-[var(--border)]">
-                <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(booking.paymentStatus)}`}>
-                  {booking.paymentStatus}
-                </span>
+                <div className="flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <span className="text-sm font-medium text-gray-600">Payment Type:</span>
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm font-semibold">
+                      {booking.paymentType === 'full' ? 'Full Payment' : booking.paymentType === 'test_payment' ? 'Test Payment' : 'Full Payment'}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className="text-sm font-medium text-gray-600">Payment Status:</span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(booking.paymentStatus)}`}>
+                      {booking.paymentStatus}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           ))}

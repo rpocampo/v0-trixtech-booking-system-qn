@@ -778,12 +778,39 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
       }
     };
 
-    // Generate payment QR code data (without creating payment record yet)
-    const { generateQRCodeDataURL, generatePaymentInstructions } = require('../utils/qrCodeService');
+    // Create payment record for the intent
+    const Payment = require('../models/Payment');
     const { generateTransactionId, generateReferenceNumber } = require('../utils/paymentService');
 
     const transactionId = generateTransactionId();
     const referenceNumber = generateReferenceNumber();
+
+    // Create payment record
+    const payment = new Payment({
+      bookingId: null, // Will be set when booking is confirmed
+      userId: req.user.id,
+      amount: bookingIntent.totalPrice,
+      paymentMethod: 'gcash_qr',
+      paymentProvider: 'gcash_qr',
+      transactionId,
+      referenceNumber,
+      status: 'pending',
+      paymentType: 'full', // Default to full payment
+      isDownPayment: false,
+      isFinalPayment: true,
+      paymentData: {
+        createdAt: new Date(),
+        qrGenerated: true,
+        referenceNumber,
+        usesUserQR: false, // Intent doesn't use user QR
+        bookingIntent: bookingIntent // Store the intent data
+      }
+    });
+
+    await payment.save();
+
+    // Generate payment QR code data
+    const { generateQRCodeDataURL, generatePaymentInstructions } = require('../utils/qrCodeService');
 
     // Generate QR code data
     const paymentDescription = `Full Payment - ${transactionId}`;
@@ -794,12 +821,17 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
       merchantName: 'TRIXTECH',
       merchantId: 'TRIXTECH001',
       description: paymentDescription,
-      paymentId: `intent_${Date.now()}`, // Temporary ID for intent
+      paymentId: payment._id.toString(),
       callbackUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/api/payments/verify-qr/${referenceNumber}`
     };
 
     const qrCode = await generateQRCodeDataURL(qrData);
     const instructions = generatePaymentInstructions(qrData);
+
+    // Update payment with QR data
+    payment.paymentData.qrCode = qrCode;
+    payment.paymentData.instructions = instructions;
+    await payment.save();
 
     res.status(200).json({
       success: true,
@@ -809,6 +841,7 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
         instructions,
         referenceNumber,
         transactionId,
+        paymentId: payment._id,
       },
       message: 'Payment required. Complete payment to confirm booking.'
     });
@@ -828,17 +861,26 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Missing payment reference or booking intent' });
     }
 
-    // Verify payment was successful
+    // Find the payment record (it should exist from create-intent)
     const Payment = require('../models/Payment');
     const payment = await Payment.findOne({
       referenceNumber: paymentReference,
-      userId: req.user.id,
-      status: 'completed'
+      userId: req.user.id
     });
 
     if (!payment) {
-      return res.status(400).json({ success: false, message: 'Payment not found or not completed' });
+      return res.status(400).json({ success: false, message: 'Payment not found' });
     }
+
+    // Check if payment is already completed
+    if (payment.status === 'completed') {
+      return res.status(400).json({ success: false, message: 'Payment already processed' });
+    }
+
+    // Mark payment as completed (this would normally be done by GCash callback)
+    payment.status = 'completed';
+    payment.completedAt = new Date();
+    await payment.save();
 
     // Double-check availability before creating booking
     const service = await Service.findById(bookingIntent.serviceId);

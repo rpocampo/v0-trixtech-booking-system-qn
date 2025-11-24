@@ -1,5 +1,6 @@
 const Service = require('../models/Service');
 const Booking = require('../models/Booking');
+const ReservationQueue = require('../models/ReservationQueue');
 
 // Find alternative services based on category and availability
 const findAlternativeServices = async (originalServiceId, bookingDate, requestedQuantity = 1) => {
@@ -103,7 +104,6 @@ const findAlternativeServices = async (originalServiceId, bookingDate, requested
 // Process reservation queue - check if any queued reservations can now be fulfilled
 const processReservationQueue = async () => {
   try {
-    const ReservationQueue = require('../models/ReservationQueue');
 
     const queuedReservations = await ReservationQueue.find({
       status: 'queued',
@@ -167,7 +167,6 @@ const processReservationQueue = async () => {
 // Clean up expired reservations
 const cleanupExpiredReservations = async () => {
   try {
-    const ReservationQueue = require('../models/ReservationQueue');
 
     const result = await ReservationQueue.updateMany(
       {

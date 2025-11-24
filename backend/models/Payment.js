@@ -5,7 +5,7 @@ const paymentSchema = new mongoose.Schema(
     bookingId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Booking',
-      required: true,
+      required: false, // Allow null for pending payments before booking is created
     },
     userId: {
       type: mongoose.Schema.Types.ObjectId,

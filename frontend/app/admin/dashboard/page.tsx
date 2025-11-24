@@ -12,7 +12,6 @@ export default function AdminDashboard() {
     totalBookings: 0,
     bookedCustomers: 0,
     totalInventory: 0,
-    revenue: 0,
   });
   const [recentBookings, setRecentBookings] = useState<any[]>([]);
   const [lowStockItems, setLowStockItems] = useState<any[]>([]);
@@ -60,7 +59,6 @@ export default function AdminDashboard() {
         totalBookings: 0, // Will be updated by fetchRecentBookings
         bookedCustomers: customersData.users?.filter((u: any) => u.role === 'customer').length || 0,
         totalInventory,
-        revenue: 0, // Will be updated by fetchRecentBookings
       });
 
       setLowStockItems(lowStock);
@@ -90,13 +88,9 @@ export default function AdminDashboard() {
       const data = await response.json();
       const bookings = data.bookings || [];
 
-      // Calculate revenue from recent bookings
-      const revenue = bookings.reduce((sum: number, booking: any) => sum + booking.totalPrice, 0);
-
       setStats(prev => ({
         ...prev,
         totalBookings: bookings.length,
-        revenue,
       }));
 
       setRecentBookings(bookings);
@@ -217,13 +211,6 @@ export default function AdminDashboard() {
             Total Inventory
           </div>
           <div className="stat-value text-purple-600">{stats.totalInventory}</div>
-        </div>
-        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
-          <div className="stat-label flex items-center gap-2">
-            <span className="text-lg">💰</span>
-            Total Revenue
-          </div>
-          <div className="stat-value text-[var(--success)]">₱{stats.revenue.toFixed(2)}</div>
         </div>
       </div>
 

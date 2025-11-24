@@ -152,6 +152,12 @@ export default function CustomerLayout({
               Bookings
             </Link>
             <Link
+              href="/customer/suggestions"
+              className="px-4 py-2 rounded-lg text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200 font-medium"
+            >
+              💡 Suggestions
+            </Link>
+            <Link
               href="/customer/notifications"
               className="relative px-4 py-2 rounded-lg text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200 font-medium"
             >
@@ -276,6 +282,14 @@ export default function CustomerLayout({
                 Bookings
               </Link>
               <Link
+                href="/customer/suggestions"
+                className="flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <span className="text-lg">💡</span>
+                Suggestions
+              </Link>
+              <Link
                 href="/customer/notifications"
                 className="relative flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200"
                 onClick={() => setIsMenuOpen(false)}
@@ -351,6 +365,7 @@ export default function CustomerLayout({
               <h4 className="font-semibold mb-4">Quick Links</h4>
               <ul className="space-y-2 text-gray-300">
                 <li><Link href="/customer/services" className="hover:text-white transition-colors">Services</Link></li>
+                <li><Link href="/customer/suggestions" className="hover:text-white transition-colors">💡 Suggestions</Link></li>
                 <li><Link href="/customer/bookings" className="hover:text-white transition-colors">My Bookings</Link></li>
                 <li><Link href="/customer/profile" className="hover:text-white transition-colors">Profile</Link></li>
                 <li><Link href="/customer/notifications" className="hover:text-white transition-colors">Notifications</Link></li>

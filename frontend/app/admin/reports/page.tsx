@@ -27,27 +27,11 @@ interface DeliverySchedule {
   notes?: string;
 }
 
-interface DeliveryTruckStatus {
-  status: 'available' | 'busy' | 'error';
-  currentDelivery?: {
-    serviceName: string;
-    customerName: string;
-    endTime: string;
-    timeRemaining: number;
-  };
-  nextDelivery?: {
-    serviceName: string;
-    customerName: string;
-    startTime: string;
-    timeUntilNext: number;
-  };
-}
 
 export default function Reports() {
   const { socket } = useSocket();
   const [inventoryReport, setInventoryReport] = useState<InventoryReport[]>([]);
   const [deliverySchedules, setDeliverySchedules] = useState<DeliverySchedule[]>([]);
-  const [deliveryTruckStatus, setDeliveryTruckStatus] = useState<DeliveryTruckStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -67,9 +51,6 @@ export default function Reports() {
 
       // Fetch delivery schedules
       await fetchDeliverySchedules();
-
-      // Fetch delivery truck status
-      await fetchDeliveryTruckStatus();
 
     } catch (error) {
       console.error('Failed to fetch reports:', error);
@@ -94,20 +75,6 @@ export default function Reports() {
     }
   };
 
-  const fetchDeliveryTruckStatus = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/bookings/admin/delivery-truck-status', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
-      if (data.success) {
-        setDeliveryTruckStatus(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch delivery truck status:', error);
-    }
-  };
 
   useEffect(() => {
     fetchReports();
@@ -207,60 +174,6 @@ export default function Reports() {
         )}
       </div>
 
-      {/* Delivery Truck Status */}
-      <div className="card p-6 mt-8">
-        <h2 className="section-title">🚚 Delivery Truck Status</h2>
-        {deliveryTruckStatus ? (
-          <div className="space-y-4">
-            <div className={`p-4 rounded-lg border-2 ${
-              deliveryTruckStatus.status === 'busy'
-                ? 'bg-red-50 border-red-200'
-                : deliveryTruckStatus.status === 'available'
-                ? 'bg-green-50 border-green-200'
-                : 'bg-gray-50 border-gray-200'
-            }`}>
-              <div className="flex items-center gap-3">
-                <div className={`w-4 h-4 rounded-full ${
-                  deliveryTruckStatus.status === 'busy'
-                    ? 'bg-red-500'
-                    : deliveryTruckStatus.status === 'available'
-                    ? 'bg-green-500'
-                    : 'bg-gray-500'
-                }`}></div>
-                <div>
-                  <h3 className={`font-semibold text-lg ${
-                    deliveryTruckStatus.status === 'busy'
-                      ? 'text-red-800'
-                      : deliveryTruckStatus.status === 'available'
-                      ? 'text-green-800'
-                      : 'text-gray-800'
-                  }`}>
-                    Truck is {deliveryTruckStatus.status === 'busy' ? 'Busy' : 'Available'}
-                  </h3>
-                  {deliveryTruckStatus.currentDelivery && (
-                    <p className="text-red-700 mt-1">
-                      Currently delivering: <strong>{deliveryTruckStatus.currentDelivery.serviceName}</strong> to {deliveryTruckStatus.currentDelivery.customerName}
-                      <br />
-                      <span className="text-sm">Ends at: {new Date(deliveryTruckStatus.currentDelivery.endTime).toLocaleString()}</span>
-                      <span className="text-sm ml-4">({deliveryTruckStatus.currentDelivery.timeRemaining} minutes remaining)</span>
-                    </p>
-                  )}
-                  {deliveryTruckStatus.nextDelivery && (
-                    <p className="text-blue-700 mt-1">
-                      Next delivery: <strong>{deliveryTruckStatus.nextDelivery.serviceName}</strong> for {deliveryTruckStatus.nextDelivery.customerName}
-                      <br />
-                      <span className="text-sm">Starts at: {new Date(deliveryTruckStatus.nextDelivery.startTime).toLocaleString()}</span>
-                      <span className="text-sm ml-4">({deliveryTruckStatus.nextDelivery.timeUntilNext} minutes from now)</span>
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className="text-[var(--muted)] text-center py-8">Loading truck status...</p>
-        )}
-      </div>
 
       {/* Delivery Schedules */}
       <div className="card p-6 mt-8">

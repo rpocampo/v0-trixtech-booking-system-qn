@@ -29,15 +29,28 @@ describe('Authentication API', () => {
     });
 
     it('should not register user with existing email', async () => {
-      const userData = {
+      // First register a user
+      const userData1 = {
+        name: 'Test User 1',
+        email: 'duplicate@example.com',
+        password: 'password123'
+      };
+
+      await request(app)
+        .post('/api/auth/register')
+        .send(userData1)
+        .expect(201);
+
+      // Try to register with same email
+      const userData2 = {
         name: 'Test User 2',
-        email: 'test@example.com', // Same email
+        email: 'duplicate@example.com', // Same email
         password: 'password123'
       };
 
       const response = await request(app)
         .post('/api/auth/register')
-        .send(userData)
+        .send(userData2)
         .expect(409);
 
       expect(response.body.success).toBe(false);
@@ -47,8 +60,21 @@ describe('Authentication API', () => {
 
   describe('POST /api/auth/login', () => {
     it('should login with correct credentials', async () => {
+      // First register a user
+      const userData = {
+        name: 'Login Test User',
+        email: 'login@example.com',
+        password: 'password123'
+      };
+
+      await request(app)
+        .post('/api/auth/register')
+        .send(userData)
+        .expect(201);
+
+      // Now login
       const loginData = {
-        email: 'test@example.com',
+        email: 'login@example.com',
         password: 'password123'
       };
 
@@ -63,8 +89,21 @@ describe('Authentication API', () => {
     });
 
     it('should not login with wrong password', async () => {
+      // First register a user
+      const userData = {
+        name: 'Wrong Password User',
+        email: 'wrongpass@example.com',
+        password: 'password123'
+      };
+
+      await request(app)
+        .post('/api/auth/register')
+        .send(userData)
+        .expect(201);
+
+      // Try login with wrong password
       const loginData = {
-        email: 'test@example.com',
+        email: 'wrongpass@example.com',
         password: 'wrongpassword'
       };
 

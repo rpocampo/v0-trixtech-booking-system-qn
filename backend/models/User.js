@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: true,
-      minlength: 6,
+      minlength: 8,
     },
     role: {
       type: String,
@@ -36,6 +36,10 @@ const userSchema = new mongoose.Schema(
     emailVerified: {
       type: Boolean,
       default: false,
+    },
+    gcashQRCode: {
+      type: String,
+      default: null, // URL to QR code image or QR code data
     },
   },
   { timestamps: true }

@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useCart } from '../../../components/CartContext';
+import QRCode from 'qrcode';
 
 interface Booking {
   _id: string;
@@ -38,10 +39,12 @@ function PaymentProcessContent() {
   // QR-only payment system - no method selection needed
   const [qrPayment, setQrPayment] = useState<{
     qrCode: string;
+    qrData?: string; // Raw QR data if provided
     instructions: any;
     referenceNumber: string;
     transactionId: string;
   } | null>(null);
+  const [generatedQRCode, setGeneratedQRCode] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed' | 'failed'>('pending');
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentType, setPaymentType] = useState<string>('full');
@@ -198,8 +201,21 @@ function PaymentProcessContent() {
 
       if (data.success) {
         console.log('QR payment created successfully:', data);
+
+        // Check if qrCode contains raw QR data (starts with numbers) or is already a data URL
+        let qrCodeToUse = data.qrCode;
+        let qrData = undefined;
+
+        if (data.qrCode && data.qrCode.startsWith('000201')) {
+          // This is raw QR data, generate QR code from it
+          qrData = data.qrCode;
+          // Generate QR code from raw data
+          generateQRCodeFromData(data.qrCode);
+        }
+
         setQrPayment({
-          qrCode: data.qrCode,
+          qrCode: qrCodeToUse,
+          qrData: qrData,
           instructions: data.instructions,
           referenceNumber: data.referenceNumber,
           transactionId: data.transactionId,
@@ -269,6 +285,27 @@ function PaymentProcessContent() {
     setTimeout(() => {
       clearInterval(pollInterval);
     }, 5 * 60 * 1000);
+  };
+
+  const generateQRCodeFromData = async (qrData: string) => {
+    try {
+      const qrCodeDataURL = await QRCode.toDataURL(qrData, {
+        errorCorrectionLevel: 'M',
+        type: 'image/png',
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        },
+        width: 256
+      });
+      setGeneratedQRCode(qrCodeDataURL);
+      return qrCodeDataURL;
+    } catch (error) {
+      console.error('Error generating QR code from data:', error);
+      setError('Failed to generate QR code');
+      return null;
+    }
   };
 
   const handleRetry = () => {
@@ -366,9 +403,9 @@ function PaymentProcessContent() {
 
             <div className="flex justify-center mb-6">
               <div className="bg-white p-4 rounded-lg border-2 border-gray-200 relative">
-                {qrPayment.qrCode ? (
+                {generatedQRCode || (qrPayment.qrCode && !qrPayment.qrCode.startsWith('000201')) ? (
                   <img
-                    src={qrPayment.qrCode}
+                    src={generatedQRCode || qrPayment.qrCode}
                     alt="GCash QR Code"
                     className="w-64 h-64"
                     onLoad={() => console.log('QR code loaded successfully')}
@@ -392,6 +429,15 @@ function PaymentProcessContent() {
                       e.currentTarget.parentNode?.replaceChild(errorDiv, e.currentTarget);
                     }}
                   />
+                ) : qrPayment.qrData ? (
+                  <div className="w-64 h-64 flex items-center justify-center bg-gray-100 border-2 border-gray-300 rounded-lg">
+                    <div className="text-center text-gray-500">
+                      <svg className="w-12 h-12 mx-auto mb-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <p className="text-sm">Generating QR Code...</p>
+                    </div>
+                  </div>
                 ) : (
                   <div className="w-64 h-64 flex items-center justify-center bg-gray-100 border-2 border-gray-300 rounded-lg">
                     <div className="text-center text-gray-500">

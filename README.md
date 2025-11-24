@@ -31,7 +31,7 @@ trixtech/
 - Payment status tracking
 
 ### Admin Features
-- Dashboard with key metrics (revenue, bookings, customers)
+- Dashboard with key metrics (bookings, customers, inventory)
 - Create, edit, and delete services
 - Manage all bookings with status updates
 - Track payment status

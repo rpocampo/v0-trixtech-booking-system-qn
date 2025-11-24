@@ -50,12 +50,15 @@ export default function AdminServices() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     category: 'event-planning',
     serviceType: 'service', // Allow selection between service, equipment, supply
     price: 0,
+    duration: 1,
+    includedItems: '',
     image: null as File | null,
   });
   const [errors, setErrors] = useState<{[key: string]: string}>({});
@@ -152,6 +155,8 @@ export default function AdminServices() {
           category: 'event-planning',
           serviceType: 'service',
           price: 0,
+          duration: 1,
+          includedItems: '',
           image: null,
         });
         setErrors({});
@@ -183,6 +188,80 @@ export default function AdminServices() {
     }
   };
 
+  const startEditing = (service: Service) => {
+    setEditingService(service);
+    setFormData({
+      name: service.name,
+      description: service.description,
+      category: service.category,
+      serviceType: service.serviceType,
+      price: service.price,
+      duration: service.duration || 1,
+      includedItems: Array.isArray(service.includedItems)
+        ? service.includedItems.join('\n')
+        : service.includedItems || '',
+      image: null,
+    });
+    setShowForm(true);
+  };
+
+  const cancelEditing = () => {
+    setEditingService(null);
+    setFormData({
+      name: '',
+      description: '',
+      category: 'event-planning',
+      serviceType: 'service',
+      price: 0,
+      duration: 1,
+      includedItems: '',
+      image: null,
+    });
+    setShowForm(false);
+  };
+
+  const updateService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingService) return;
+
+    if (!validateForm()) {
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+
+    try {
+      const formDataToSend = new FormData();
+
+      formDataToSend.append('name', formData.name.trim());
+      formDataToSend.append('description', formData.description.trim());
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('price', formData.price.toString());
+      formDataToSend.append('duration', formData.duration.toString());
+      formDataToSend.append('includedItems', formData.includedItems);
+
+      const response = await fetch(`http://localhost:5000/api/services/${editingService._id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formDataToSend,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setServices(services.map(s => s._id === editingService._id ? data.service : s));
+        cancelEditing();
+      } else {
+        setErrors({ submit: data.message || 'Failed to update service' });
+      }
+    } catch (error) {
+      console.error('Failed to update service:', error);
+      setErrors({ submit: 'Network error. Please try again.' });
+    }
+  };
+
 
   if (loading) return <div>Loading services...</div>;
 
@@ -196,14 +275,22 @@ export default function AdminServices() {
             💡 Stock quantities are managed in the <a href="/admin/inventory" className="underline hover:text-blue-800">Inventory</a> module
           </p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="btn-primary">
+        <button onClick={() => {
+          if (showForm) {
+            cancelEditing();
+          } else {
+            setShowForm(true);
+          }
+        }} className="btn-primary">
           {showForm ? 'Cancel' : 'Add Service'}
         </button>
       </div>
 
       {showForm && (
         <div className="card p-6 mb-8">
-          <h2 className="text-2xl font-bold mb-4">Create New Service</h2>
+          <h2 className="text-2xl font-bold mb-4">
+            {editingService ? 'Edit Service' : 'Create New Service'}
+          </h2>
 
           {errors.submit && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
@@ -211,7 +298,7 @@ export default function AdminServices() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={editingService ? updateService : handleSubmit} className="space-y-6">
             <div className="grid md:grid-cols-2 gap-6">
               {/* Service Name */}
               <div className="md:col-span-2">
@@ -294,6 +381,37 @@ export default function AdminServices() {
                 {errors.price && <p className="text-sm text-red-600 mt-1">{errors.price}</p>}
                 <p className="text-xs text-gray-500 mt-1">Enter the service price in Philippine Pesos</p>
               </div>
+
+              {/* Duration */}
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700">
+                  Duration (Days) *
+                </label>
+                <input
+                  type="number"
+                  value={formData.duration}
+                  onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) || 1 })}
+                  className="input-field"
+                  min="1"
+                  placeholder="1"
+                />
+                <p className="text-xs text-gray-500 mt-1">Duration of the service in days</p>
+              </div>
+            </div>
+
+            {/* Inclusions */}
+            <div>
+              <label className="block text-sm font-medium mb-2 text-gray-700">
+                What's Included
+              </label>
+              <textarea
+                value={formData.includedItems}
+                onChange={(e) => setFormData({ ...formData, includedItems: e.target.value })}
+                className="input-field"
+                rows={4}
+                placeholder="List what is included in this service (one item per line):&#10;- Professional service delivery&#10;- Setup and preparation&#10;- Basic equipment"
+              />
+              <p className="text-xs text-gray-500 mt-1">Enter each inclusion on a new line</p>
             </div>
 
             {/* Description */}
@@ -335,7 +453,7 @@ export default function AdminServices() {
                 Cancel
               </button>
               <button type="submit" className="btn-primary">
-                Create Service
+                {editingService ? 'Update Service' : 'Create Service'}
               </button>
             </div>
           </form>
@@ -351,7 +469,7 @@ export default function AdminServices() {
                 <p className="text-[var(--muted)] text-sm mt-1">{service.description}</p>
                 <div className="flex gap-6 mt-4 text-sm">
                   <span>Category: <span className="font-semibold capitalize">{service.category}</span></span>
-                  <span>Duration: <span className="font-semibold">{service.duration} min</span></span>
+                  <span>Duration: <span className="font-semibold">{service.duration || 1} day{service.duration !== 1 ? 's' : ''}</span></span>
                   <span>Price: <span className="font-semibold text-[var(--primary)]">₱{service.price}</span></span>
                   {(service.serviceType === 'equipment' || service.serviceType === 'supply') && (
                     <span className="flex items-center gap-2">
@@ -369,12 +487,20 @@ export default function AdminServices() {
                   )}
                 </div>
               </div>
-              <button
-                onClick={() => deleteService(service._id)}
-                className="text-red-600 hover:text-red-800 transition-colors"
-              >
-                Delete
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => startEditing(service)}
+                  className="text-blue-600 hover:text-blue-800 transition-colors"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => deleteService(service._id)}
+                  className="text-red-600 hover:text-red-800 transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
             </div>
           </div>
         ))}

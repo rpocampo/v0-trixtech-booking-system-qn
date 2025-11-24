@@ -167,17 +167,9 @@ const NOTIFICATION_TEMPLATES = {
     channels: ['in-app', 'email', 'sms'],
   },
 
-  BOOKING_DOWN_PAYMENT_CONFIRMED: {
-    title: 'Down Payment Confirmed',
-    message: 'Your down payment has been confirmed. Your booking is now reserved.',
-    type: 'booking',
-    priority: 'medium',
-    channels: ['in-app', 'email', 'sms'],
-  },
-
-  BOOKING_FINAL_PAYMENT_CONFIRMED: {
-    title: 'Final Payment Confirmed',
-    message: 'Your final payment has been confirmed. Your booking is now fully paid.',
+  BOOKING_PAYMENT_CONFIRMED: {
+    title: 'Payment Confirmed',
+    message: 'Your payment has been confirmed. Your booking is now confirmed.',
     type: 'booking',
     priority: 'medium',
     channels: ['in-app', 'email', 'sms'],
@@ -231,17 +223,9 @@ const NOTIFICATION_TEMPLATES = {
     channels: ['in-app', 'email'],
   },
 
-  NEW_DOWN_PAYMENT_ADMIN: {
-    title: 'New Down Payment Received',
-    message: 'A customer has made a down payment for their booking.',
-    type: 'admin',
-    priority: 'medium',
-    channels: ['in-app', 'email'],
-  },
-
-  FINAL_PAYMENT_ADMIN: {
-    title: 'Final Payment Received',
-    message: 'A customer has completed their final payment.',
+  PAYMENT_RECEIVED_ADMIN: {
+    title: 'Payment Received',
+    message: 'A customer has completed their payment.',
     type: 'admin',
     priority: 'medium',
     channels: ['in-app', 'email'],

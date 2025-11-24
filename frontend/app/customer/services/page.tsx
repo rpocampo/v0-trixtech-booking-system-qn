@@ -267,7 +267,7 @@ export default function Services() {
           <div className="mt-6 pt-6 border-t border-[var(--border)]">
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Category</label>
+                <label className="block text-sm font-medium mb-2">Event Type</label>
                 <select
                   value={pendingFilters.category}
                   onChange={(e) => setPendingFilters(prev => ({ ...prev, category: e.target.value }))}

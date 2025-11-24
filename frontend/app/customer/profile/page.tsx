@@ -8,6 +8,7 @@ interface User {
   email: string;
   phone: string;
   address: string;
+  gcashQRCode?: string;
 }
 
 export default function Profile() {
@@ -21,6 +22,9 @@ export default function Profile() {
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [qrUploading, setQrUploading] = useState(false);
+  const [qrMessage, setQrMessage] = useState('');
+  const [qrCodeData, setQrCodeData] = useState('');
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -94,6 +98,107 @@ export default function Profile() {
     }
   };
 
+  const handleQRUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setQrUploading(true);
+    setQrMessage('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const formDataUpload = new FormData();
+      formDataUpload.append('qrCode', file);
+
+      const response = await fetch(`http://localhost:5000/api/users/${user?._id}/gcash-qr`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formDataUpload,
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setQrMessage('GCash QR code uploaded successfully!');
+        setUser(data.user);
+      } else {
+        setQrMessage(data.message || 'Failed to upload QR code');
+      }
+    } catch (error) {
+      setQrMessage('An error occurred while uploading');
+    } finally {
+      setQrUploading(false);
+    }
+  };
+
+  const handleQRRemove = async () => {
+    if (!confirm('Are you sure you want to remove your GCash QR code?')) return;
+
+    setQrUploading(true);
+    setQrMessage('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/users/${user?._id}/gcash-qr`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setQrMessage('GCash QR code removed successfully!');
+        setUser(data.user);
+        setQrCodeData('');
+      } else {
+        setQrMessage(data.message || 'Failed to remove QR code');
+      }
+    } catch (error) {
+      setQrMessage('An error occurred while removing QR code');
+    } finally {
+      setQrUploading(false);
+    }
+  };
+
+  const handleQRDataSubmit = async () => {
+    if (!qrCodeData.trim()) {
+      setQrMessage('Please enter your GCash QR code data');
+      return;
+    }
+
+    setQrUploading(true);
+    setQrMessage('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:5000/api/users/${user?._id}/gcash-qr`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ qrCodeUrl: qrCodeData.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setQrMessage('GCash QR code set successfully!');
+        setUser(data.user);
+      } else {
+        setQrMessage(data.message || 'Failed to set QR code');
+      }
+    } catch (error) {
+      setQrMessage('An error occurred while setting QR code');
+    } finally {
+      setQrUploading(false);
+    }
+  };
+
   if (loading) return <div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--primary)]"></div></div>;
 
   if (error) return <div className="flex items-center justify-center min-h-screen"><div className="text-red-500">{error}</div></div>;
@@ -149,6 +254,118 @@ export default function Profile() {
               rows={3}
               placeholder="Your address"
             />
+          </div>
+
+          {/* GCash QR Code Section */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold mb-4">GCash QR Code</h3>
+            <p className="text-sm text-[var(--muted)] mb-4">
+              Set up your personal GCash QR code to receive payments directly. You can either paste your QR code data or upload an image.
+            </p>
+
+            {qrMessage && (
+              <div className={`mb-4 px-4 py-2 rounded border ${qrMessage.includes('successfully') ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700'}`}>
+                {qrMessage}
+              </div>
+            )}
+
+            {user?.gcashQRCode ? (
+              <div className="space-y-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-16 h-16 bg-white rounded-lg border flex items-center justify-center">
+                      <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-green-800">GCash QR Code Active</p>
+                      <p className="text-sm text-green-600">Your personal QR code will be used for payments</p>
+                      {user.gcashQRCode.startsWith('000201') && (
+                        <p className="text-xs text-green-700 mt-1">Using QR data string</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleQRRemove}
+                    disabled={qrUploading}
+                    className="btn-secondary bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
+                  >
+                    Remove QR Code
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 21h.01M12 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-medium text-yellow-800">No GCash QR Code</p>
+                      <p className="text-sm text-yellow-600">Set up your QR code to receive payments directly</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Option 1: Paste QR Code Data */}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-gray-800">Option 1: Paste QR Code Data</h4>
+                  <p className="text-sm text-gray-600">
+                    Open your GCash app → Profile → QR Code → Tap "Copy QR" to get your QR code data string.
+                  </p>
+                  <div className="space-y-2">
+                    <textarea
+                      value={qrCodeData}
+                      onChange={(e) => setQrCodeData(e.target.value)}
+                      placeholder="Paste your GCash QR code data here (starts with 000201...)"
+                      className="input-field font-mono text-sm"
+                      rows={3}
+                    />
+                    <button
+                      onClick={handleQRDataSubmit}
+                      disabled={qrUploading || !qrCodeData.trim()}
+                      className="btn-primary"
+                    >
+                      {qrUploading ? 'Setting...' : 'Set QR Code Data'}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">OR</span>
+                  </div>
+                </div>
+
+                {/* Option 2: Upload QR Code Image */}
+                <div className="space-y-3">
+                  <h4 className="font-medium text-gray-800">Option 2: Upload QR Code Image</h4>
+                  <p className="text-sm text-gray-600">
+                    Take a screenshot of your GCash QR code and upload the image.
+                  </p>
+                  <label className="btn-secondary cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleQRUpload}
+                      disabled={qrUploading}
+                      className="hidden"
+                    />
+                    {qrUploading ? 'Uploading...' : 'Upload QR Code Image'}
+                  </label>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-6">

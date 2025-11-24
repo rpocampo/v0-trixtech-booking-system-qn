@@ -26,7 +26,6 @@
 
 ### 4. Analytics & Reporting
 - View real-time dashboard metrics
-- Track total revenue
 - Monitor booking trends
 - Analyze customer behavior
 - Export analytics reports (coming soon)

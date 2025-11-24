@@ -35,22 +35,25 @@ export default function CheckoutPage() {
   const [stockValidationIssues, setStockValidationIssues] = useState<string[]>([]);
   const [isValidatingStock, setIsValidatingStock] = useState(false);
   const [currentStep, setCurrentStep] = useState<'review' | 'schedule' | 'confirm' | 'payment-type' | 'payment'>('review');
-  const [scheduledItems, setScheduledItems] = useState<{ [key: string]: { date: string; notes: string } }>({});
+  const [scheduledItems, setScheduledItems] = useState<{ [key: string]: { date: string; notes: string; sameDateTime: boolean; pickupDate?: string; pickupNotes?: string } }>({});
+  const [pickupDate, setPickupDate] = useState<string>('');
+  const [numberOfDays, setNumberOfDays] = useState<number>(0);
+  const [commonDateTime, setCommonDateTime] = useState<string>('');
+  const [commonNotes, setCommonNotes] = useState<string>('');
   const [paymentBooking, setPaymentBooking] = useState<any>(null);
   const [checkoutTotal, setCheckoutTotal] = useState<number>(0);
-  const [paymentType, setPaymentType] = useState<'full' | 'down_payment'>('full');
-  const [downPaymentAmount, setDownPaymentAmount] = useState<number>(0);
+  const [paymentType, setPaymentType] = useState<'full'>('full');
   const [qrPayment, setQrPayment] = useState<{
     qrCode: string;
     instructions: any;
     referenceNumber: string;
     transactionId: string;
   } | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed' | 'failed'>('pending');
+  const [paymentStatus, setPaymentStatus] = useState<'unpaid' | 'processing' | 'paid' | 'failed'>('unpaid');
   const [creatingPayment, setCreatingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState('');
 
-  // Initialize checkout items from cart
+  // Initialize checkout items from cart and load scheduled data
   useEffect(() => {
     if (items.length === 0) {
       router.push('/customer/cart');
@@ -68,6 +71,28 @@ export default function CheckoutPage() {
     }));
 
     setCheckoutItems(initialCheckoutItems);
+
+    // Load scheduled items from localStorage
+    const savedScheduledItems = localStorage.getItem('cartScheduledItems');
+    const savedCommonDateTime = localStorage.getItem('cartCommonDateTime');
+    const savedCommonNotes = localStorage.getItem('cartCommonNotes');
+
+    if (savedScheduledItems) {
+      try {
+        const parsedScheduledItems = JSON.parse(savedScheduledItems);
+        setScheduledItems(parsedScheduledItems);
+      } catch (error) {
+        console.error('Failed to load scheduled items:', error);
+      }
+    }
+
+    if (savedCommonDateTime) {
+      setPickupDate(savedCommonDateTime);
+    }
+
+    if (savedCommonNotes) {
+      // Store common notes - could be used for pickup notes
+    }
   }, [items, router]);
 
   // Validate stock on load
@@ -102,10 +127,123 @@ export default function CheckoutPage() {
   };
 
   const handleScheduleUpdate = (itemId: string, date: string, notes: string) => {
-    setScheduledItems(prev => ({
-      ...prev,
-      [itemId]: { date, notes }
-    }));
+    setScheduledItems(prev => {
+      const currentItem = prev[itemId] || { date: '', notes: '', sameDateTime: false };
+      const isSameDateTime = currentItem.sameDateTime;
+
+      // If this item uses same date/time, update all checked items
+      if (isSameDateTime) {
+        setCommonDateTime(date);
+        setCommonNotes(notes);
+
+        const updated = { ...prev };
+        Object.keys(updated).forEach(key => {
+          if (updated[key].sameDateTime) {
+            updated[key] = {
+              date,
+              notes,
+              sameDateTime: true
+            };
+          }
+        });
+        return updated;
+      }
+
+      return {
+        ...prev,
+        [itemId]: { date, notes, sameDateTime: isSameDateTime }
+      };
+    });
+    calculateNumberOfDays();
+  };
+
+  const handlePickupDateChange = (date: string) => {
+    setPickupDate(date);
+    calculateNumberOfDays();
+  };
+
+  const handleSameDateTimeChange = (itemId: string, checked: boolean) => {
+    setScheduledItems(prev => {
+      const updated = { ...prev };
+
+      if (checked) {
+        // When checking, use the common date/time or set a default
+        const dateTime = commonDateTime || new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
+        const notes = commonNotes;
+
+        updated[itemId] = {
+          date: dateTime,
+          notes: notes,
+          sameDateTime: true
+        };
+
+        // If this is the first item checked, set it as the common date/time
+        const checkedItems = Object.values(updated).filter(item => item.sameDateTime);
+        if (checkedItems.length === 1) {
+          setCommonDateTime(dateTime);
+          setCommonNotes(notes);
+        }
+      } else {
+        // When unchecking, keep current values but mark as not same
+        if (updated[itemId]) {
+          updated[itemId] = {
+            ...updated[itemId],
+            sameDateTime: false
+          };
+        }
+
+        // If no items are checked anymore, clear common values
+        const stillChecked = Object.values(updated).some(item => item.sameDateTime);
+        if (!stillChecked) {
+          setCommonDateTime('');
+          setCommonNotes('');
+        }
+      }
+
+      return updated;
+    });
+  };
+
+  const handleCommonDateTimeChange = (date: string, notes: string) => {
+    setCommonDateTime(date);
+    setCommonNotes(notes);
+
+    // Update all checked items
+    setScheduledItems(prev => {
+      const updated = { ...prev };
+      Object.keys(updated).forEach(key => {
+        if (updated[key].sameDateTime) {
+          updated[key] = {
+            date,
+            notes,
+            sameDateTime: true
+          };
+        }
+      });
+      return updated;
+    });
+  };
+
+  const calculateNumberOfDays = () => {
+    // Get the earliest delivery date from scheduled items
+    const deliveryDates = Object.values(scheduledItems)
+      .map(item => item.date)
+      .filter(date => date)
+      .map(date => new Date(date));
+
+    if (deliveryDates.length === 0 || !pickupDate) {
+      setNumberOfDays(0);
+      return;
+    }
+
+    const earliestDelivery = new Date(Math.min(...deliveryDates.map(d => d.getTime())));
+    const pickup = new Date(pickupDate);
+
+    // Calculate difference in days
+    const diffTime = pickup.getTime() - earliestDelivery.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    setNumberOfDays(Math.max(0, diffDays));
   };
 
   const handleProceedToSchedule = () => {
@@ -114,77 +252,6 @@ export default function CheckoutPage() {
     }
   };
 
-  const createPaymentForBooking = async () => {
-    if (!paymentBooking) {
-      setPaymentError('No booking found. Please go back and try again.');
-      return;
-    }
-
-    if (creatingPayment) {
-      return;
-    }
-
-    if (!checkoutTotal || checkoutTotal <= 0) {
-      setPaymentError('Invalid payment amount. Please go back and try again.');
-      return;
-    }
-
-    setCreatingPayment(true);
-    setPaymentError('');
-    setQrPayment(null);
-
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Please log in to continue');
-      }
-
-      const response = await fetch('http://localhost:5000/api/payments/create-qr', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          bookingId: paymentBooking._id,
-          amount: checkoutTotal,
-          paymentType: paymentType,
-        }),
-      });
-
-      if (response.status === 401) {
-        throw new Error('Your session has expired. Please log in again.');
-      }
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Server error: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success && data.qrCode) {
-        setQrPayment({
-          qrCode: data.qrCode,
-          instructions: data.instructions,
-          referenceNumber: data.referenceNumber,
-          transactionId: data.transactionId,
-        });
-        setCreatingPayment(false);
-
-        // Start polling for payment status
-        startPaymentPolling(data.referenceNumber, token);
-      } else {
-        throw new Error(data.message || 'Failed to generate QR code');
-      }
-    } catch (error) {
-      console.error('QR payment creation failed:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to generate QR code';
-      setPaymentError(errorMessage);
-      setCreatingPayment(false);
-      setQrPayment(null); // Reset QR payment state on error
-    }
-  };
 
   const startPaymentPolling = (referenceNumber: string, token: string) => {
     const pollInterval = setInterval(async () => {
@@ -199,43 +266,61 @@ export default function CheckoutPage() {
           const data = await response.json();
           if (data.success && data.payment) {
             if (data.payment.status === 'completed') {
-              setPaymentStatus('completed');
+              setPaymentStatus('paid');
               clearInterval(pollInterval);
 
-              // Confirm the booking after successful payment
+              // Confirm all bookings after successful payment
               try {
-                const confirmResponse = await fetch('http://localhost:5000/api/bookings/confirm', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({
-                    paymentReference: referenceNumber,
-                    bookingIntent: paymentBooking,
-                  }),
-                });
+                const confirmPromises = Array.isArray(paymentBooking)
+                  ? paymentBooking.map(bookingData =>
+                      fetch('http://localhost:5000/api/bookings/confirm', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({
+                          paymentReference: referenceNumber,
+                          bookingIntent: bookingData.intent,
+                        }),
+                      })
+                    )
+                  : [
+                      fetch('http://localhost:5000/api/bookings/confirm', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`,
+                        },
+                        body: JSON.stringify({
+                          paymentReference: referenceNumber,
+                          bookingIntent: paymentBooking,
+                        }),
+                      })
+                    ];
 
-                if (confirmResponse.ok) {
-                  const confirmData = await confirmResponse.json();
-                  if (confirmData.success) {
-                    // Clear cart and redirect to success page after a short delay
-                    setTimeout(() => {
-                      clearCart();
-                      router.push('/customer/bookings?payment=success');
-                    }, 2000);
-                  } else {
-                    alert('Payment completed but booking confirmation failed. Please contact support.');
-                  }
+                const confirmResults = await Promise.allSettled(confirmPromises);
+                const successfulConfirmations = confirmResults.filter(result =>
+                  result.status === 'fulfilled' && result.value.ok
+                ).length;
+
+                if (successfulConfirmations > 0) {
+                  // Clear cart and redirect to success page after a short delay
+                  setTimeout(() => {
+                    clearCart();
+                    router.push('/customer/bookings?payment=success');
+                  }, 2000);
                 } else {
                   alert('Payment completed but booking confirmation failed. Please contact support.');
                 }
               } catch (confirmError) {
-                console.error('Error confirming booking:', confirmError);
+                console.error('Error confirming bookings:', confirmError);
                 alert('Payment completed but booking confirmation failed. Please contact support.');
               }
             } else if (data.payment.status === 'failed') {
               setPaymentStatus('failed');
+            } else {
+              setPaymentStatus('processing');
               clearInterval(pollInterval);
             }
           }
@@ -262,56 +347,64 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Check if multiple items - for now, only allow one booking at a time
-      if (checkoutItems.length > 1) {
-        alert('Payment processing currently supports one booking at a time. Please remove items from your cart and try again.');
-        return;
-      }
+      // Process all items in the cart
+      const bookingIntents = [];
+      let totalAmount = 0;
 
-      // Process the single item in the cart
-      const firstItem = checkoutItems[0];
-      const scheduleData = scheduledItems[firstItem.id];
+      for (const item of checkoutItems) {
+        const scheduleData = scheduledItems[item.id];
 
-      if (!scheduleData?.date) {
-        throw new Error(`Please schedule a date for ${firstItem.name}`);
-      }
+        if (!scheduleData?.date) {
+          throw new Error(`Please schedule a date for ${item.name}`);
+        }
 
-      // Create booking intent (payment-first approach)
-      const response = await fetch('http://localhost:5000/api/bookings/create-intent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          serviceId: firstItem.id,
-          quantity: firstItem.quantity,
-          bookingDate: scheduleData.date,
-          notes: scheduleData.notes || '',
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Failed to create booking intent: ${errorData.message}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success && data.bookingIntent) {
-        // Store booking intent and payment details
-        setCheckoutTotal(data.bookingIntent.totalPrice);
-        setPaymentBooking(data.bookingIntent);
-        setQrPayment({
-          qrCode: data.payment.qrCode,
-          instructions: data.payment.instructions,
-          referenceNumber: data.payment.referenceNumber,
-          transactionId: data.payment.transactionId,
+        // Create booking intent for each item (payment-first approach)
+        const intentResponse = await fetch('http://localhost:5000/api/bookings/create-intent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            serviceId: item.id,
+            quantity: item.quantity,
+            bookingDate: scheduleData.date,
+            notes: scheduleData.notes || '',
+          }),
         });
-        setCurrentStep('payment-type');
-      } else {
-        throw new Error(data.message || 'Failed to create booking intent');
+
+        if (!intentResponse.ok) {
+          const errorData = await intentResponse.json();
+          throw new Error(`Failed to create booking intent for ${item.name}: ${errorData.message}`);
+        }
+
+        const data = await intentResponse.json();
+
+        if (data.success && data.bookingIntent) {
+          bookingIntents.push({
+            item,
+            intent: data.bookingIntent,
+            payment: data.payment
+          });
+          totalAmount += data.bookingIntent.totalPrice;
+        } else {
+          throw new Error(data.message || `Failed to create booking intent for ${item.name}`);
+        }
       }
+
+      // Use the first payment details for the combined checkout
+      const firstBooking = bookingIntents[0];
+
+      // Store all booking intents and use combined total for payment
+      setCheckoutTotal(totalAmount);
+      setPaymentBooking(bookingIntents); // Store all intents
+      setQrPayment({
+        qrCode: firstBooking.payment.qrCode,
+        instructions: firstBooking.payment.instructions,
+        referenceNumber: firstBooking.payment.referenceNumber,
+        transactionId: firstBooking.payment.transactionId,
+      });
+      setCurrentStep('payment-type');
 
     } catch (error) {
       console.error('Checkout failed:', error);
@@ -351,7 +444,7 @@ export default function CheckoutPage() {
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${currentStep === 'schedule' ? 'bg-indigo-600 text-white' : currentStep === 'confirm' || currentStep === 'payment' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
               2
             </div>
-            <span className="font-medium">Schedule Services</span>
+            <span className="font-medium">Delivery date and time</span>
           </div>
           <div className={`w-16 h-0.5 ${currentStep === 'confirm' || currentStep === 'payment' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
           <div className={`flex items-center space-x-2 ${currentStep === 'confirm' ? 'text-indigo-600' : currentStep === 'payment-type' || currentStep === 'payment' ? 'text-green-600' : 'text-gray-400'}`}>
@@ -476,106 +569,315 @@ export default function CheckoutPage() {
       {currentStep === 'schedule' && (
         <div className="space-y-6">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Schedule Your Services</h1>
-            <p className="text-gray-600">Select dates and times for each service in your cart.</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Delivery date and time</h1>
+            <p className="text-gray-600">Select delivery and pick-up dates for your services.</p>
           </div>
 
-          {/* Scheduling Interface */}
-          <div className="space-y-6">
-            {checkoutItems.map((item, index) => (
-              <div key={item.id} className="card p-6">
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-xl">
-                    {item.category === 'party' ? '🎉' :
-                     item.category === 'wedding' ? '💒' :
-                     item.category === 'corporate' ? '🏢' :
-                     item.category === 'equipment' ? '🎪' :
-                     item.category === 'cleaning' ? '🧹' : '⚙️'}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800">{item.name}</h3>
-                    <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                  </div>
-                </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
+          {/* Delivery & Pickup Interface */}
+          <div className="space-y-6">
+            {/* Delivery Date & Time */}
+            <div className="card p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Delivery Information</h3>
+              <div className="space-y-6">
+                {checkoutItems.map((item, index) => (
+                  <div key={item.id} className="border-b border-gray-200 pb-4 last:border-b-0 last:pb-0">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-xl">
+                        {item.category === 'party' ? '🎉' :
+                         item.category === 'wedding' ? '💒' :
+                         item.category === 'corporate' ? '🏢' :
+                         item.category === 'equipment' ? '🎪' :
+                         item.category === 'cleaning' ? '🧹' : '⚙️'}
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-semibold text-gray-800">{item.name}</h4>
+                        <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                      </div>
+                    </div>
+
+                    {/* Same Date and Time Checkbox */}
+                    <div className="flex items-center gap-2 mb-4">
+                      <input
+                        type="checkbox"
+                        id={`same-datetime-${item.id}`}
+                        checked={scheduledItems[item.id]?.sameDateTime || false}
+                        onChange={(e) => handleSameDateTimeChange(item.id, e.target.checked)}
+                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                      />
+                      <label
+                        htmlFor={`same-datetime-${item.id}`}
+                        className="text-sm text-gray-700 cursor-pointer font-medium"
+                      >
+                        Same Date and Time
+                      </label>
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Delivery Date & Time {!scheduledItems[item.id]?.date && !scheduledItems[item.id]?.sameDateTime && <span className="text-red-500">*</span>}
+                        </label>
+                        <input
+                          type="datetime-local"
+                          className={`input-field ${
+                            scheduledItems[item.id]?.sameDateTime
+                              ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-300'
+                              : !scheduledItems[item.id]?.date
+                                ? 'border-red-300 focus:border-red-500'
+                                : 'border-green-300 focus:border-green-500'
+                          }`}
+                          min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)} // At least 1 hour from now
+                          value={scheduledItems[item.id]?.date || ''}
+                          onChange={(e) => {
+                            const selectedDate = e.target.value;
+                            if (selectedDate) {
+                              handleScheduleUpdate(item.id, selectedDate, scheduledItems[item.id]?.notes || '');
+                            } else {
+                              // Clear the date if user clears the input
+                              const updatedNotes = scheduledItems[item.id]?.notes || '';
+                              const isSameDateTime = scheduledItems[item.id]?.sameDateTime || false;
+                              setScheduledItems(prev => ({
+                                ...prev,
+                                [item.id]: { date: '', notes: updatedNotes, sameDateTime: isSameDateTime }
+                              }));
+                            }
+                          }}
+                          disabled={scheduledItems[item.id]?.sameDateTime}
+                          required={!scheduledItems[item.id]?.sameDateTime}
+                        />
+                        {scheduledItems[item.id]?.sameDateTime && (
+                          <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                            </svg>
+                            Locked to common schedule
+                          </p>
+                        )}
+                        {!scheduledItems[item.id]?.date && !scheduledItems[item.id]?.sameDateTime && (
+                          <p className="text-xs text-red-600 mt-1">Please select a delivery date and time</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Notes (Optional)</label>
+                        <textarea
+                          className={`input-field ${
+                            scheduledItems[item.id]?.sameDateTime
+                              ? 'bg-gray-100 text-gray-500 cursor-not-allowed resize-none'
+                              : ''
+                          }`}
+                          rows={3}
+                          placeholder="Any special delivery instructions..."
+                          value={scheduledItems[item.id]?.notes || ''}
+                          onChange={(e) => handleScheduleUpdate(item.id, scheduledItems[item.id]?.date || '', e.target.value)}
+                          disabled={scheduledItems[item.id]?.sameDateTime}
+                        />
+                      </div>
+ 
+                      {/* Individual Pick-up Information for Unchecked Items */}
+                      {!scheduledItems[item.id]?.sameDateTime && (
+                        <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                          <h5 className="text-sm font-medium text-gray-700 mb-3">Pick-up Information</h5>
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Pick-up Date & Time {!scheduledItems[item.id]?.pickupDate && <span className="text-red-500">*</span>}
+                              </label>
+                              <input
+                                type="datetime-local"
+                                className={`w-full text-sm border rounded px-3 py-2 ${
+                                  !scheduledItems[item.id]?.pickupDate
+                                    ? 'border-red-300 focus:border-red-500'
+                                    : 'border-green-300 focus:border-green-500'
+                                }`}
+                                min={scheduledItems[item.id]?.date || new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
+                                value={scheduledItems[item.id]?.pickupDate || ''}
+                                onChange={(e) => {
+                                  const pickupDate = e.target.value;
+                                  setScheduledItems(prev => ({
+                                    ...prev,
+                                    [item.id]: {
+                                      ...prev[item.id],
+                                      pickupDate,
+                                      pickupNotes: prev[item.id]?.pickupNotes || ''
+                                    }
+                                  }));
+                                }}
+                                required={!scheduledItems[item.id]?.sameDateTime}
+                              />
+                              {!scheduledItems[item.id]?.pickupDate && (
+                                <p className="text-xs text-red-600 mt-1">Please select a pick-up date and time</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-gray-600 mb-1">
+                                Pick-up Notes (Optional)
+                              </label>
+                              <textarea
+                                className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none"
+                                rows={2}
+                                placeholder="Any special pick-up instructions..."
+                                value={scheduledItems[item.id]?.pickupNotes || ''}
+                                onChange={(e) => {
+                                  setScheduledItems(prev => ({
+                                    ...prev,
+                                    [item.id]: {
+                                      ...prev[item.id],
+                                      pickupNotes: e.target.value
+                                    }
+                                  }));
+                                }}
+                              />
+                            </div>
+                          </div>
+                          {scheduledItems[item.id]?.pickupDate && (
+                            <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded">
+                              <div className="flex items-center gap-2 text-green-800">
+                                <span className="text-sm">✅</span>
+                                <span className="text-xs font-medium">
+                                    Pick-up scheduled for: {new Date(scheduledItems[item.id].pickupDate!).toLocaleString()}
+                                  </span>
+                              </div>
+                              {scheduledItems[item.id]?.pickupNotes && (
+                                <p className="text-xs text-green-700 mt-1">Notes: {scheduledItems[item.id].pickupNotes}</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+ 
+          
+                    </div>
+                    {scheduledItems[item.id]?.date && (
+                      <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center gap-2 text-green-800">
+                          <span className="text-lg">✅</span>
+                          <div>
+                            <span className="text-sm font-medium">Delivery scheduled for: {new Date(scheduledItems[item.id].date).toLocaleString()}</span>
+                            {scheduledItems[item.id]?.notes && (
+                              <p className="text-xs text-green-700 mt-1">Notes: {scheduledItems[item.id].notes}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Common Schedule Manager */}
+            {Object.values(scheduledItems).some(item => item.sameDateTime) && (
+              <div className="card p-6 bg-blue-50 border-blue-200">
+                <div className="flex items-center gap-2 text-blue-800 mb-4">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                  </svg>
+                  <span className="font-semibold">Common Schedule</span>
+                </div>
+                <p className="text-sm text-blue-700 mb-4">
+                  {Object.values(scheduledItems).filter(item => item.sameDateTime).length} item(s) locked to this schedule
+                </p>
+                <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date & Time {!scheduledItems[item.id]?.date && <span className="text-red-500">*</span>}
+                    <label className="block text-sm font-medium text-blue-800 mb-2">
+                      Common Delivery Date & Time
                     </label>
                     <input
                       type="datetime-local"
-                      className={`input-field ${!scheduledItems[item.id]?.date ? 'border-red-300 focus:border-red-500' : 'border-green-300 focus:border-green-500'}`}
-                      min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)} // At least 1 hour from now
-                      value={scheduledItems[item.id]?.date || ''}
-                      onChange={(e) => {
-                        const selectedDate = e.target.value;
-                        if (selectedDate) {
-                          handleScheduleUpdate(item.id, selectedDate, scheduledItems[item.id]?.notes || '');
-                        } else {
-                          // Clear the date if user clears the input
-                          const updatedNotes = scheduledItems[item.id]?.notes || '';
-                          setScheduledItems(prev => ({
-                            ...prev,
-                            [item.id]: { date: '', notes: updatedNotes }
-                          }));
-                        }
-                      }}
-                      required
+                      className="w-full text-sm border border-blue-300 rounded px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
+                      value={commonDateTime}
+                      onChange={(e) => handleCommonDateTimeChange(e.target.value, commonNotes)}
                     />
-                    {!scheduledItems[item.id]?.date && (
-                      <p className="text-xs text-red-600 mt-1">Please select a date and time</p>
-                    )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                    <label className="block text-sm font-medium text-blue-800 mb-2">
+                      Common Delivery Notes (Optional)
+                    </label>
                     <textarea
-                      className="input-field"
-                      rows={3}
-                      placeholder="Any special requests or notes..."
-                      value={scheduledItems[item.id]?.notes || ''}
-                      onChange={(e) => handleScheduleUpdate(item.id, scheduledItems[item.id]?.date || '', e.target.value)}
+                      className="w-full text-sm border border-blue-300 rounded px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+                      rows={2}
+                      placeholder="Any special delivery instructions for all locked items..."
+                      value={commonNotes}
+                      onChange={(e) => handleCommonDateTimeChange(commonDateTime, e.target.value)}
                     />
                   </div>
                 </div>
-
-                {scheduledItems[item.id]?.date && (
-                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-green-800">
-                      <span className="text-lg">✅</span>
-                      <div>
-                        <span className="text-sm font-medium">Scheduled for: {new Date(scheduledItems[item.id].date).toLocaleString()}</span>
-                        {scheduledItems[item.id]?.notes && (
-                          <p className="text-xs text-green-700 mt-1">Notes: {scheduledItems[item.id].notes}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
-            ))}
+            )}
+
+            {/* Pick-up Date & Time */}
+            <div className="card p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Pick-up Information</h3>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Pick-up Date & Time {!pickupDate && <span className="text-red-500">*</span>}
+                  </label>
+                  <input
+                    type="datetime-local"
+                    className={`input-field ${!pickupDate ? 'border-red-300 focus:border-red-500' : 'border-green-300 focus:border-green-500'}`}
+                    min={scheduledItems[Object.keys(scheduledItems)[0]]?.date || new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
+                    value={pickupDate}
+                    onChange={(e) => handlePickupDateChange(e.target.value)}
+                    required
+                  />
+                  {!pickupDate && (
+                    <p className="text-xs text-red-600 mt-1">Please select a pick-up date and time</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Number of days</label>
+                  <div className="input-field bg-gray-50 flex items-center justify-center text-lg font-semibold text-indigo-600">
+                    {numberOfDays} day{numberOfDays !== 1 ? 's' : ''}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Auto-calculated from delivery to pick-up date</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Missing Dates Warning */}
-          {checkoutItems.some(item => !scheduledItems[item.id]?.date) && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-2 text-yellow-800 mb-2">
-                <span className="text-lg">⚠️</span>
-                <span className="font-semibold">Please schedule dates for all items</span>
+          {(() => {
+            const missingDelivery = checkoutItems.filter(item => !scheduledItems[item.id]?.date);
+            const missingPickup = checkoutItems.filter(item =>
+              !scheduledItems[item.id]?.sameDateTime && !scheduledItems[item.id]?.pickupDate
+            );
+            const missingCommonPickup = !pickupDate && checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime);
+
+            return (missingDelivery.length > 0 || missingPickup.length > 0 || missingCommonPickup) ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <div className="flex items-center gap-2 text-yellow-800 mb-2">
+                  <span className="text-lg">⚠️</span>
+                  <span className="font-semibold">Please complete all date selections</span>
+                </div>
+                <p className="text-sm text-yellow-700">
+                  The following items need scheduling before you can proceed:
+                </p>
+                <ul className="text-sm text-yellow-700 mt-2 space-y-1">
+                  {missingDelivery.map(item => (
+                    <li key={item.id} className="flex items-center gap-2">
+                      <span>•</span>
+                      <span>{item.name} - Delivery date required</span>
+                    </li>
+                  ))}
+                  {missingPickup.map(item => (
+                    <li key={item.id} className="flex items-center gap-2">
+                      <span>•</span>
+                      <span>{item.name} - Pick-up date required</span>
+                    </li>
+                  ))}
+                  {missingCommonPickup && (
+                    <li className="flex items-center gap-2">
+                      <span>•</span>
+                      <span>Common pick-up date required for synchronized items</span>
+                    </li>
+                  )}
+                </ul>
               </div>
-              <p className="text-sm text-yellow-700">
-                The following items need scheduling before you can proceed:
-              </p>
-              <ul className="text-sm text-yellow-700 mt-2 space-y-1">
-                {checkoutItems.filter(item => !scheduledItems[item.id]?.date).map(item => (
-                  <li key={item.id} className="flex items-center gap-2">
-                    <span>•</span>
-                    <span>{item.name}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+            ) : null;
+          })()}
 
           {/* Action Buttons */}
           <div className="flex gap-4 justify-center">
@@ -587,9 +889,23 @@ export default function CheckoutPage() {
             </button>
             <button
               onClick={() => setCurrentStep('confirm')}
-              disabled={checkoutItems.some(item => !scheduledItems[item.id]?.date)}
+              disabled={(() => {
+                const hasAllDeliveryDates = checkoutItems.every(item => scheduledItems[item.id]?.date);
+                const hasAllIndividualPickups = checkoutItems.every(item =>
+                  scheduledItems[item.id]?.sameDateTime || scheduledItems[item.id]?.pickupDate
+                );
+                const hasCommonPickup = !checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) || pickupDate;
+                return !(hasAllDeliveryDates && hasAllIndividualPickups && hasCommonPickup);
+              })()}
               className="btn-primary"
-              title={checkoutItems.some(item => !scheduledItems[item.id]?.date) ? 'Please schedule dates for all items to continue' : ''}
+              title={(() => {
+                const hasAllDeliveryDates = checkoutItems.every(item => scheduledItems[item.id]?.date);
+                const hasAllIndividualPickups = checkoutItems.every(item =>
+                  scheduledItems[item.id]?.sameDateTime || scheduledItems[item.id]?.pickupDate
+                );
+                const hasCommonPickup = !checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) || pickupDate;
+                return !(hasAllDeliveryDates && hasAllIndividualPickups && hasCommonPickup) ? 'Please complete all date selections to continue' : '';
+              })()}
             >
               Review & Confirm →
             </button>
@@ -623,10 +939,18 @@ export default function CheckoutPage() {
                         <h3 className="text-lg font-semibold text-gray-800">{item.name}</h3>
                         <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                         <p className="text-sm text-indigo-600 font-medium">
-                          {schedule?.date ? new Date(schedule.date).toLocaleString() : 'Not scheduled'}
+                          Delivery: {schedule?.date ? new Date(schedule.date).toLocaleString() : 'Not scheduled'}
                         </p>
                         {schedule?.notes && (
-                          <p className="text-sm text-gray-500 mt-1">Notes: {schedule.notes}</p>
+                          <p className="text-sm text-gray-500 mt-1">Delivery Notes: {schedule.notes}</p>
+                        )}
+                        {!schedule?.sameDateTime && schedule?.pickupDate && (
+                          <p className="text-sm text-purple-600 font-medium mt-1">
+                            Pick-up: {new Date(schedule.pickupDate).toLocaleString()}
+                          </p>
+                        )}
+                        {!schedule?.sameDateTime && schedule?.pickupNotes && (
+                          <p className="text-sm text-gray-500 mt-1">Pick-up Notes: {schedule.pickupNotes}</p>
                         )}
                       </div>
                     </div>
@@ -637,6 +961,21 @@ export default function CheckoutPage() {
                 </div>
               );
             })}
+
+            {/* Pick-up Summary */}
+            <div className="card p-6 bg-blue-50 border-blue-200">
+              <h3 className="text-lg font-semibold text-blue-800 mb-3">Pick-up Information</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <span className="text-sm text-blue-700">Pick-up Date & Time:</span>
+                  <p className="font-medium text-blue-900">{pickupDate ? new Date(pickupDate).toLocaleString() : 'Not set'}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-blue-700">Rental Duration:</span>
+                  <p className="font-medium text-blue-900">{numberOfDays} day{numberOfDays !== 1 ? 's' : ''}</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Final Total */}
@@ -675,7 +1014,7 @@ export default function CheckoutPage() {
           </div>
 
           {/* Payment Options */}
-          <div className="grid md:grid-cols-2 gap-6">
+          <div className="grid md:grid-cols-1 gap-6 max-w-md mx-auto">
             {/* Full Payment Option */}
             <div
               className={`card cursor-pointer transition-all duration-200 ${
@@ -719,55 +1058,6 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Down Payment Option */}
-            <div
-              className={`card cursor-pointer transition-all duration-200 ${
-                paymentType === 'down_payment'
-                  ? 'border-2 border-indigo-500 bg-indigo-50'
-                  : 'border border-gray-200 hover:border-indigo-300'
-              }`}
-              onClick={() => {
-                setPaymentType('down_payment');
-                setDownPaymentAmount(Math.round(checkoutTotal * 0.3)); // 30% down payment
-              }}
-            >
-              <div className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
-                    paymentType === 'down_payment' ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300'
-                  }`}>
-                    {paymentType === 'down_payment' && (
-                      <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-800">Down Payment</h3>
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Down Payment (30%):</span>
-                    <span className="text-2xl font-bold text-orange-600">₱{Math.round(checkoutTotal * 0.3).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Remaining Balance:</span>
-                    <span className="text-lg text-gray-700">₱{Math.round(checkoutTotal * 0.7).toFixed(2)}</span>
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    Pay 30% now to reserve your booking. Pay the remaining balance later.
-                  </div>
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                    <div className="flex items-center text-orange-800">
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span className="font-medium">Booking reserved, pay balance later</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Payment Summary */}
@@ -780,19 +1070,14 @@ export default function CheckoutPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Payment Type:</span>
-                <span className="font-semibold capitalize">{paymentType.replace('_', ' ')}</span>
+                <span className="font-semibold capitalize">Full Payment</span>
               </div>
               <div className="flex justify-between text-lg font-bold border-t pt-2">
                 <span>Amount to Pay Now:</span>
                 <span className="text-indigo-600">
-                  ₱{paymentType === 'full' ? checkoutTotal.toFixed(2) : Math.round(checkoutTotal * 0.3).toFixed(2)}
+                  ₱{checkoutTotal.toFixed(2)}
                 </span>
               </div>
-              {paymentType === 'down_payment' && (
-                <div className="text-sm text-gray-500 mt-2">
-                  Remaining balance of ₱{Math.round(checkoutTotal * 0.7).toFixed(2)} to be paid before service date.
-                </div>
-              )}
             </div>
           </div>
 
@@ -872,23 +1157,9 @@ export default function CheckoutPage() {
                 <svg className="w-16 h-16 mx-auto text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 21h.01M12 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <h3 className="text-xl font-bold text-blue-800 mb-2">Ready to Pay</h3>
-                <p className="text-blue-700 mb-4">Click below to generate your QR code for payment</p>
+                <h3 className="text-xl font-bold text-blue-800 mb-2">QR Code Not Available</h3>
+                <p className="text-blue-700 mb-4">Please go back and complete the booking process</p>
               </div>
-              <button
-                onClick={createPaymentForBooking}
-                className="btn-primary text-lg px-8 py-3"
-              >
-                Generate QR Code
-              </button>
-            </div>
-          )}
-
-          {creatingPayment && (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">Generating QR Code</h3>
-              <p className="text-gray-600">Please wait while we prepare your payment...</p>
             </div>
           )}
 
@@ -966,15 +1237,15 @@ export default function CheckoutPage() {
 
               {/* Payment Status */}
               <div className="mt-4 text-center">
-                {paymentStatus === 'pending' && (
+                {paymentStatus === 'processing' && (
                   <div className="space-y-3">
                     <div className="inline-flex items-center text-blue-600">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                      Waiting for payment...
+                      Processing payment...
                     </div>
                   </div>
                 )}
-                {paymentStatus === 'completed' && (
+                {paymentStatus === 'paid' && (
                   <div className="inline-flex items-center text-green-600">
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -990,72 +1261,38 @@ export default function CheckoutPage() {
                     Payment failed. Please try again.
                   </div>
                 )}
+                {paymentStatus === 'unpaid' && (
+                  <div className="inline-flex items-center text-yellow-600">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Payment pending...
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {/* Action Buttons */}
-          <div className="flex gap-4 justify-center">
+          <div className="flex gap-4 justify-center flex-wrap">
             <button
               onClick={() => setCurrentStep('confirm')}
               className="btn-secondary"
-              disabled={creatingPayment || paymentStatus === 'completed'}
+              disabled={creatingPayment || paymentStatus === 'paid'}
             >
               ← Back to Confirm
             </button>
-            {!qrPayment && !creatingPayment && (
-              <button
-                onClick={createPaymentForBooking}
-                className="btn-primary"
-              >
-                Generate QR Code
-              </button>
-            )}
-            {creatingPayment && (
-              <button
-                disabled
-                className="btn-primary opacity-50 cursor-not-allowed"
-              >
-                Generating QR Code...
-              </button>
-            )}
-            {qrPayment && paymentStatus === 'pending' && (
-              <button
-                onClick={() => {
-                  setQrPayment(null);
-                  setPaymentStatus('pending');
-                  setCreatingPayment(false);
-                  createPaymentForBooking();
-                }}
-                className="btn-secondary"
-              >
-                Regenerate QR Code
-              </button>
-            )}
             {paymentError && (
               <button
                 onClick={() => {
                   setPaymentError('');
                   setQrPayment(null);
                   setCreatingPayment(false);
-                  createPaymentForBooking();
+                  setCurrentStep('payment-type');
                 }}
                 className="btn-primary"
               >
                 Try Again
-              </button>
-            )}
-            {paymentStatus === 'failed' && (
-              <button
-                onClick={() => {
-                  setQrPayment(null);
-                  setPaymentStatus('pending');
-                  setCreatingPayment(false);
-                  createPaymentForBooking();
-                }}
-                className="btn-primary"
-              >
-                Generate New QR Code
               </button>
             )}
           </div>

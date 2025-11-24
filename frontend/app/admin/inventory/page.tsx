@@ -189,7 +189,7 @@ export default function InventoryManagement() {
       </div>
 
       {/* Inventory Stats */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid md:grid-cols-3 gap-6">
         <div className="stat-box hover:shadow-lg transition-shadow duration-300">
           <div className="stat-label flex items-center gap-2">
             <span className="text-lg">📦</span>
@@ -210,13 +210,6 @@ export default function InventoryManagement() {
             Out of Stock
           </div>
           <div className="stat-value text-red-600">{outOfStockItems}</div>
-        </div>
-        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
-          <div className="stat-label flex items-center gap-2">
-            <span className="text-lg">💰</span>
-            Total Value
-          </div>
-          <div className="stat-value text-green-600">₱{totalValue.toFixed(2)}</div>
         </div>
       </div>
 

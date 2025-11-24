@@ -45,8 +45,16 @@ const generateGCashQRData = (paymentData) => {
 // Generate QR code as data URL (for web display)
 const generateQRCodeDataURL = async (paymentData) => {
   try {
-    // Always generate dynamic QR code for payments to include payment-specific data
-    const qrData = generateGCashQRData(paymentData);
+    let qrData;
+
+    // Check if user has personal GCash QR code data
+    if (paymentData.userQRCode) {
+      // Use user's personal GCash QR code data directly
+      qrData = paymentData.userQRCode;
+    } else {
+      // Generate dynamic QR code for payments to include payment-specific data
+      qrData = generateGCashQRData(paymentData);
+    }
 
     const options = {
       errorCorrectionLevel: 'M',
