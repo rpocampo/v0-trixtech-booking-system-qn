@@ -16,27 +16,12 @@ const serviceSchema = new mongoose.Schema(
     category: {
       type: String,
       enum: [
-        // Service-based categories
-        'event-planning',
-        'catering',
-        'photography',
-        'entertainment',
-        'decoration',
-        'setup-teardown',
-        'cleaning',
-        // Equipment/Supply categories
-        'furniture',
-        'lighting',
-        'sound-system',
-        'tents-canopies',
-        'linens-tableware',
-        'party-supplies',
-        // Event type categories
-        'wedding',
+        'equipment',
+        'party',
         'corporate',
+        'wedding',
         'birthday',
-        'graduation',
-        'other'
+        'funeral'
       ],
       required: true,
     },

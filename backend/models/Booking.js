@@ -68,6 +68,15 @@ const bookingSchema = new mongoose.Schema(
     notes: {
       type: String,
     },
+    duration: {
+      type: Number, // Duration in days
+      default: 1,
+      min: 1,
+    },
+    dailyRate: {
+      type: Number, // Daily rate for the booking
+      default: 0,
+    },
     // Delivery truck availability fields
     requiresDelivery: {
       type: Boolean,

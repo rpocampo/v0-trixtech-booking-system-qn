@@ -32,10 +32,20 @@ interface Recommendation {
   availableQuantity?: number;
 }
 
+interface PredictiveSuggestion {
+  service: Service;
+  confidence: number;
+  frequency: number;
+  averageQuantity: number;
+  reasons: string[];
+}
+
 export default function SuggestionsPage() {
   const router = useRouter();
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [predictiveSuggestions, setPredictiveSuggestions] = useState<PredictiveSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingPredictive, setLoadingPredictive] = useState(true);
   const [filters, setFilters] = useState({
     category: '',
     priceRange: '',
@@ -49,6 +59,7 @@ export default function SuggestionsPage() {
 
   useEffect(() => {
     fetchRecommendations();
+    fetchPredictiveSuggestions();
   }, []);
 
   const fetchRecommendations = async () => {
@@ -78,6 +89,31 @@ export default function SuggestionsPage() {
       console.error('Error fetching recommendations:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPredictiveSuggestions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      const response = await fetch('http://localhost:5000/api/bookings/suggestions/predictive', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setPredictiveSuggestions(data.suggestions || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching predictive suggestions:', error);
+    } finally {
+      setLoadingPredictive(false);
     }
   };
 
@@ -173,8 +209,8 @@ export default function SuggestionsPage() {
       case 'wedding': return '💒';
       case 'corporate': return '🏢';
       case 'equipment': return '🎪';
-      case 'furniture': return '🪑';
-      case 'cleaning': return '🧹';
+      case 'birthday': return '🎂';
+      case 'funeral': return '⚰️';
       default: return '⚙️';
     }
   };
@@ -214,8 +250,8 @@ export default function SuggestionsPage() {
               <option value="wedding">Wedding</option>
               <option value="corporate">Corporate</option>
               <option value="equipment">Equipment</option>
-              <option value="furniture">Furniture</option>
-              <option value="cleaning">Cleaning</option>
+              <option value="birthday">Birthday</option>
+              <option value="funeral">Funeral</option>
             </select>
           </div>
           <div>
@@ -374,6 +410,92 @@ export default function SuggestionsPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Predictive Analytics Suggestions */}
+      {predictiveSuggestions.length > 0 && (
+        <div className="card p-6">
+          <div className="flex items-center gap-2 text-purple-800 mb-6">
+            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+            </svg>
+            <h2 className="text-2xl font-bold">🎯 Smart Suggestions</h2>
+          </div>
+          <p className="text-gray-600 mb-6">
+            Based on what other customers frequently add to their bookings
+          </p>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {predictiveSuggestions.map((suggestion, index) => (
+              <div key={suggestion.service._id} className="border border-purple-200 rounded-lg p-4 bg-purple-50 hover:bg-purple-100 transition-colors">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{getCategoryIcon(suggestion.service.category)}</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      suggestion.confidence >= 0.8 ? 'bg-green-100 text-green-800' :
+                      suggestion.confidence >= 0.6 ? 'bg-blue-100 text-blue-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {suggestion.confidence >= 0.8 ? 'Highly Recommended' :
+                       suggestion.confidence >= 0.6 ? 'Recommended' : 'Suggested'}
+                    </span>
+                  </div>
+                  <span className="text-xs text-gray-500">#{index + 1}</span>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-gray-800 text-sm">{suggestion.service.name}</h4>
+                  <p className="text-xs text-gray-600 capitalize">{suggestion.service.category.replace('-', ' ')}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-purple-600">₱{suggestion.service.basePrice.toFixed(2)}</span>
+                    <span className={`px-2 py-1 rounded text-xs ${
+                      suggestion.service.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {suggestion.service.isAvailable ? 'Available' : 'Unavailable'}
+                    </span>
+                  </div>
+
+                  <div className="bg-white border border-purple-200 rounded p-2">
+                    <div className="flex items-start gap-2">
+                      <span className="text-purple-600 mt-0.5">📊</span>
+                      <div>
+                        <p className="text-xs font-medium text-purple-800">Why suggested:</p>
+                        <p className="text-xs text-purple-700">
+                          Added by {suggestion.frequency} customer{suggestion.frequency > 1 ? 's' : ''} to similar bookings
+                        </p>
+                        {suggestion.reasons && suggestion.reasons.length > 0 && (
+                          <p className="text-xs text-purple-600 mt-1">
+                            {suggestion.reasons[0]}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/customer/services/${suggestion.service._id}`}
+                      className="flex-1 btn-secondary text-xs py-1.5 text-center"
+                    >
+                      View Details
+                    </Link>
+                    {suggestion.service.isAvailable && (
+                      <button
+                        onClick={() => {
+                          // Add to cart logic
+                          alert(`Added ${suggestion.service.name} to cart!`);
+                        }}
+                        className="flex-1 btn-primary text-xs py-1.5"
+                      >
+                        Add to Cart
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

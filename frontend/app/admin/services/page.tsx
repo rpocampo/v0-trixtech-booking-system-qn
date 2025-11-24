@@ -54,7 +54,7 @@ export default function AdminServices() {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    category: 'event-planning',
+    category: 'equipment',
     serviceType: 'service', // Allow selection between service, equipment, supply
     price: 0,
     duration: 1,
@@ -152,7 +152,7 @@ export default function AdminServices() {
         setFormData({
           name: '',
           description: '',
-          category: 'event-planning',
+          category: 'equipment',
           serviceType: 'service',
           price: 0,
           duration: 1,
@@ -210,7 +210,7 @@ export default function AdminServices() {
     setFormData({
       name: '',
       description: '',
-      category: 'event-planning',
+      category: 'equipment',
       serviceType: 'service',
       price: 0,
       duration: 1,
@@ -344,23 +344,12 @@ export default function AdminServices() {
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                   className="input-field"
                 >
-                  <optgroup label="Services">
-                    <option value="event-planning">Event Planning</option>
-                    <option value="catering">Catering</option>
-                    <option value="photography">Photography</option>
-                    <option value="entertainment">Entertainment</option>
-                    <option value="decoration">Decoration</option>
-                    <option value="setup-teardown">Setup/Teardown</option>
-                    <option value="cleaning">Cleaning</option>
-                  </optgroup>
-                  <optgroup label="Equipment & Supplies">
-                    <option value="furniture">Furniture</option>
-                    <option value="lighting">Lighting</option>
-                    <option value="sound-system">Sound System</option>
-                    <option value="tents-canopies">Tents & Canopies</option>
-                    <option value="linens-tableware">Linens & Tableware</option>
-                    <option value="party-supplies">Party Supplies</option>
-                  </optgroup>
+                  <option value="equipment">Equipment</option>
+                  <option value="party">Party</option>
+                  <option value="corporate">Corporate</option>
+                  <option value="wedding">Wedding</option>
+                  <option value="birthday">Birthday</option>
+                  <option value="funeral">Funeral</option>
                 </select>
               </div>
 

@@ -274,18 +274,12 @@ export default function Services() {
                   className="input-field w-full"
                 >
                   <option value="">All Categories</option>
-                  <option value="event-planning">Event Planning</option>
-                  <option value="catering">Catering</option>
-                  <option value="photography">Photography</option>
-                  <option value="entertainment">Entertainment</option>
-                  <option value="decoration">Decoration</option>
-                  <option value="setup-teardown">Setup/Teardown</option>
-                  <option value="furniture">Furniture</option>
-                  <option value="lighting">Lighting</option>
-                  <option value="sound-system">Sound System</option>
-                  <option value="tents-canopies">Tents & Canopies</option>
-                  <option value="linens-tableware">Linens & Tableware</option>
-                  <option value="party-supplies">Party Supplies</option>
+                  <option value="equipment">Equipment</option>
+                  <option value="party">Party</option>
+                  <option value="corporate">Corporate</option>
+                  <option value="wedding">Wedding</option>
+                  <option value="birthday">Birthday</option>
+                  <option value="funeral">Funeral</option>
                 </select>
               </div>
 
@@ -364,7 +358,7 @@ export default function Services() {
         <>
           {/* Category Filter */}
           <div className="flex flex-wrap justify-center gap-2 mb-8">
-            {['all', 'party', 'other', 'equipment', 'corporate', 'cleaning', 'wedding'].map((category) => (
+            {['all', 'party', 'equipment', 'corporate', 'wedding', 'birthday', 'funeral'].map((category) => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
@@ -405,7 +399,8 @@ export default function Services() {
                          service.category === 'wedding' ? '💒' :
                          service.category === 'corporate' ? '🏢' :
                          service.category === 'equipment' ? '🎪' :
-                         service.category === 'cleaning' ? '🧹' : '⚙️'}
+                         service.category === 'birthday' ? '🎂' :
+                         service.category === 'funeral' ? '⚰️' : '⚙️'}
                       </div>
                     </div>
                   )}
@@ -573,7 +568,8 @@ export default function Services() {
                          selectedService.category === 'wedding' ? '💒' :
                          selectedService.category === 'corporate' ? '🏢' :
                          selectedService.category === 'equipment' ? '🎪' :
-                         selectedService.category === 'cleaning' ? '🧹' : '⚙️'}
+                         selectedService.category === 'birthday' ? '🎂' :
+                         selectedService.category === 'funeral' ? '⚰️' : '⚙️'}
                       </div>
                     </div>
                   )}

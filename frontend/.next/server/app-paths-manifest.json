@@ -1,3 +1,5 @@
 {
-  "/admin/bookings/page": "app/admin/bookings/page.js"
+  "/customer/services/page": "app/customer/services/page.js",
+  "/customer/suggestions/page": "app/customer/suggestions/page.js",
+  "/customer/dashboard/page": "app/customer/dashboard/page.js"
 }

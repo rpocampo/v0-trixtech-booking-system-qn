@@ -3,6 +3,7 @@ const Booking = require('../models/Booking');
 const Service = require('../models/Service');
 const User = require('../models/User');
 const ReservationQueue = require('../models/ReservationQueue');
+const BookingAnalytics = require('../models/BookingAnalytics');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { sendBookingConfirmation, sendAdminBookingNotification, sendLowStockAlert } = require('../utils/emailService');
 const { sendTemplateNotification } = require('../utils/notificationService');
@@ -670,7 +671,7 @@ router.put('/:id/cancel', authMiddleware, async (req, res, next) => {
 // Create booking intent (payment-first approach)
 router.post('/create-intent', authMiddleware, async (req, res, next) => {
   try {
-    const { serviceId, quantity, bookingDate, notes } = req.body;
+    const { serviceId, quantity, bookingDate, notes, duration, dailyRate } = req.body;
 
     if (!serviceId || !bookingDate) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -757,11 +758,10 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
       });
     }
 
-    // Calculate price
-    const now = new Date();
-    const daysBeforeCheckout = Math.ceil((bookingDateObj.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    const calculatedPrice = service.basePrice || service.price || 0;
-    const totalPrice = calculatedPrice * requestedQuantity;
+    // Calculate price using duration-based pricing
+    const durationDays = duration || 1;
+    const dailyRateValue = dailyRate || service.basePrice || service.price || 0;
+    const totalPrice = dailyRateValue * durationDays * requestedQuantity;
 
     // Create booking intent (temporary, not saved to database yet)
     const bookingIntent = {
@@ -771,10 +771,12 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
       bookingDate: new Date(bookingDate),
       totalPrice,
       notes,
+      duration: durationDays,
+      dailyRate: dailyRateValue,
       service: {
         name: service.name,
         category: service.category,
-        price: calculatedPrice
+        price: dailyRateValue
       }
     };
 
@@ -940,6 +942,8 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       paymentStatus: 'paid',
       paymentId: payment._id,
       notes: bookingIntent.notes,
+      duration: bookingIntent.duration,
+      dailyRate: bookingIntent.dailyRate,
     });
 
     await booking.save();
@@ -1010,6 +1014,14 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       console.error('Error sending booking confirmation notifications:', notificationError);
     }
 
+    // Record booking analytics patterns
+    try {
+      await recordBookingAnalytics(req.user.id, bookingIntent.serviceId, bookingIntent.quantity);
+    } catch (analyticsError) {
+      console.error('Error recording booking analytics:', analyticsError);
+      // Don't fail the booking if analytics recording fails
+    }
+
     res.status(201).json({
       success: true,
       booking,
@@ -1022,6 +1034,69 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     next(error);
   }
 });
+
+// Function to record booking analytics patterns
+async function recordBookingAnalytics(customerId, currentServiceId, quantity) {
+  try {
+    // Get current service details
+    const currentService = await Service.findById(currentServiceId);
+    if (!currentService) return;
+
+    // Get recent bookings by this customer in the last 24 hours
+    const recentBookings = await Booking.find({
+      customerId,
+      status: 'confirmed',
+      createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
+    }).populate('serviceId');
+
+    // Find main services (typically higher-value or primary services)
+    const mainServices = recentBookings.filter(booking => {
+      const service = booking.serviceId;
+      return service.category === 'party' || service.category === 'wedding' ||
+             service.category === 'corporate' || service.category === 'birthday' ||
+             service.category === 'funeral' || service.serviceType === 'service';
+    });
+
+    // Record patterns for each main service with additional services
+    for (const mainBooking of mainServices) {
+      if (mainBooking.serviceId._id.toString() !== currentServiceId.toString()) {
+        // This is an additional service booked with a main service
+        await BookingAnalytics.recordBookingPattern(
+          mainBooking.serviceId._id,
+          currentServiceId,
+          mainBooking.serviceId.category,
+          currentService.category,
+          quantity
+        );
+      }
+    }
+
+    // Also record patterns where current service is main and others are additional
+    const additionalBookings = recentBookings.filter(booking =>
+      booking.serviceId._id.toString() !== currentServiceId.toString()
+    );
+
+    const isMainService = currentService.category === 'party' || currentService.category === 'wedding' ||
+                          currentService.category === 'corporate' || currentService.category === 'birthday' ||
+                          currentService.category === 'funeral' || currentService.serviceType === 'service';
+
+    if (isMainService) {
+      // Record patterns where current service is main and others are additional
+      for (const additionalBooking of additionalBookings) {
+        await BookingAnalytics.recordBookingPattern(
+          currentServiceId,
+          additionalBooking.serviceId._id,
+          currentService.category,
+          additionalBooking.serviceId.category,
+          additionalBooking.quantity
+        );
+      }
+    }
+
+  } catch (error) {
+    console.error('Error in recordBookingAnalytics:', error);
+  }
+}
 
 // Get delivery schedules for admin (shows all delivery bookings)
 router.get('/admin/delivery-schedules', adminMiddleware, async (req, res, next) => {
@@ -1095,6 +1170,51 @@ router.get('/delivery-slots/available', authMiddleware, async (req, res, next) =
       timeSlots
     });
   } catch (error) {
+    next(error);
+  }
+});
+
+// Get predictive suggestions based on booking analytics
+router.get('/suggestions/predictive', authMiddleware, async (req, res, next) => {
+  try {
+    const { category, serviceId } = req.query;
+
+    let suggestions = [];
+
+    if (serviceId) {
+      // Get suggestions for a specific service
+      suggestions = await BookingAnalytics.getSuggestionsForService(serviceId);
+    } else if (category) {
+      // Get suggestions for a category
+      suggestions = await BookingAnalytics.getSuggestionsByCategory(category);
+    } else {
+      // Get general suggestions based on popular patterns
+      const categories = ['party', 'wedding', 'corporate', 'birthday', 'funeral'];
+      for (const cat of categories) {
+        const categorySuggestions = await BookingAnalytics.getSuggestionsByCategory(cat, 3);
+        suggestions.push(...categorySuggestions);
+      }
+      // Remove duplicates and sort by confidence
+      const seen = new Set();
+      suggestions = suggestions
+        .filter(suggestion => {
+          const id = suggestion.service._id.toString();
+          if (seen.has(id)) return false;
+          seen.add(id);
+          return true;
+        })
+        .sort((a, b) => b.confidence - a.confidence)
+        .slice(0, 10);
+    }
+
+    res.json({
+      success: true,
+      suggestions,
+      total: suggestions.length
+    });
+
+  } catch (error) {
+    console.error('Error getting predictive suggestions:', error);
     next(error);
   }
 });

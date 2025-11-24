@@ -236,7 +236,6 @@ export default function InventoryManagement() {
                   <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">Stock</th>
                   <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">Status</th>
                   <th className="text-right py-3 px-4 font-semibold text-[var(--muted)]">Unit Price</th>
-                  <th className="text-right py-3 px-4 font-semibold text-[var(--muted)]">Total Value</th>
                   <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">Actions</th>
                 </tr>
               </thead>
@@ -280,7 +279,6 @@ export default function InventoryManagement() {
                         </span>
                       </td>
                       <td className="py-4 px-4 text-right font-semibold text-[var(--primary)]">₱{isNaN(item.price) ? '0.00' : item.price.toFixed(2)}</td>
-                      <td className="py-4 px-4 text-right font-semibold text-green-600">₱{isNaN(item.price) ? '0.00' : (item.price * item.quantity).toFixed(2)}</td>
                       <td className="py-4 px-4 text-center">
                         <button
                           onClick={() => openUpdateModal(item)}

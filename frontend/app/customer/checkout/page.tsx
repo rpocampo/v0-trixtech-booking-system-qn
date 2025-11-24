@@ -16,6 +16,8 @@ interface CheckoutItem {
   image?: string;
   bookingDate?: string;
   notes?: string;
+  duration?: number; // Duration in days
+  dailyRate?: number; // Daily rate for the item
 }
 
 export default function CheckoutPage() {
@@ -38,8 +40,6 @@ export default function CheckoutPage() {
   const [scheduledItems, setScheduledItems] = useState<{ [key: string]: { date: string; notes: string; sameDateTime: boolean; pickupDate?: string; pickupNotes?: string } }>({});
   const [pickupDate, setPickupDate] = useState<string>('');
   const [numberOfDays, setNumberOfDays] = useState<number>(0);
-  const [commonDateTime, setCommonDateTime] = useState<string>('');
-  const [commonNotes, setCommonNotes] = useState<string>('');
   const [paymentBooking, setPaymentBooking] = useState<any>(null);
   const [checkoutTotal, setCheckoutTotal] = useState<number>(0);
   const [paymentType, setPaymentType] = useState<'full'>('full');
@@ -52,6 +52,7 @@ export default function CheckoutPage() {
   const [paymentStatus, setPaymentStatus] = useState<'unpaid' | 'processing' | 'paid' | 'failed'>('unpaid');
   const [creatingPayment, setCreatingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState('');
+  const [durationError, setDurationError] = useState('');
 
   // Initialize checkout items from cart and load scheduled data
   useEffect(() => {
@@ -68,14 +69,14 @@ export default function CheckoutPage() {
       serviceType: item.serviceType,
       category: item.category,
       image: item.image,
+      duration: 1, // Default 1 day minimum
+      dailyRate: item.price, // Assume current price is daily rate
     }));
 
     setCheckoutItems(initialCheckoutItems);
 
     // Load scheduled items from localStorage
     const savedScheduledItems = localStorage.getItem('cartScheduledItems');
-    const savedCommonDateTime = localStorage.getItem('cartCommonDateTime');
-    const savedCommonNotes = localStorage.getItem('cartCommonNotes');
 
     if (savedScheduledItems) {
       try {
@@ -84,14 +85,6 @@ export default function CheckoutPage() {
       } catch (error) {
         console.error('Failed to load scheduled items:', error);
       }
-    }
-
-    if (savedCommonDateTime) {
-      setPickupDate(savedCommonDateTime);
-    }
-
-    if (savedCommonNotes) {
-      // Store common notes - could be used for pickup notes
     }
   }, [items, router]);
 
@@ -131,24 +124,6 @@ export default function CheckoutPage() {
       const currentItem = prev[itemId] || { date: '', notes: '', sameDateTime: false };
       const isSameDateTime = currentItem.sameDateTime;
 
-      // If this item uses same date/time, update all checked items
-      if (isSameDateTime) {
-        setCommonDateTime(date);
-        setCommonNotes(notes);
-
-        const updated = { ...prev };
-        Object.keys(updated).forEach(key => {
-          if (updated[key].sameDateTime) {
-            updated[key] = {
-              date,
-              notes,
-              sameDateTime: true
-            };
-          }
-        });
-        return updated;
-      }
-
       return {
         ...prev,
         [itemId]: { date, notes, sameDateTime: isSameDateTime }
@@ -162,27 +137,76 @@ export default function CheckoutPage() {
     calculateNumberOfDays();
   };
 
+  const calculateItemDuration = (itemId: string, deliveryDate?: string, pickupDate?: string) => {
+    if (!deliveryDate || !pickupDate) return;
+
+    const delivery = new Date(deliveryDate);
+    const pickup = new Date(pickupDate);
+
+    // Validate that pick-up is after delivery
+    if (pickup <= delivery) {
+      console.warn('Pick-up date must be after delivery date');
+      return;
+    }
+
+    // Calculate duration in days (rounded up)
+    const diffTime = pickup.getTime() - delivery.getTime();
+    const duration = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+    // Update the item duration
+    setCheckoutItems(prevItems =>
+      prevItems.map(item =>
+        item.id === itemId
+          ? { ...item, duration, price: (item.dailyRate || item.price) * duration }
+          : item
+      )
+    );
+
+    // Trigger visual feedback for price change
+    const itemElement = document.querySelector(`[data-item-id="${itemId}"] .duration-price`);
+    if (itemElement) {
+      itemElement.classList.add('text-green-600', 'font-bold');
+      setTimeout(() => {
+        itemElement.classList.remove('text-green-600', 'font-bold');
+      }, 1000);
+    }
+  };
+
+  const handleDurationChange = (itemId: string, duration: number) => {
+    if (duration < 1) return; // Minimum 1 day
+
+    setCheckoutItems(prevItems =>
+      prevItems.map(item =>
+        item.id === itemId
+          ? { ...item, duration, price: (item.dailyRate || item.price) * duration }
+          : item
+      )
+    );
+
+    // Trigger visual feedback for price change
+    const itemElement = document.querySelector(`[data-item-id="${itemId}"] .duration-price`);
+    if (itemElement) {
+      itemElement.classList.add('text-green-600', 'font-bold');
+      setTimeout(() => {
+        itemElement.classList.remove('text-green-600', 'font-bold');
+      }, 1000);
+    }
+  };
+
   const handleSameDateTimeChange = (itemId: string, checked: boolean) => {
     setScheduledItems(prev => {
       const updated = { ...prev };
 
       if (checked) {
-        // When checking, use the common date/time or set a default
-        const dateTime = commonDateTime || new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
-        const notes = commonNotes;
+        // When checking, use the current date/time or set a default
+        const currentItem = updated[itemId] || { date: '', notes: '', sameDateTime: false };
+        const dateTime = currentItem.date || new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
 
         updated[itemId] = {
           date: dateTime,
-          notes: notes,
+          notes: currentItem.notes || '',
           sameDateTime: true
         };
-
-        // If this is the first item checked, set it as the common date/time
-        const checkedItems = Object.values(updated).filter(item => item.sameDateTime);
-        if (checkedItems.length === 1) {
-          setCommonDateTime(dateTime);
-          setCommonNotes(notes);
-        }
       } else {
         // When unchecking, keep current values but mark as not same
         if (updated[itemId]) {
@@ -191,38 +215,12 @@ export default function CheckoutPage() {
             sameDateTime: false
           };
         }
-
-        // If no items are checked anymore, clear common values
-        const stillChecked = Object.values(updated).some(item => item.sameDateTime);
-        if (!stillChecked) {
-          setCommonDateTime('');
-          setCommonNotes('');
-        }
       }
 
       return updated;
     });
   };
 
-  const handleCommonDateTimeChange = (date: string, notes: string) => {
-    setCommonDateTime(date);
-    setCommonNotes(notes);
-
-    // Update all checked items
-    setScheduledItems(prev => {
-      const updated = { ...prev };
-      Object.keys(updated).forEach(key => {
-        if (updated[key].sameDateTime) {
-          updated[key] = {
-            date,
-            notes,
-            sameDateTime: true
-          };
-        }
-      });
-      return updated;
-    });
-  };
 
   const calculateNumberOfDays = () => {
     // Get the earliest delivery date from scheduled items
@@ -233,6 +231,7 @@ export default function CheckoutPage() {
 
     if (deliveryDates.length === 0 || !pickupDate) {
       setNumberOfDays(0);
+      setDurationError('');
       return;
     }
 
@@ -243,7 +242,15 @@ export default function CheckoutPage() {
     const diffTime = pickup.getTime() - earliestDelivery.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    setNumberOfDays(Math.max(0, diffDays));
+    const finalDays = Math.max(0, diffDays);
+    setNumberOfDays(finalDays);
+
+    // Validate minimum 1-day duration
+    if (finalDays < 1) {
+      setDurationError('Minimum booking duration is 1 day. Please select a pick-up date at least 24 hours after delivery.');
+    } else {
+      setDurationError('');
+    }
   };
 
   const handleProceedToSchedule = () => {
@@ -370,6 +377,8 @@ export default function CheckoutPage() {
             quantity: item.quantity,
             bookingDate: scheduleData.date,
             notes: scheduleData.notes || '',
+            duration: item.duration || 1,
+            dailyRate: item.dailyRate || item.price,
           }),
         });
 
@@ -415,7 +424,7 @@ export default function CheckoutPage() {
   };
 
   const totalItems = getTotalItems();
-  const totalPrice = getTotalPrice();
+  const totalPrice = checkoutItems.reduce((total, item) => total + (item.price * item.quantity), 0);
 
   if (checkoutItems.length === 0) {
     return (
@@ -516,7 +525,8 @@ export default function CheckoutPage() {
                       item.category === 'wedding' ? '💒' :
                       item.category === 'corporate' ? '🏢' :
                       item.category === 'equipment' ? '🎪' :
-                      item.category === 'cleaning' ? '🧹' : '⚙️'
+                      item.category === 'birthday' ? '🎂' :
+                      item.category === 'funeral' ? '⚰️' : '⚙️'
                     )}
                   </div>
                   <div className="flex-1">
@@ -526,7 +536,9 @@ export default function CheckoutPage() {
                   </div>
                   <div className="text-right">
                     <div className="text-xl font-bold text-indigo-600">₱{(item.price * item.quantity).toFixed(2)}</div>
-                    <div className="text-sm text-gray-500">₱{item.price.toFixed(2)} each</div>
+                    <div className="text-sm text-gray-500">
+                      ₱{(item.dailyRate || item.price).toFixed(2)}/day × {item.duration || 1} day{item.duration !== 1 ? 's' : ''}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -576,277 +588,467 @@ export default function CheckoutPage() {
 
           {/* Delivery & Pickup Interface */}
           <div className="space-y-6">
-            {/* Delivery Date & Time */}
-            <div className="card p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Delivery Information</h3>
-              <div className="space-y-6">
-                {checkoutItems.map((item, index) => (
-                  <div key={item.id} className="border-b border-gray-200 pb-4 last:border-b-0 last:pb-0">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-xl">
-                        {item.category === 'party' ? '🎉' :
-                         item.category === 'wedding' ? '💒' :
-                         item.category === 'corporate' ? '🏢' :
-                         item.category === 'equipment' ? '🎪' :
-                         item.category === 'cleaning' ? '🧹' : '⚙️'}
-                      </div>
-                      <div>
-                        <h4 className="text-lg font-semibold text-gray-800">{item.name}</h4>
-                        <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                      </div>
-                    </div>
-
-                    {/* Same Date and Time Checkbox */}
-                    <div className="flex items-center gap-2 mb-4">
-                      <input
-                        type="checkbox"
-                        id={`same-datetime-${item.id}`}
-                        checked={scheduledItems[item.id]?.sameDateTime || false}
-                        onChange={(e) => handleSameDateTimeChange(item.id, e.target.checked)}
-                        className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                      />
-                      <label
-                        htmlFor={`same-datetime-${item.id}`}
-                        className="text-sm text-gray-700 cursor-pointer font-medium"
-                      >
-                        Same Date and Time
-                      </label>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Delivery Date & Time {!scheduledItems[item.id]?.date && !scheduledItems[item.id]?.sameDateTime && <span className="text-red-500">*</span>}
-                        </label>
-                        <input
-                          type="datetime-local"
-                          className={`input-field ${
-                            scheduledItems[item.id]?.sameDateTime
-                              ? 'bg-gray-100 text-gray-500 cursor-not-allowed border-gray-300'
-                              : !scheduledItems[item.id]?.date
-                                ? 'border-red-300 focus:border-red-500'
-                                : 'border-green-300 focus:border-green-500'
-                          }`}
-                          min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)} // At least 1 hour from now
-                          value={scheduledItems[item.id]?.date || ''}
-                          onChange={(e) => {
-                            const selectedDate = e.target.value;
-                            if (selectedDate) {
-                              handleScheduleUpdate(item.id, selectedDate, scheduledItems[item.id]?.notes || '');
-                            } else {
-                              // Clear the date if user clears the input
-                              const updatedNotes = scheduledItems[item.id]?.notes || '';
-                              const isSameDateTime = scheduledItems[item.id]?.sameDateTime || false;
-                              setScheduledItems(prev => ({
-                                ...prev,
-                                [item.id]: { date: '', notes: updatedNotes, sameDateTime: isSameDateTime }
-                              }));
-                            }
-                          }}
-                          disabled={scheduledItems[item.id]?.sameDateTime}
-                          required={!scheduledItems[item.id]?.sameDateTime}
-                        />
-                        {scheduledItems[item.id]?.sameDateTime && (
-                          <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                            </svg>
-                            Locked to common schedule
-                          </p>
-                        )}
-                        {!scheduledItems[item.id]?.date && !scheduledItems[item.id]?.sameDateTime && (
-                          <p className="text-xs text-red-600 mt-1">Please select a delivery date and time</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Notes (Optional)</label>
-                        <textarea
-                          className={`input-field ${
-                            scheduledItems[item.id]?.sameDateTime
-                              ? 'bg-gray-100 text-gray-500 cursor-not-allowed resize-none'
-                              : ''
-                          }`}
-                          rows={3}
-                          placeholder="Any special delivery instructions..."
-                          value={scheduledItems[item.id]?.notes || ''}
-                          onChange={(e) => handleScheduleUpdate(item.id, scheduledItems[item.id]?.date || '', e.target.value)}
-                          disabled={scheduledItems[item.id]?.sameDateTime}
-                        />
-                      </div>
- 
-                      {/* Individual Pick-up Information for Unchecked Items */}
-                      {!scheduledItems[item.id]?.sameDateTime && (
-                        <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                          <h5 className="text-sm font-medium text-gray-700 mb-3">Pick-up Information</h5>
-                          <div className="grid md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                Pick-up Date & Time {!scheduledItems[item.id]?.pickupDate && <span className="text-red-500">*</span>}
-                              </label>
-                              <input
-                                type="datetime-local"
-                                className={`w-full text-sm border rounded px-3 py-2 ${
-                                  !scheduledItems[item.id]?.pickupDate
-                                    ? 'border-red-300 focus:border-red-500'
-                                    : 'border-green-300 focus:border-green-500'
-                                }`}
-                                min={scheduledItems[item.id]?.date || new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
-                                value={scheduledItems[item.id]?.pickupDate || ''}
-                                onChange={(e) => {
-                                  const pickupDate = e.target.value;
-                                  setScheduledItems(prev => ({
-                                    ...prev,
-                                    [item.id]: {
-                                      ...prev[item.id],
-                                      pickupDate,
-                                      pickupNotes: prev[item.id]?.pickupNotes || ''
-                                    }
-                                  }));
-                                }}
-                                required={!scheduledItems[item.id]?.sameDateTime}
-                              />
-                              {!scheduledItems[item.id]?.pickupDate && (
-                                <p className="text-xs text-red-600 mt-1">Please select a pick-up date and time</p>
-                              )}
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">
-                                Pick-up Notes (Optional)
-                              </label>
-                              <textarea
-                                className="w-full text-sm border border-gray-300 rounded px-3 py-2 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none"
-                                rows={2}
-                                placeholder="Any special pick-up instructions..."
-                                value={scheduledItems[item.id]?.pickupNotes || ''}
-                                onChange={(e) => {
-                                  setScheduledItems(prev => ({
-                                    ...prev,
-                                    [item.id]: {
-                                      ...prev[item.id],
-                                      pickupNotes: e.target.value
-                                    }
-                                  }));
-                                }}
-                              />
-                            </div>
-                          </div>
-                          {scheduledItems[item.id]?.pickupDate && (
-                            <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded">
-                              <div className="flex items-center gap-2 text-green-800">
-                                <span className="text-sm">✅</span>
-                                <span className="text-xs font-medium">
-                                    Pick-up scheduled for: {new Date(scheduledItems[item.id].pickupDate!).toLocaleString()}
-                                  </span>
-                              </div>
-                              {scheduledItems[item.id]?.pickupNotes && (
-                                <p className="text-xs text-green-700 mt-1">Notes: {scheduledItems[item.id].pickupNotes}</p>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
- 
-          
-                    </div>
-                    {scheduledItems[item.id]?.date && (
-                      <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-center gap-2 text-green-800">
-                          <span className="text-lg">✅</span>
-                          <div>
-                            <span className="text-sm font-medium">Delivery scheduled for: {new Date(scheduledItems[item.id].date).toLocaleString()}</span>
-                            {scheduledItems[item.id]?.notes && (
-                              <p className="text-xs text-green-700 mt-1">Notes: {scheduledItems[item.id].notes}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Common Schedule Manager */}
-            {Object.values(scheduledItems).some(item => item.sameDateTime) && (
+            {/* Synchronized Bookings Section */}
+            {checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) && (
               <div className="card p-6 bg-blue-50 border-blue-200">
-                <div className="flex items-center gap-2 text-blue-800 mb-4">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <div className="flex items-center gap-2 text-blue-800 mb-6">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                   </svg>
-                  <span className="font-semibold">Common Schedule</span>
+                  <h3 className="text-xl font-bold">Synchronized Bookings</h3>
                 </div>
                 <p className="text-sm text-blue-700 mb-4">
-                  {Object.values(scheduledItems).filter(item => item.sameDateTime).length} item(s) locked to this schedule
+                  These items share the same delivery and pick-up schedule
                 </p>
-                <div className="space-y-4">
+
+                {/* Synchronized Items List */}
+                <div className="space-y-3 mb-6">
+                  {checkoutItems.filter(item => scheduledItems[item.id]?.sameDateTime).map((item) => (
+                    <div key={item.id} className="p-3 bg-white rounded-lg border border-blue-200">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm">
+                          {item.category === 'party' ? '🎉' :
+                           item.category === 'wedding' ? '💒' :
+                           item.category === 'corporate' ? '🏢' :
+                           item.category === 'equipment' ? '🎪' :
+                           item.category === 'birthday' ? '🎂' :
+                           item.category === 'funeral' ? '⚰️' : '⚙️'}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-sm font-semibold text-gray-800">{item.name}</h4>
+                          <p className="text-xs text-gray-600">Quantity: {item.quantity}</p>
+                        </div>
+                        <button
+                          onClick={() => handleSameDateTimeChange(item.id, false)}
+                          className="text-xs text-red-600 hover:text-red-800 font-medium"
+                        >
+                          Remove
+                        </button>
+                      </div>
+
+                      {/* Duration Selection for Synchronized Items */}
+                      <div className="p-2 bg-blue-50 border border-blue-200 rounded" data-item-id={item.id}>
+                        <label className="block text-xs font-medium text-blue-800 mb-1">
+                          Duration (Days)
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleDurationChange(item.id, Math.max(1, (item.duration || 1) - 1))}
+                            className="w-6 h-6 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center text-blue-700 font-bold text-xs"
+                            disabled={(item.duration || 1) <= 1}
+                          >
+                            −
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.duration || 1}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 1;
+                              handleDurationChange(item.id, Math.max(1, value));
+                            }}
+                            className="w-12 text-center border border-blue-300 rounded px-1 py-0.5 text-xs focus:border-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleDurationChange(item.id, (item.duration || 1) + 1)}
+                            className="w-6 h-6 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center text-blue-700 font-bold text-xs"
+                          >
+                            +
+                          </button>
+                          <span
+                            className="text-xs text-blue-700 duration-price transition-colors"
+                            data-item-id={item.id}
+                          >
+                            ₱{((item.dailyRate || item.price) * (item.duration || 1) * item.quantity).toFixed(2)} • Auto-calculated
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Shared Delivery & Pick-up Controls */}
+                <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-blue-800 mb-2">
-                      Common Delivery Date & Time
+                      Delivery Date & Time {!scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date && <span className="text-red-500">*</span>}
                     </label>
                     <input
                       type="datetime-local"
-                      className="w-full text-sm border border-blue-300 rounded px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      className={`input-field ${
+                        !scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date
+                          ? 'border-red-300 focus:border-red-500'
+                          : 'border-green-300 focus:border-green-500'
+                      }`}
                       min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
-                      value={commonDateTime}
-                      onChange={(e) => handleCommonDateTimeChange(e.target.value, commonNotes)}
+                      value={scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date || ''}
+                      onChange={(e) => {
+                        const selectedDate = e.target.value;
+                        // Update all synchronized items
+                        const synchronizedItems = checkoutItems.filter(item => scheduledItems[item.id]?.sameDateTime);
+                        synchronizedItems.forEach(item => {
+                          handleScheduleUpdate(item.id, selectedDate, scheduledItems[item.id]?.notes || '');
+                        });
+                      }}
+                      required
+                    />
+                    {!scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date && (
+                      <p className="text-xs text-red-600 mt-1">Please select a delivery date and time</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-blue-800 mb-2">Delivery Notes (Optional)</label>
+                    <textarea
+                      className="input-field resize-none"
+                      rows={3}
+                      placeholder="Any special delivery instructions for all synchronized items..."
+                      value={scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.notes || ''}
+                      onChange={(e) => {
+                        const notes = e.target.value;
+                        // Update all synchronized items
+                        const synchronizedItems = checkoutItems.filter(item => scheduledItems[item.id]?.sameDateTime);
+                        synchronizedItems.forEach(item => {
+                          handleScheduleUpdate(item.id, scheduledItems[item.id]?.date || '', notes);
+                        });
+                      }}
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-blue-800 mb-2">
-                      Common Delivery Notes (Optional)
+                      Pick-up Date & Time {!scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate && <span className="text-red-500">*</span>}
                     </label>
+                    <input
+                      type="datetime-local"
+                      className={`input-field ${
+                        !scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate
+                          ? 'border-red-300 focus:border-red-500'
+                          : 'border-green-300 focus:border-green-500'
+                      }`}
+                      min={(() => {
+                        const deliveryDate = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date;
+                        return deliveryDate ? new Date(new Date(deliveryDate).getTime() + 60 * 60 * 1000).toISOString().slice(0, 16) : new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
+                      })()}
+                      value={scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate || ''}
+                      onChange={(e) => {
+                        const pickupDate = e.target.value;
+                        // Update all synchronized items
+                        const synchronizedItems = checkoutItems.filter(item => scheduledItems[item.id]?.sameDateTime);
+                        synchronizedItems.forEach(item => {
+                          const deliveryDate = scheduledItems[item.id]?.date;
+                          setScheduledItems(prev => ({
+                            ...prev,
+                            [item.id]: {
+                              ...prev[item.id],
+                              pickupDate,
+                              pickupNotes: prev[item.id]?.pickupNotes || ''
+                            }
+                          }));
+                          // Auto-calculate duration for this item
+                          calculateItemDuration(item.id, deliveryDate, pickupDate);
+                        });
+                        calculateNumberOfDays();
+                      }}
+                      required
+                    />
+                    {!scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate && (
+                      <p className="text-xs text-red-600 mt-1">Please select a pick-up date and time</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-blue-800 mb-2">Pick-up Notes (Optional)</label>
                     <textarea
-                      className="w-full text-sm border border-blue-300 rounded px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
-                      rows={2}
-                      placeholder="Any special delivery instructions for all locked items..."
-                      value={commonNotes}
-                      onChange={(e) => handleCommonDateTimeChange(commonDateTime, e.target.value)}
+                      className="input-field resize-none"
+                      rows={3}
+                      placeholder="Any special pick-up instructions for all synchronized items..."
+                      value={scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupNotes || ''}
+                      onChange={(e) => {
+                        const pickupNotes = e.target.value;
+                        // Update all synchronized items
+                        const synchronizedItems = checkoutItems.filter(item => scheduledItems[item.id]?.sameDateTime);
+                        synchronizedItems.forEach(item => {
+                          setScheduledItems(prev => ({
+                            ...prev,
+                            [item.id]: {
+                              ...prev[item.id],
+                              pickupNotes
+                            }
+                          }));
+                        });
+                      }}
                     />
                   </div>
                 </div>
+
+                {/* Confirmation Messages */}
+                {scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date && scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate && (
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center gap-2 text-green-800 bg-green-50 border border-green-200 rounded-lg p-3">
+                      <span className="text-lg">✅</span>
+                      <span className="text-sm font-medium">
+                        Delivery scheduled for: {new Date(scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].date).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-blue-800 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <span className="text-sm">📅</span>
+                      <span className="text-sm font-medium">
+                        Pick-up scheduled for: {new Date(scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].pickupDate!).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Pick-up Date & Time */}
-            <div className="card p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Pick-up Information</h3>
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Pick-up Date & Time {!pickupDate && <span className="text-red-500">*</span>}
-                  </label>
-                  <input
-                    type="datetime-local"
-                    className={`input-field ${!pickupDate ? 'border-red-300 focus:border-red-500' : 'border-green-300 focus:border-green-500'}`}
-                    min={scheduledItems[Object.keys(scheduledItems)[0]]?.date || new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
-                    value={pickupDate}
-                    onChange={(e) => handlePickupDateChange(e.target.value)}
-                    required
-                  />
-                  {!pickupDate && (
-                    <p className="text-xs text-red-600 mt-1">Please select a pick-up date and time</p>
-                  )}
+            {/* Individual Bookings Section */}
+            {checkoutItems.some(item => !scheduledItems[item.id]?.sameDateTime) && (
+              <div className="card p-6 bg-gray-50 border-gray-200">
+                <div className="flex items-center gap-2 text-gray-800 mb-6">
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" clipRule="evenodd" />
+                  </svg>
+                  <h3 className="text-xl font-bold">Individual Bookings</h3>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Number of days</label>
-                  <div className="input-field bg-gray-50 flex items-center justify-center text-lg font-semibold text-indigo-600">
-                    {numberOfDays} day{numberOfDays !== 1 ? 's' : ''}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">Auto-calculated from delivery to pick-up date</p>
+                <p className="text-sm text-gray-700 mb-4">
+                  These items have their own delivery and pick-up schedules
+                </p>
+
+                <div className="space-y-6">
+                  {checkoutItems.filter(item => !scheduledItems[item.id]?.sameDateTime).map((item) => (
+                    <div key={item.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-xl">
+                          {item.category === 'party' ? '🎉' :
+                           item.category === 'wedding' ? '💒' :
+                           item.category === 'corporate' ? '🏢' :
+                           item.category === 'equipment' ? '🎪' :
+                           item.category === 'birthday' ? '🎂' :
+                           item.category === 'funeral' ? '⚰️' : '⚙️'}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="text-lg font-semibold text-gray-800">{item.name}</h4>
+                          <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id={`same-datetime-${item.id}`}
+                            checked={scheduledItems[item.id]?.sameDateTime || false}
+                            onChange={(e) => handleSameDateTimeChange(item.id, e.target.checked)}
+                            className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                          />
+                          <label
+                            htmlFor={`same-datetime-${item.id}`}
+                            className="text-sm text-gray-700 cursor-pointer font-medium"
+                          >
+                            Sync with group
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Duration Selection */}
+                      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg" data-item-id={item.id}>
+                        <label className="block text-sm font-medium text-blue-800 mb-2">
+                          Duration (Days) <span className="text-red-500">*</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleDurationChange(item.id, Math.max(1, (item.duration || 1) - 1))}
+                            className="w-8 h-8 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center text-blue-700 font-bold"
+                            disabled={(item.duration || 1) <= 1}
+                          >
+                            −
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.duration || 1}
+                            onChange={(e) => {
+                              const value = parseInt(e.target.value) || 1;
+                              handleDurationChange(item.id, Math.max(1, value));
+                            }}
+                            className="w-16 text-center border border-blue-300 rounded px-2 py-1 text-sm focus:border-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleDurationChange(item.id, (item.duration || 1) + 1)}
+                            className="w-8 h-8 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center text-blue-700 font-bold"
+                          >
+                            +
+                          </button>
+                          <span className="text-sm text-blue-700 ml-2">
+                            ₱{(item.dailyRate || item.price).toFixed(2)}/day
+                          </span>
+                        </div>
+                        <div className="mt-2 flex justify-between items-center">
+                          <p className="text-xs text-blue-600">
+                            Minimum 1 day required • Auto-calculated from dates
+                          </p>
+                          <div
+                            className="text-sm font-semibold text-blue-800 duration-price transition-colors"
+                            data-item-id={item.id}
+                          >
+                            Total: ₱{((item.dailyRate || item.price) * (item.duration || 1) * item.quantity).toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Delivery Date & Time {!scheduledItems[item.id]?.date && <span className="text-red-500">*</span>}
+                          </label>
+                          <input
+                            type="datetime-local"
+                            className={`input-field ${
+                              !scheduledItems[item.id]?.date
+                                ? 'border-red-300 focus:border-red-500'
+                                : 'border-green-300 focus:border-green-500'
+                            }`}
+                            min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
+                            value={scheduledItems[item.id]?.date || ''}
+                            onChange={(e) => {
+                              const selectedDate = e.target.value;
+                              if (selectedDate) {
+                                handleScheduleUpdate(item.id, selectedDate, scheduledItems[item.id]?.notes || '');
+                              } else {
+                                const updatedNotes = scheduledItems[item.id]?.notes || '';
+                                setScheduledItems(prev => ({
+                                  ...prev,
+                                  [item.id]: { date: '', notes: updatedNotes, sameDateTime: false }
+                                }));
+                              }
+                            }}
+                            required
+                          />
+                          {!scheduledItems[item.id]?.date && (
+                            <p className="text-xs text-red-600 mt-1">Please select a delivery date and time</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Notes (Optional)</label>
+                          <textarea
+                            className="input-field resize-none"
+                            rows={3}
+                            placeholder="Any special delivery instructions..."
+                            value={scheduledItems[item.id]?.notes || ''}
+                            onChange={(e) => handleScheduleUpdate(item.id, scheduledItems[item.id]?.date || '', e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Pick-up Date & Time {!scheduledItems[item.id]?.pickupDate && <span className="text-red-500">*</span>}
+                          </label>
+                          <input
+                            type="datetime-local"
+                            className={`input-field ${
+                              !scheduledItems[item.id]?.pickupDate
+                                ? 'border-red-300 focus:border-red-500'
+                                : 'border-green-300 focus:border-green-500'
+                            }`}
+                            min={(() => {
+                              const deliveryDate = scheduledItems[item.id]?.date;
+                              return deliveryDate ? new Date(new Date(deliveryDate).getTime() + 60 * 60 * 1000).toISOString().slice(0, 16) : new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
+                            })()}
+                            value={scheduledItems[item.id]?.pickupDate || ''}
+                            onChange={(e) => {
+                              const pickupDate = e.target.value;
+                              const deliveryDate = scheduledItems[item.id]?.date;
+                              setScheduledItems(prev => ({
+                                ...prev,
+                                [item.id]: {
+                                  ...prev[item.id],
+                                  pickupDate,
+                                  pickupNotes: prev[item.id]?.pickupNotes || ''
+                                }
+                              }));
+                              // Auto-calculate duration for this item
+                              calculateItemDuration(item.id, deliveryDate, pickupDate);
+                              calculateNumberOfDays();
+                            }}
+                            required
+                          />
+                          {!scheduledItems[item.id]?.pickupDate && (
+                            <p className="text-xs text-red-600 mt-1">Please select a pick-up date and time</p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Pick-up Notes (Optional)</label>
+                          <textarea
+                            className="input-field resize-none"
+                            rows={3}
+                            placeholder="Any special pick-up instructions..."
+                            value={scheduledItems[item.id]?.pickupNotes || ''}
+                            onChange={(e) => {
+                              setScheduledItems(prev => ({
+                                ...prev,
+                                [item.id]: {
+                                  ...prev[item.id],
+                                  pickupNotes: e.target.value
+                                }
+                              }));
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {scheduledItems[item.id]?.date && (
+                        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center gap-2 text-green-800">
+                            <span className="text-lg">✅</span>
+                            <div>
+                              <span className="text-sm font-medium">Delivery scheduled for: {new Date(scheduledItems[item.id].date).toLocaleString()}</span>
+                              {scheduledItems[item.id]?.notes && (
+                                <p className="text-xs text-green-700 mt-1">Notes: {scheduledItems[item.id].notes}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {scheduledItems[item.id]?.pickupDate && (
+                        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center gap-2 text-blue-800">
+                            <span className="text-sm">📅</span>
+                            <div>
+                              <span className="text-xs font-medium">Pick-up scheduled for: {new Date(scheduledItems[item.id].pickupDate!).toLocaleString()}</span>
+                              {scheduledItems[item.id]?.pickupNotes && (
+                                <p className="text-xs text-blue-700 mt-1">Notes: {scheduledItems[item.id].pickupNotes}</p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
           </div>
+
+          {/* Duration Error */}
+          {durationError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-2 text-red-800 mb-2">
+                <span className="text-lg">⚠️</span>
+                <span className="font-semibold">Minimum Duration Required</span>
+              </div>
+              <p className="text-sm text-red-700">{durationError}</p>
+            </div>
+          )}
 
           {/* Missing Dates Warning */}
           {(() => {
             const missingDelivery = checkoutItems.filter(item => !scheduledItems[item.id]?.date);
-            const missingPickup = checkoutItems.filter(item =>
+            const missingIndividualPickup = checkoutItems.filter(item =>
               !scheduledItems[item.id]?.sameDateTime && !scheduledItems[item.id]?.pickupDate
             );
-            const missingCommonPickup = !pickupDate && checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime);
+            const missingSynchronizedPickup = checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) &&
+              !scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate;
 
-            return (missingDelivery.length > 0 || missingPickup.length > 0 || missingCommonPickup) ? (
+            return (missingDelivery.length > 0 || missingIndividualPickup.length > 0 || missingSynchronizedPickup) ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                 <div className="flex items-center gap-2 text-yellow-800 mb-2">
                   <span className="text-lg">⚠️</span>
@@ -862,16 +1064,16 @@ export default function CheckoutPage() {
                       <span>{item.name} - Delivery date required</span>
                     </li>
                   ))}
-                  {missingPickup.map(item => (
+                  {missingIndividualPickup.map(item => (
                     <li key={item.id} className="flex items-center gap-2">
                       <span>•</span>
                       <span>{item.name} - Pick-up date required</span>
                     </li>
                   ))}
-                  {missingCommonPickup && (
+                  {missingSynchronizedPickup && (
                     <li className="flex items-center gap-2">
                       <span>•</span>
-                      <span>Common pick-up date required for synchronized items</span>
+                      <span>Synchronized bookings - Pick-up date required</span>
                     </li>
                   )}
                 </ul>
@@ -891,20 +1093,23 @@ export default function CheckoutPage() {
               onClick={() => setCurrentStep('confirm')}
               disabled={(() => {
                 const hasAllDeliveryDates = checkoutItems.every(item => scheduledItems[item.id]?.date);
-                const hasAllIndividualPickups = checkoutItems.every(item =>
-                  scheduledItems[item.id]?.sameDateTime || scheduledItems[item.id]?.pickupDate
-                );
-                const hasCommonPickup = !checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) || pickupDate;
-                return !(hasAllDeliveryDates && hasAllIndividualPickups && hasCommonPickup);
+                const hasAllIndividualPickups = checkoutItems.filter(item => !scheduledItems[item.id]?.sameDateTime).every(item => scheduledItems[item.id]?.pickupDate);
+                const hasSynchronizedPickup = !checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) ||
+                  scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate;
+                const hasValidDuration = !durationError;
+                return !(hasAllDeliveryDates && hasAllIndividualPickups && hasSynchronizedPickup && hasValidDuration);
               })()}
               className="btn-primary"
               title={(() => {
                 const hasAllDeliveryDates = checkoutItems.every(item => scheduledItems[item.id]?.date);
-                const hasAllIndividualPickups = checkoutItems.every(item =>
-                  scheduledItems[item.id]?.sameDateTime || scheduledItems[item.id]?.pickupDate
-                );
-                const hasCommonPickup = !checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) || pickupDate;
-                return !(hasAllDeliveryDates && hasAllIndividualPickups && hasCommonPickup) ? 'Please complete all date selections to continue' : '';
+                const hasAllIndividualPickups = checkoutItems.filter(item => !scheduledItems[item.id]?.sameDateTime).every(item => scheduledItems[item.id]?.pickupDate);
+                const hasSynchronizedPickup = !checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) ||
+                  scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate;
+                const hasValidDuration = !durationError;
+
+                if (!hasValidDuration) return 'Minimum booking duration is 1 day. Please adjust your pick-up date.';
+                if (!(hasAllDeliveryDates && hasAllIndividualPickups && hasSynchronizedPickup)) return 'Please complete all date selections to continue';
+                return '';
               })()}
             >
               Review & Confirm →
@@ -921,61 +1126,129 @@ export default function CheckoutPage() {
           </div>
 
           {/* Final Summary */}
-          <div className="space-y-4">
-            {checkoutItems.map((item) => {
-              const schedule = scheduledItems[item.id];
-              return (
-                <div key={item.id} className="card p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-xl">
-                        {item.category === 'party' ? '🎉' :
-                         item.category === 'wedding' ? '💒' :
-                         item.category === 'corporate' ? '🏢' :
-                         item.category === 'equipment' ? '🎪' :
-                         item.category === 'cleaning' ? '🧹' : '⚙️'}
+          <div className="space-y-6">
+            {/* Synchronized Bookings Summary */}
+            {checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) && (
+              <div className="card p-6 bg-blue-50 border-blue-200">
+                <div className="flex items-center gap-2 text-blue-800 mb-4">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                  </svg>
+                  <h3 className="text-lg font-bold">Synchronized Bookings</h3>
+                </div>
+                <div className="space-y-3">
+                  {checkoutItems.filter(item => scheduledItems[item.id]?.sameDateTime).map((item) => {
+                    const schedule = scheduledItems[item.id];
+                    return (
+                      <div key={item.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm">
+                            {item.category === 'party' ? '🎉' :
+                             item.category === 'wedding' ? '💒' :
+                             item.category === 'corporate' ? '🏢' :
+                             item.category === 'equipment' ? '🎪' :
+                             item.category === 'birthday' ? '🎂' :
+                             item.category === 'funeral' ? '⚰️' : '⚙️'}
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold text-gray-800">{item.name}</h4>
+                            <p className="text-xs text-gray-600">Quantity: {item.quantity}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-blue-600">₱{(item.price * item.quantity).toFixed(2)}</div>
+                          <div className="text-xs text-blue-500">
+                            ₱{(item.dailyRate || item.price).toFixed(2)}/day × {item.duration || 1} day{item.duration !== 1 ? 's' : ''}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-800">{item.name}</h3>
-                        <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                        <p className="text-sm text-indigo-600 font-medium">
-                          Delivery: {schedule?.date ? new Date(schedule.date).toLocaleString() : 'Not scheduled'}
-                        </p>
-                        {schedule?.notes && (
-                          <p className="text-sm text-gray-500 mt-1">Delivery Notes: {schedule.notes}</p>
-                        )}
-                        {!schedule?.sameDateTime && schedule?.pickupDate && (
-                          <p className="text-sm text-purple-600 font-medium mt-1">
-                            Pick-up: {new Date(schedule.pickupDate).toLocaleString()}
-                          </p>
-                        )}
-                        {!schedule?.sameDateTime && schedule?.pickupNotes && (
-                          <p className="text-sm text-gray-500 mt-1">Pick-up Notes: {schedule.pickupNotes}</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-indigo-600">₱{(item.price * item.quantity).toFixed(2)}</div>
-                    </div>
+                    );
+                  })}
+                </div>
+                <div className="mt-4 grid md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-blue-200">
+                  <div>
+                    <span className="text-sm text-blue-700">Delivery:</span>
+                    <p className="font-medium text-blue-900">
+                      {scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date
+                        ? new Date(scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].date).toLocaleString()
+                        : 'Not set'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-blue-700">Pick-up:</span>
+                    <p className="font-medium text-blue-900">
+                      {scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate
+                        ? new Date(scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].pickupDate!).toLocaleString()
+                        : 'Not set'}
+                    </p>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            )}
 
-            {/* Pick-up Summary */}
-            <div className="card p-6 bg-blue-50 border-blue-200">
-              <h3 className="text-lg font-semibold text-blue-800 mb-3">Pick-up Information</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <span className="text-sm text-blue-700">Pick-up Date & Time:</span>
-                  <p className="font-medium text-blue-900">{pickupDate ? new Date(pickupDate).toLocaleString() : 'Not set'}</p>
+            {/* Individual Bookings Summary */}
+            {checkoutItems.some(item => !scheduledItems[item.id]?.sameDateTime) && (
+              <div className="card p-6 bg-gray-50 border-gray-200">
+                <div className="flex items-center gap-2 text-gray-800 mb-4">
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" clipRule="evenodd" />
+                  </svg>
+                  <h3 className="text-lg font-bold">Individual Bookings</h3>
                 </div>
-                <div>
-                  <span className="text-sm text-blue-700">Rental Duration:</span>
-                  <p className="font-medium text-blue-900">{numberOfDays} day{numberOfDays !== 1 ? 's' : ''}</p>
+                <div className="space-y-3">
+                  {checkoutItems.filter(item => !scheduledItems[item.id]?.sameDateTime).map((item) => {
+                    const schedule = scheduledItems[item.id];
+                    return (
+                      <div key={item.id} className="p-4 bg-white rounded-lg border border-gray-200">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-lg">
+                              {item.category === 'party' ? '🎉' :
+                               item.category === 'wedding' ? '💒' :
+                               item.category === 'corporate' ? '🏢' :
+                               item.category === 'equipment' ? '🎪' :
+                               item.category === 'birthday' ? '🎂' :
+                               item.category === 'funeral' ? '⚰️' : '⚙️'}
+                            </div>
+                            <div>
+                              <h4 className="text-lg font-semibold text-gray-800">{item.name}</h4>
+                              <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-indigo-600">₱{(item.price * item.quantity).toFixed(2)}</div>
+                            <div className="text-xs text-indigo-500">
+                              ₱{(item.dailyRate || item.price).toFixed(2)}/day × {item.duration || 1} day{item.duration !== 1 ? 's' : ''}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-600">Delivery:</span>
+                            <p className="font-medium text-gray-900">
+                              {schedule?.date ? new Date(schedule.date).toLocaleString() : 'Not scheduled'}
+                            </p>
+                            {schedule?.notes && (
+                              <p className="text-xs text-gray-500 mt-1">Notes: {schedule.notes}</p>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Pick-up:</span>
+                            <p className="font-medium text-gray-900">
+                              {schedule?.pickupDate ? new Date(schedule.pickupDate).toLocaleString() : 'Not scheduled'}
+                            </p>
+                            {schedule?.pickupNotes && (
+                              <p className="text-xs text-gray-500 mt-1">Notes: {schedule.pickupNotes}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
+            )}
+
           </div>
 
           {/* Final Total */}
@@ -1138,6 +1411,9 @@ export default function CheckoutPage() {
                       )}
                     </span>
                     <span className="font-medium">₱{(item.price * item.quantity).toFixed(2)}</span>
+                    <div className="text-xs text-gray-500">
+                      ₱{(item.dailyRate || item.price).toFixed(2)}/day × {item.duration || 1} day{item.duration !== 1 ? 's' : ''}
+                    </div>
                   </div>
                 );
               })}

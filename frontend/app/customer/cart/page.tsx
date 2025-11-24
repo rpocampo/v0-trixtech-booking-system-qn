@@ -198,7 +198,8 @@ export default function CartPage() {
                     item.category === 'wedding' ? '💒' :
                     item.category === 'corporate' ? '🏢' :
                     item.category === 'equipment' ? '🎪' :
-                    item.category === 'cleaning' ? '🧹' : '⚙️'
+                    item.category === 'birthday' ? '🎂' :
+                    item.category === 'funeral' ? '⚰️' : '⚙️'
                   )}
                 </div>
 
