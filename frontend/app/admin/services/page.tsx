@@ -58,10 +58,32 @@ export default function AdminServices() {
     serviceType: 'service', // Allow selection between service, equipment, supply
     price: 0,
     duration: 1,
-    includedItems: '',
+    includedItems: [] as string[],
     image: null as File | null,
   });
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+
+  // Inclusions management functions
+  const addInclusion = () => {
+    setFormData(prev => ({
+      ...prev,
+      includedItems: [...prev.includedItems, '']
+    }));
+  };
+
+  const removeInclusion = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      includedItems: prev.includedItems.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateInclusion = (index: number, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      includedItems: prev.includedItems.map((item, i) => i === index ? value : item)
+    }));
+  };
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -97,6 +119,18 @@ export default function AdminServices() {
       newErrors.price = 'Price must be greater than ₱0.00';
     }
 
+    // Validate inclusions
+    const validInclusions = formData.includedItems.filter(item => item.trim());
+    if (validInclusions.length === 0) {
+      newErrors.inclusions = 'At least one inclusion is required';
+    }
+
+    // Check for duplicates
+    const uniqueInclusions = new Set(validInclusions.map(item => item.trim().toLowerCase()));
+    if (uniqueInclusions.size !== validInclusions.length) {
+      newErrors.inclusions = 'Duplicate inclusions are not allowed';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -128,9 +162,17 @@ export default function AdminServices() {
         formDataToSend.append('quantity', '10'); // Default quantity for inventory items
       }
 
-      // Add default inclusions for simplified form
-      formDataToSend.append('includedItems', 'Professional service delivery');
-      formDataToSend.append('includedItems', 'Standard setup and preparation');
+      // Add included items (use provided ones or defaults if empty)
+      if (formData.includedItems.length === 0) {
+        formDataToSend.append('includedItems', 'Professional service delivery');
+        formDataToSend.append('includedItems', 'Standard setup and preparation');
+      } else {
+        formData.includedItems.forEach(item => {
+          if (item.trim()) {
+            formDataToSend.append('includedItems', item.trim());
+          }
+        });
+      }
 
       // Add image if exists
       if (formData.image) {
@@ -156,7 +198,7 @@ export default function AdminServices() {
           serviceType: 'service',
           price: 0,
           duration: 1,
-          includedItems: '',
+          includedItems: [],
           image: null,
         });
         setErrors({});
@@ -198,8 +240,8 @@ export default function AdminServices() {
       price: service.price,
       duration: service.duration || 1,
       includedItems: Array.isArray(service.includedItems)
-        ? service.includedItems.join('\n')
-        : service.includedItems || '',
+        ? service.includedItems
+        : service.includedItems ? [service.includedItems] : [],
       image: null,
     });
     setShowForm(true);
@@ -214,7 +256,7 @@ export default function AdminServices() {
       serviceType: 'service',
       price: 0,
       duration: 1,
-      includedItems: '',
+      includedItems: [],
       image: null,
     });
     setShowForm(false);
@@ -238,7 +280,13 @@ export default function AdminServices() {
       formDataToSend.append('category', formData.category);
       formDataToSend.append('price', formData.price.toString());
       formDataToSend.append('duration', formData.duration.toString());
-      formDataToSend.append('includedItems', formData.includedItems);
+
+      // Add included items as separate entries
+      formData.includedItems.forEach(item => {
+        if (item.trim()) {
+          formDataToSend.append('includedItems', item.trim());
+        }
+      });
 
       const response = await fetch(`http://localhost:5000/api/services/${editingService._id}`, {
         method: 'PUT',
@@ -390,17 +438,51 @@ export default function AdminServices() {
 
             {/* Inclusions */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700">
-                What's Included
-              </label>
-              <textarea
-                value={formData.includedItems}
-                onChange={(e) => setFormData({ ...formData, includedItems: e.target.value })}
-                className="input-field"
-                rows={4}
-                placeholder="List what is included in this service (one item per line):&#10;- Professional service delivery&#10;- Setup and preparation&#10;- Basic equipment"
-              />
-              <p className="text-xs text-gray-500 mt-1">Enter each inclusion on a new line</p>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  What's Included
+                </label>
+                <button
+                  type="button"
+                  onClick={addInclusion}
+                  className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                >
+                  <span>+</span> Add Item
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                {formData.includedItems.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500 text-sm border-2 border-dashed border-gray-300 rounded-md">
+                    No inclusions added yet. Click "Add Item" to get started.
+                  </div>
+                ) : (
+                  formData.includedItems.map((item, index) => (
+                    <div key={index} className="flex gap-2 items-center">
+                      <input
+                        type="text"
+                        value={item}
+                        onChange={(e) => updateInclusion(index, e.target.value)}
+                        className="input-field flex-1"
+                        placeholder="e.g., Professional service delivery"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeInclusion(index)}
+                        className="text-red-500 hover:text-red-700 p-2"
+                        title="Remove this item"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {errors.inclusions && <p className="text-sm text-red-600 mt-1">{errors.inclusions}</p>}
+              <p className="text-xs text-gray-500 mt-2">
+                Add items that are included in this service package
+              </p>
             </div>
 
             {/* Description */}

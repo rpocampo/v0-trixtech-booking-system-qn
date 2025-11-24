@@ -245,17 +245,110 @@ router.post('/', adminMiddleware, upload.fields([
 });
 
 // Update service (admin only)
-router.put('/:id', adminMiddleware, async (req, res, next) => {
+router.put('/:id', adminMiddleware, upload.fields([
+  { name: 'image', maxCount: 1 },
+  { name: 'gallery', maxCount: 10 }
+]), async (req, res, next) => {
   try {
     const oldService = await Service.findById(req.params.id);
-    const service = await Service.findByIdAndUpdate(req.params.id, req.body, {
+    if (!oldService) {
+      return res.status(404).json({ success: false, message: 'Service not found' });
+    }
+
+    const {
+      name,
+      description,
+      shortDescription,
+      category,
+      serviceType,
+      eventTypes,
+      price,
+      priceType,
+      duration,
+      quantity,
+      location,
+      tags,
+      features,
+      includedItems,
+      requirements,
+      minOrder,
+      maxOrder,
+      leadTime
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !description) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service name and description are required'
+      });
+    }
+
+    // Validate and parse price
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Service price must be a valid positive number'
+      });
+    }
+
+    const updateData = {
+      name,
+      description,
+      shortDescription,
+      category,
+      serviceType: serviceType || 'service',
+      eventTypes: eventTypes ? (Array.isArray(eventTypes) ? eventTypes : [eventTypes]) : [],
+      price: parsedPrice,
+      priceType: priceType || 'flat-rate',
+      location: location || 'both',
+      tags: tags ? (Array.isArray(tags) ? tags : [tags]) : [],
+      features: features ? (Array.isArray(features) ? features : [features]) : [],
+      includedItems: includedItems ? (Array.isArray(includedItems) ? includedItems : [includedItems]) : [],
+      requirements: requirements ? (Array.isArray(requirements) ? requirements : [requirements]) : [],
+      minOrder: minOrder ? parseInt(minOrder) : 1,
+      leadTime: leadTime ? parseInt(leadTime) : 24,
+    };
+
+    // Validate inclusions
+    const inclusionsValidation = validateInclusions(updateData.includedItems);
+    if (!inclusionsValidation.valid) {
+      return res.status(400).json({
+        success: false,
+        message: inclusionsValidation.message
+      });
+    }
+    updateData.includedItems = inclusionsValidation.inclusions;
+
+    // Handle duration for services
+    if (serviceType === 'service' && duration) {
+      updateData.duration = parseInt(duration);
+    }
+
+    // Handle quantity for equipment/supplies
+    if ((serviceType === 'equipment' || serviceType === 'supply') && quantity) {
+      updateData.quantity = parseInt(quantity);
+      if (maxOrder) {
+        updateData.maxOrder = parseInt(maxOrder);
+      }
+    }
+
+    // Handle image uploads
+    if (req.files) {
+      if (req.files.image && req.files.image[0]) {
+        updateData.image = `/uploads/${req.files.image[0].filename}`;
+      }
+
+      if (req.files.gallery) {
+        updateData.gallery = req.files.gallery.map(file => `/uploads/${file.filename}`);
+      }
+    }
+
+    const service = await Service.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     });
-
-    if (!service) {
-      return res.status(404).json({ success: false, message: 'Service not found' });
-    }
 
     // Emit real-time event for service update
     const io = global.io;
