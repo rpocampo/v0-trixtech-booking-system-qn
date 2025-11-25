@@ -7,6 +7,7 @@ const {
   cancelPayment,
 } = require('../utils/paymentService');
 const logger = require('../utils/logger');
+const { auditService } = require('../utils/auditService');
 
 const router = express.Router();
 
@@ -172,6 +173,26 @@ router.post('/webhook/gcash', async (req, res) => {
         amount: webhookData.amount,
         status: 'completed'
       });
+
+      // Log audit event for payment completion
+      await auditService.logAuditEvent(
+        'system_action',
+        result.payment.userId,
+        'payment_completed_webhook',
+        {
+          paymentId: result.payment._id,
+          bookingId: result.booking?._id,
+          referenceNumber: webhookData.referenceNumber,
+          amount: result.payment.amount,
+          paymentMethod: 'gcash_qr',
+          processedBy: 'webhook'
+        },
+        {
+          webhookData,
+          transactionId: webhookData.transactionId,
+          timestamp: webhookData.timestamp
+        }
+      );
 
       // Emit real-time update to connected clients
       const io = global.io;

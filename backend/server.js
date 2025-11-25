@@ -22,6 +22,9 @@ const eventTypeRoutes = require('./routes/eventTypeRoutes');
 const otpRoutes = require('./routes/otpRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const recommendationsRoutes = require('./routes/recommendationsRoutes');
+const cartRoutes = require('./routes/cartRoutes');
+const auditRoutes = require('./routes/auditRoutes');
+const dataConsistencyRoutes = require('./routes/dataConsistencyRoutes');
 const { initializeEmailService } = require('./utils/emailService');
 const { processReservationQueue, cleanupExpiredReservations } = require('./utils/recommendationService');
 const { cleanupExpiredOTPs } = require('./utils/otpService');
@@ -122,6 +125,9 @@ app.use('/api/event-types', eventTypeRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/audit', auditRoutes);
+app.use('/api/consistency', dataConsistencyRoutes);
 
 // Enhanced health check with monitoring
 app.get('/api/health', healthCheckHandler);
@@ -174,6 +180,9 @@ app.all('/', (req, res) => {
       '/api/otp',
       '/api/inventory',
       '/api/recommendations',
+      '/api/cart',
+      '/api/audit',
+      '/api/consistency',
       '/api/health'
     ]
   });

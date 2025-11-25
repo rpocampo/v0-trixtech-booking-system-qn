@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const User = require('../models/User');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { auditService } = require('../utils/auditService');
 
 // Configure multer for QR code uploads
 const storage = multer.diskStorage({
@@ -68,6 +69,23 @@ router.put('/:id', authMiddleware, async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
+
+    // Log audit event for profile update
+    await auditService.logAuditEvent(
+      'user_action',
+      req.user.id,
+      'update_profile',
+      {
+        userId: req.params.id,
+        updatedFields: { name, phone, address },
+        isSelfUpdate: req.user.id === req.params.id
+      },
+      {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        targetUserId: req.params.id
+      }
+    );
 
     res.json({ success: true, user });
   } catch (error) {

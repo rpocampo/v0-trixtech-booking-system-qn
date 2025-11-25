@@ -374,8 +374,8 @@ export default function Services() {
           </div>
 
           {/* Services Grid - Full Width Responsive Carousel */}
-          <div className="w-full">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+          <div className="w-full max-w-7xl mx-auto px-12 sm:px-16 lg:px-20 xl:px-28 py-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-12 sm:gap-16 lg:gap-20 xl:gap-24">
               {filteredServices.map((service, index) => (
                 <div
                   key={service._id}

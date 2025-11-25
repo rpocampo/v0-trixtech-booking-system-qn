@@ -186,6 +186,18 @@ router.post('/', adminMiddleware, upload.fields([
       });
     }
 
+    // Check for duplicate service name (only for create, not update)
+    const existingService = await Service.findOne({
+      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
+    });
+
+    if (existingService) {
+      return res.status(409).json({
+        success: false,
+        message: 'A service with this name already exists. Please choose a different name.'
+      });
+    }
+
     // Validate and parse price
     const parsedPrice = parseFloat(price);
     if (isNaN(parsedPrice) || parsedPrice < 0) {
@@ -213,15 +225,21 @@ router.post('/', adminMiddleware, upload.fields([
       leadTime: leadTime ? parseInt(leadTime) : 24,
     };
 
-    // Validate inclusions
-    const inclusionsValidation = validateInclusions(serviceData.includedItems);
-    if (!inclusionsValidation.valid) {
-      return res.status(400).json({
-        success: false,
-        message: inclusionsValidation.message
-      });
+    // Validate inclusions (skip for equipment-type services)
+    if (serviceType === 'equipment' && category === 'equipment') {
+      // Equipment services don't require inclusions
+      serviceData.includedItems = includedItems ? (Array.isArray(includedItems) ? includedItems : [includedItems]) : [];
+    } else {
+      // Other service types require inclusions
+      const inclusionsValidation = validateInclusions(serviceData.includedItems);
+      if (!inclusionsValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: inclusionsValidation.message
+        });
+      }
+      serviceData.includedItems = inclusionsValidation.inclusions;
     }
-    serviceData.includedItems = inclusionsValidation.inclusions;
 
     // Handle duration for services
     if (serviceType === 'service' && duration) {
@@ -249,6 +267,18 @@ router.post('/', adminMiddleware, upload.fields([
 
     const service = new Service(serviceData);
     await service.save();
+
+    // Emit real-time event for service creation
+    const io = global.io;
+    if (io) {
+      io.emit('service-created', {
+        serviceId: service._id,
+        serviceName: service.name,
+        category: service.category,
+        serviceType: service.serviceType,
+      });
+    }
+
     res.status(201).json({ success: true, service });
   } catch (error) {
     next(error);
@@ -322,15 +352,21 @@ router.put('/:id', adminMiddleware, upload.fields([
       leadTime: leadTime ? parseInt(leadTime) : 24,
     };
 
-    // Validate inclusions
-    const inclusionsValidation = validateInclusions(updateData.includedItems);
-    if (!inclusionsValidation.valid) {
-      return res.status(400).json({
-        success: false,
-        message: inclusionsValidation.message
-      });
+    // Validate inclusions (skip for equipment-type services)
+    if (serviceType === 'equipment' && category === 'equipment') {
+      // Equipment services don't require inclusions
+      updateData.includedItems = includedItems ? (Array.isArray(includedItems) ? includedItems : [includedItems]) : [];
+    } else {
+      // Other service types require inclusions
+      const inclusionsValidation = validateInclusions(updateData.includedItems);
+      if (!inclusionsValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: inclusionsValidation.message
+        });
+      }
+      updateData.includedItems = inclusionsValidation.inclusions;
     }
-    updateData.includedItems = inclusionsValidation.inclusions;
 
     // Handle duration for services
     if (serviceType === 'service' && duration) {
@@ -387,6 +423,17 @@ router.delete('/:id', adminMiddleware, async (req, res, next) => {
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
+
+    // Emit real-time event for service deletion
+    const io = global.io;
+    if (io) {
+      io.emit('service-deleted', {
+        serviceId: service._id,
+        serviceName: service.name,
+        category: service.category,
+      });
+    }
+
     res.json({ success: true, message: 'Service deleted' });
   } catch (error) {
     next(error);

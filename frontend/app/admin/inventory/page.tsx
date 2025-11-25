@@ -207,7 +207,7 @@ export default function InventoryManagement() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/services/${itemId}`, {
+      const response = await fetch(`http://localhost:5000/api/inventory/service/${itemId}/quantity`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -215,6 +215,7 @@ export default function InventoryManagement() {
         },
         body: JSON.stringify({
           quantity: newQty,
+          reason: 'Manual stock update from inventory management'
         }),
       });
 
@@ -225,13 +226,30 @@ export default function InventoryManagement() {
       }
 
       if (response.ok) {
-        fetchInventory();
+        const data = await response.json();
+        console.log('Inventory updated:', data);
+
+        // Update local state immediately for better UX
+        setInventory(prev =>
+          prev.map(item =>
+            item._id === itemId
+              ? { ...item, quantity: newQty }
+              : item
+          )
+        );
+
+        fetchInventory(); // Refresh to get latest data
         setShowModal(false);
         setSelectedItem(null);
         setNewQuantity('');
+      } else {
+        const errorData = await response.json();
+        console.error('Failed to update inventory:', errorData);
+        alert(`Failed to update inventory: ${errorData.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Failed to update inventory:', error);
+      alert('Network error. Please try again.');
     }
   };
 

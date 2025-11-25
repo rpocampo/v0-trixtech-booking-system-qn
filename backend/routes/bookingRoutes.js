@@ -11,6 +11,7 @@ const { sendTemplateNotification } = require('../utils/notificationService');
 const { findAlternativeServices, processReservationQueue } = require('../utils/recommendationService');
 const { triggerLowStockCheck } = require('../utils/lowStockAlertService');
 const lockService = require('../utils/lockService');
+const { auditService } = require('../utils/auditService');
 
 const router = express.Router();
 
@@ -443,6 +444,26 @@ router.post('/', authMiddleware, async (req, res, next) => {
         } catch (notificationError) {
           console.error('Error sending pending booking notifications:', notificationError);
         }
+
+        // Log audit event for booking creation
+        await auditService.logAuditEvent(
+          'user_action',
+          req.user.id,
+          'create_booking',
+          {
+            bookingId: booking._id,
+            serviceId,
+            quantity: requestedQuantity,
+            totalPrice,
+            status: 'pending'
+          },
+          {
+            ip: req.ip,
+            userAgent: req.get('User-Agent'),
+            serviceName: service.name,
+            serviceCategory: service.category
+          }
+        );
 
         return {
           success: true,
@@ -1093,6 +1114,27 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       console.error('Error tracking user preferences:', preferenceError);
       // Don't fail the booking if preference tracking fails
     }
+
+    // Log audit event for booking confirmation
+    await auditService.logAuditEvent(
+      'user_action',
+      req.user.id,
+      'confirm_booking',
+      {
+        bookingId: booking._id,
+        paymentId: payment._id,
+        serviceId: bookingIntent.serviceId,
+        quantity: bookingIntent.quantity,
+        totalPrice: bookingIntent.totalPrice,
+        paymentMethod: 'gcash_qr'
+      },
+      {
+        ip: req.ip,
+        userAgent: req.get('User-Agent'),
+        referenceNumber: paymentReference,
+        serviceName: service.name
+      }
+    );
 
     res.status(201).json({
       success: true,

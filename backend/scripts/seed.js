@@ -36,18 +36,18 @@ async function seedDatabase() {
     }
 
     // Create demo customer only if seeding demo data
-    const existingCustomer = await User.findOne({ email: 'demo@trixtech.com' });
+    const existingCustomer = await User.findOne({ email: 'mikkimamaradlo@gmail.com' });
     if (!existingCustomer) {
       const customerUser = new User({
-        name: 'Demo Customer',
-        email: 'demo@trixtech.com',
-        password: 'demo1234',
+        name: 'Mikki Mamaradlo',
+        email: 'mikkimamaradlo@gmail.com',
+        password: 'Mikki1234',
         role: 'customer',
         phone: '+63 (999) 123-4567',
-        address: '123 Demo Street, Demo City, Philippines',
+        address: '4213, Caloocan, Balayan, Batangas City, Philippines',
       });
       await customerUser.save();
-      console.log('Demo customer created');
+      console.log('Mikki customer created');
     }
 
     // Create basic services (always create for testing)
