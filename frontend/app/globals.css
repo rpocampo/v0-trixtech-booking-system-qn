@@ -80,6 +80,34 @@
   --transition-normal: 250ms ease-in-out;
   --transition-slow: 350ms ease-in-out;
 
+  /* Enhanced Typography Scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+  --text-7xl: 4.5rem;
+
+  /* Enhanced Spacing Scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+  --space-32: 8rem;
+
   /* Enhanced Background Theme */
   --background-image: url('/theme-background.svg');
   --background-image-opacity: 0.12;
@@ -289,9 +317,9 @@ button, a, input, textarea, select {
 
 /* TRIXTECH MODERN PROFESSIONAL BUTTON SYSTEM */
 .btn-primary {
-  @apply bg-gradient-to-r from-[var(--primary)] to-[var(--primary-light)] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg active:scale-95 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-[var(--primary)] relative overflow-hidden;
+  @apply bg-gradient-to-r from-[var(--primary)] via-[var(--primary-light)] to-[var(--primary)] text-white px-8 py-4 rounded-2xl font-bold hover:shadow-2xl active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed border-2 border-white/20 relative overflow-hidden;
   background-size: 200% 200%;
-  box-shadow: 0 4px 15px rgb(30, 64, 175, 0.2);
+  box-shadow: 0 8px 32px rgb(30, 64, 175, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .btn-primary::before {
@@ -621,11 +649,27 @@ button, a, input, textarea, select {
 
 /* TRIXTECH MODERN PROFESSIONAL CARD SYSTEM */
 .card {
-  @apply bg-white backdrop-blur-sm border border-[var(--border)] rounded-xl shadow-[var(--shadow)] hover:shadow-[var(--shadow-md)] transition-all duration-300 animate-fade-in;
+  @apply bg-white backdrop-blur-sm border border-[var(--border)] rounded-2xl shadow-[var(--shadow)] hover:shadow-[var(--shadow-lg)] transition-all duration-300 animate-fade-in relative overflow-hidden;
   background: rgba(255, 255, 255, 0.98);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(30, 64, 175, 0.08);
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 50%, var(--primary) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.card:hover::before {
+  opacity: 1;
 }
 
 .card-elevated {
@@ -676,11 +720,15 @@ button, a, input, textarea, select {
 
 /* TRIXTECH MODERN PROFESSIONAL FORM ELEMENTS */
 .input-field {
-  @apply w-full px-4 py-3 border border-[var(--border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--primary)] focus:ring-opacity-30 focus:border-[var(--primary)] bg-white backdrop-blur-sm transition-all duration-200 text-[var(--foreground)] placeholder-[var(--muted)] shadow-[var(--shadow-sm)];
+  @apply w-full px-5 py-4 border-2 border-[var(--border)] rounded-2xl focus:outline-none focus:ring-4 focus:border-[var(--primary)] bg-white/95 backdrop-blur-md transition-all duration-300 text-[var(--foreground)] placeholder-[var(--muted)] shadow-[var(--shadow-sm)] hover:shadow-md;
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(30, 64, 175, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 2px solid rgba(30, 64, 175, 0.12);
+}
+
+.input-field:focus {
+  box-shadow: 0 0 0 4px rgba(30, 64, 175, 0.1);
 }
 
 .input-field:hover {

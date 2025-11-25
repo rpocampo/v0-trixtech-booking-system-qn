@@ -1,4 +1,5 @@
 {
-  "/customer/services/page": "app/customer/services/page.js",
-  "/admin/services/page": "app/admin/services/page.js"
+  "/page": "app/page.js",
+  "/customer/dashboard/page": "app/customer/dashboard/page.js",
+  "/customer/services/page": "app/customer/services/page.js"
 }

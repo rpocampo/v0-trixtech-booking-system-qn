@@ -179,45 +179,54 @@ export default function AdminDashboard() {
       )}
 
       {/* Header */}
-      <div>
-        <h1 className="text-4xl font-bold text-[var(--foreground)]">Admin Dashboard</h1>
-        <p className="text-[var(--muted)] mt-2">Overview of your business performance</p>
+      <div className="text-center mb-12">
+        <h1 className="text-6xl font-black text-transparent bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text mb-4">
+          Admin Dashboard
+        </h1>
+        <p className="text-xl text-[var(--muted)] max-w-2xl mx-auto">
+          Comprehensive overview of your business performance and real-time insights
+        </p>
         {lastUpdate && (
-          <p className="text-xs text-[var(--muted)] mt-1">
-            Last updated: {lastUpdate.toLocaleTimeString()}
+          <p className="text-sm text-[var(--muted)] mt-4 bg-[var(--primary-50)] px-4 py-2 rounded-full inline-block">
+            🔄 Last updated: {lastUpdate.toLocaleTimeString()}
           </p>
         )}
       </div>
 
       {/* Stats Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
-          <div className="stat-label flex items-center gap-2">
-            <span className="text-lg">📅</span>
-            Total Bookings
+      <div className="flex justify-center">
+        <div className="grid md:grid-cols-3 gap-6 max-w-6xl">
+          <div className="stat-box hover:shadow-lg transition-shadow duration-300 p-6">
+            <div className="stat-label flex items-center gap-3 mb-4">
+              <span className="text-2xl">📅</span>
+              <span className="text-lg font-semibold">Total Bookings</span>
+            </div>
+            <div className="stat-value text-[var(--accent)] text-4xl font-bold">{stats.totalBookings}</div>
           </div>
-          <div className="stat-value text-[var(--accent)]">{stats.totalBookings}</div>
-        </div>
-        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
-          <div className="stat-label flex items-center gap-2">
-            <span className="text-lg">👥</span>
-            Booked Customers
+          <div className="stat-box hover:shadow-lg transition-shadow duration-300 p-6">
+            <div className="stat-label flex items-center gap-3 mb-4">
+              <span className="text-2xl">👥</span>
+              <span className="text-lg font-semibold">Booked Customers</span>
+            </div>
+            <div className="stat-value text-blue-600 text-4xl font-bold">{stats.bookedCustomers}</div>
           </div>
-          <div className="stat-value text-blue-600">{stats.bookedCustomers}</div>
-        </div>
-        <div className="stat-box hover:shadow-lg transition-shadow duration-300">
-          <div className="stat-label flex items-center gap-2">
-            <span className="text-lg">📦</span>
-            Total Inventory
+          <div className="stat-box hover:shadow-lg transition-shadow duration-300 p-6">
+            <div className="stat-label flex items-center gap-3 mb-4">
+              <span className="text-2xl">📦</span>
+              <span className="text-lg font-semibold">Total Inventory</span>
+            </div>
+            <div className="stat-value text-purple-600 text-4xl font-bold">{stats.totalInventory}</div>
           </div>
-          <div className="stat-value text-purple-600">{stats.totalInventory}</div>
         </div>
       </div>
 
       {/* Alerts */}
       {lowStockItems.length > 0 && (
-        <div className="card p-6 border-l-4 border-red-500">
-          <h2 className="section-title text-red-600">⚠️ Low Stock Alerts</h2>
+        <div className="card p-8 border-l-4 border-red-500 bg-gradient-to-r from-red-50 to-white">
+          <h2 className="text-3xl font-bold text-red-600 mb-6 flex items-center gap-3">
+            <span className="text-4xl">⚠️</span>
+            Low Stock Alerts
+          </h2>
           <div className="space-y-2">
             {lowStockItems.map((item) => (
               <div key={item._id} className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
@@ -235,27 +244,35 @@ export default function AdminDashboard() {
       )}
 
       {/* Management Cards */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <Link href="/admin/services" className="card-hover p-6 group hover:shadow-xl transition-all duration-300 border-l-4 border-[var(--primary)]">
-          <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">⚙️</div>
-          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">Manage Services</h3>
-          <p className="text-[var(--muted)]">Create, edit, or delete services</p>
-        </Link>
-        <Link href="/admin/bookings" className="card-hover p-6 group hover:shadow-xl transition-all duration-300 border-l-4 border-[var(--accent)]">
-          <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">📅</div>
-          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)] group-hover:text-[var(--accent)] transition-colors">Manage Bookings</h3>
-          <p className="text-[var(--muted)]">Update booking status and payments</p>
-        </Link>
-        <Link href="/admin/customers" className="card-hover p-6 group hover:shadow-xl transition-all duration-300 border-l-4 border-blue-500">
-          <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300">👥</div>
-          <h3 className="text-xl font-semibold mb-2 text-[var(--foreground)] group-hover:text-blue-600 transition-colors">Manage Customers</h3>
-          <p className="text-[var(--muted)]">View and manage customer accounts</p>
-        </Link>
+      <div className="mb-16">
+        <h2 className="text-4xl font-black text-center text-[var(--foreground)] mb-12">
+          Management Center
+        </h2>
+        <div className="grid md:grid-cols-3 gap-8">
+          <Link href="/admin/services" className="card-hover p-8 group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border-l-4 border-[var(--primary)] bg-gradient-to-br from-white to-[var(--primary-50)]">
+            <div className="text-6xl mb-6 group-hover:scale-110 transition-transform duration-300">⚙️</div>
+            <h3 className="text-2xl font-bold mb-4 text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">Manage Services</h3>
+            <p className="text-[var(--muted)] text-lg leading-relaxed">Create, edit, or delete services with advanced inventory management</p>
+          </Link>
+          <Link href="/admin/bookings" className="card-hover p-8 group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border-l-4 border-[var(--accent)] bg-gradient-to-br from-white to-[var(--accent-50)]">
+            <div className="text-6xl mb-6 group-hover:scale-110 transition-transform duration-300">📅</div>
+            <h3 className="text-2xl font-bold mb-4 text-[var(--foreground)] group-hover:text-[var(--accent)] transition-colors">Manage Bookings</h3>
+            <p className="text-[var(--muted)] text-lg leading-relaxed">Update booking status, process payments, and track delivery schedules</p>
+          </Link>
+          <Link href="/admin/customers" className="card-hover p-8 group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border-l-4 border-blue-500 bg-gradient-to-br from-white to-blue-50">
+            <div className="text-6xl mb-6 group-hover:scale-110 transition-transform duration-300">👥</div>
+            <h3 className="text-2xl font-bold mb-4 text-[var(--foreground)] group-hover:text-blue-600 transition-colors">Manage Customers</h3>
+            <p className="text-[var(--muted)] text-lg leading-relaxed">View and manage customer accounts, profiles, and communication</p>
+          </Link>
+        </div>
       </div>
 
       {/* Recent Bookings */}
-      <div className="card p-6">
-        <h2 className="section-title">Recent Bookings</h2>
+      <div className="card p-8">
+        <h2 className="text-3xl font-bold text-[var(--foreground)] mb-6 flex items-center gap-3">
+          <span className="text-4xl">📋</span>
+          Recent Bookings
+        </h2>
         {recentBookingsLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-[var(--primary)] border-t-transparent"></div>
