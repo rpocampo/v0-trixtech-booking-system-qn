@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Button from '../../../../components/Button';
+import Calendar from '../../../../components/Calendar';
 
 interface Service {
   _id: string;
@@ -62,6 +63,8 @@ export default function BookingPage() {
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed' | 'failed'>('pending');
   const [currentBookingId, setCurrentBookingId] = useState<string>('');
   const [currentBookingIntent, setCurrentBookingIntent] = useState<any>(null);
+  const [showBookingSummary, setShowBookingSummary] = useState(false);
+  const [bookingSummaryData, setBookingSummaryData] = useState<any>(null);
 
   // Reset and check availability when selections change
   useEffect(() => {
@@ -403,6 +406,61 @@ export default function BookingPage() {
         return;
       }
 
+      if (!service) {
+        setError('Service information not available');
+        setSubmitting(false);
+        return;
+      }
+
+      // Calculate final price for summary
+      const calculatedPrice = (pricingInfo?.calculatedPrice || service.basePrice) * booking.quantity;
+
+      // Prepare booking summary data
+      const summaryData = {
+        service: {
+          name: service.name,
+          category: service.category,
+          basePrice: service.basePrice,
+          duration: service.duration
+        },
+        booking: {
+          quantity: booking.quantity,
+          bookingDate: booking.bookingDate,
+          deliveryTime: booking.deliveryTime,
+          notes: booking.notes
+        },
+        pricing: {
+          unitPrice: pricingInfo?.calculatedPrice || service.basePrice,
+          totalPrice: calculatedPrice,
+          discount: pricingInfo?.discount || 0,
+          daysBeforeEvent: selectedDate ? Math.max(0, Math.ceil((selectedDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : 0
+        },
+        availability: availabilityStatus
+      };
+
+      setBookingSummaryData(summaryData);
+      setShowBookingSummary(true);
+      setSubmitting(false);
+
+    } catch (err) {
+      setError('An error occurred. Please try again.');
+      setSubmitting(false);
+    }
+  };
+
+  const handleConfirmBooking = async () => {
+    setShowBookingSummary(false);
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please log in to make a booking');
+        setSubmitting(false);
+        return;
+      }
+
       // Step 1: Create booking intent (payment-first approach)
       const intentResponse = await fetch('http://localhost:5000/api/bookings/create-intent', {
         method: 'POST',
@@ -452,7 +510,6 @@ export default function BookingPage() {
       }
     } catch (err) {
       setError('An error occurred. Please try again.');
-    } finally {
       setSubmitting(false);
     }
   };
@@ -587,47 +644,51 @@ export default function BookingPage() {
               />
             </div>
 
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Booking Summary</h3>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>Service:</span>
-                  <span>{service.name}</span>
+            <div className="bg-gray-50 p-4 rounded-lg border">
+              <h3 className="font-semibold mb-3 text-gray-800">Booking Summary</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Service:</span>
+                  <span className="font-medium text-gray-800">{service.name}</span>
                 </div>
                 {service.category === 'equipment' && (
-                  <div className="flex justify-between">
-                    <span>Quantity:</span>
-                    <span>{booking.quantity}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Quantity:</span>
+                    <span className="font-medium text-gray-800">{booking.quantity}</span>
                   </div>
                 )}
                 {selectedDate && (
-                  <div className="flex justify-between">
-                    <span>Days before event:</span>
-                    <span>{Math.max(0, Math.ceil((selectedDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} days</span>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Days before event:</span>
+                    <span className="font-medium text-gray-800">{Math.max(0, Math.ceil((selectedDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} days</span>
                   </div>
                 )}
                 {pricingInfo && pricingInfo.discount > 0 && (
-                  <div className="flex justify-between text-green-600">
+                  <div className="flex justify-between items-center text-green-600">
                     <span>Discount applied:</span>
-                    <span>-{pricingInfo.discount}%</span>
+                    <span className="font-medium">-{pricingInfo.discount}%</span>
                   </div>
                 )}
-                <div className="flex justify-between font-semibold pt-2 border-t">
-                  <span>Total Price:</span>
-                  <span className="text-[var(--primary)]">
-                    ₱{(calculatedPrice || service.basePrice) * booking.quantity}
-                    {pricingInfo && pricingInfo.discount > 0 && (
-                      <span className="text-sm text-gray-500 ml-2">
-                        (was ₱{service.basePrice * booking.quantity})
-                      </span>
-                    )}
-                  </span>
+                <div className="border-t pt-2 mt-3">
+                  <div className="flex justify-between items-center font-semibold text-lg">
+                    <span className="text-gray-800">Total Price:</span>
+                    <div className="text-right">
+                      <div className="text-[var(--primary)] text-xl">
+                        ₱{(calculatedPrice || service.basePrice) * booking.quantity}
+                      </div>
+                      {pricingInfo && pricingInfo.discount > 0 && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          was ₱{service.basePrice * booking.quantity}
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
             <Button type="submit" loading={submitting} size="lg" fullWidth>
-              {submitting ? 'Processing...' : 'Confirm Booking'}
+              {submitting ? 'Processing...' : 'Review & Confirm Booking'}
             </Button>
           </form>
         </div>
@@ -781,25 +842,157 @@ export default function BookingPage() {
         </div>
       )}
 
+      {/* Booking Summary Modal */}
+      {showBookingSummary && bookingSummaryData && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800">Confirm Your Booking</h2>
+                <p className="text-gray-600 mt-2">Please review your booking details before proceeding to payment</p>
+              </div>
+
+              <div className="space-y-6">
+                {/* Service Information */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-900 mb-3">Service Details</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-gray-600">Service:</span>
+                      <div className="font-medium text-gray-900">{bookingSummaryData.service.name}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Category:</span>
+                      <div className="font-medium text-gray-900 capitalize">{bookingSummaryData.service.category}</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Duration:</span>
+                      <div className="font-medium text-gray-900">{bookingSummaryData.service.duration} minutes</div>
+                    </div>
+                    <div>
+                      <span className="text-gray-600">Unit Price:</span>
+                      <div className="font-medium text-gray-900">₱{bookingSummaryData.service.basePrice}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Booking Details */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-900 mb-3">Booking Details</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Date & Time:</span>
+                      <span className="font-medium text-gray-900">{new Date(bookingSummaryData.booking.bookingDate).toLocaleString()}</span>
+                    </div>
+                    {bookingSummaryData.booking.quantity > 1 && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Quantity:</span>
+                        <span className="font-medium text-gray-900">{bookingSummaryData.booking.quantity}</span>
+                      </div>
+                    )}
+                    {bookingSummaryData.booking.deliveryTime && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Delivery Time:</span>
+                        <span className="font-medium text-gray-900">{bookingSummaryData.booking.deliveryTime}</span>
+                      </div>
+                    )}
+                    {bookingSummaryData.booking.notes && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Notes:</span>
+                        <span className="font-medium text-gray-900">{bookingSummaryData.booking.notes}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Pricing Summary */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-blue-900 mb-3">Pricing Summary</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-blue-700">Unit Price:</span>
+                      <span className="font-medium text-blue-900">₱{bookingSummaryData.pricing.unitPrice}</span>
+                    </div>
+                    {bookingSummaryData.booking.quantity > 1 && (
+                      <div className="flex justify-between">
+                        <span className="text-blue-700">Quantity:</span>
+                        <span className="font-medium text-blue-900">×{bookingSummaryData.booking.quantity}</span>
+                      </div>
+                    )}
+                    {bookingSummaryData.pricing.discount > 0 && (
+                      <div className="flex justify-between text-green-600">
+                        <span>Early Booking Discount:</span>
+                        <span className="font-medium">-{bookingSummaryData.pricing.discount}%</span>
+                      </div>
+                    )}
+                    <div className="border-t border-blue-200 pt-2 mt-3">
+                      <div className="flex justify-between text-lg font-bold">
+                        <span className="text-blue-900">Total Amount:</span>
+                        <span className="text-blue-900">₱{bookingSummaryData.pricing.totalPrice.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Availability Status */}
+                {bookingSummaryData.availability && (
+                  <div className={`p-3 rounded-lg ${
+                    bookingSummaryData.availability.available
+                      ? 'bg-green-50 border border-green-200'
+                      : 'bg-red-50 border border-red-200'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-lg ${bookingSummaryData.availability.available ? 'text-green-600' : 'text-red-600'}`}>
+                        {bookingSummaryData.availability.available ? '✓' : '⚠️'}
+                      </span>
+                      <span className={`text-sm font-medium ${bookingSummaryData.availability.available ? 'text-green-800' : 'text-red-800'}`}>
+                        {bookingSummaryData.availability.available ? 'Service is available' : 'Service availability may have changed'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setShowBookingSummary(false)}
+                  className="flex-1 btn-secondary"
+                >
+                  Review Details
+                </button>
+                <button
+                  onClick={handleConfirmBooking}
+                  className="flex-1 btn-primary"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Processing...' : 'Proceed to Payment'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Date Time Picker Modal */}
       {showDateTimePicker && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <h3 className="text-lg font-semibold mb-4">Select Date & Time</h3>
 
               {/* Date Selection */}
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Date</label>
-                <input
-                  type="date"
-                  min={new Date().toISOString().split('T')[0]}
-                  value={selectedDate ? selectedDate.toISOString().split('T')[0] : ''}
-                  onChange={(e) => {
-                    const date = new Date(e.target.value);
-                    setSelectedDate(date);
-                  }}
-                  className="input-field"
+                <Calendar
+                  selectedDate={selectedDate}
+                  onDateSelect={handleDateSelect}
+                  minDate={new Date()}
+                  className="w-full"
                 />
               </div>
 
@@ -852,36 +1045,37 @@ export default function BookingPage() {
 
                 {/* Availability Status */}
                 {availabilityChecked && availabilityStatus && (
-                  <div className={`mt-4 p-3 rounded ${
+                  <div className={`mt-4 p-3 rounded-lg ${
                     availabilityStatus.available
-                      ? 'bg-green-100 border border-green-300'
-                      : 'bg-red-100 border border-red-300'
+                      ? 'bg-green-50 border border-green-200'
+                      : 'bg-red-50 border border-red-200'
                   }`}>
-                    <div className="flex items-start gap-2">
-                      <span className={availabilityStatus.available ? 'text-green-600' : 'text-red-600'}>
+                    <div className="flex items-start gap-3">
+                      <span className={`text-lg ${availabilityStatus.available ? 'text-green-600' : 'text-red-600'}`}>
                         {availabilityStatus.available ? '✓' : '✗'}
                       </span>
-                      <div className={`text-sm ${
+                      <div className={`flex-1 text-sm leading-relaxed ${
                         availabilityStatus.available ? 'text-green-800' : 'text-red-800'
                       }`}>
                         {availabilityStatus.available ? (
                           <div>
-                            <div className="font-medium">Available</div>
-                            <div className="text-xs text-green-700">
+                            <div className="font-semibold mb-1">Available</div>
+                            <div className="text-xs">
                               {availabilityStatus.availableQuantity} {availabilityStatus.availableQuantity === 1 ? 'item' : 'items'} left
                               {availabilityStatus.requiresDelivery && availabilityStatus.deliveryTruckAvailable && (
-                                <span className="ml-2">• Delivery truck available</span>
+                                <div className="mt-1">• Delivery truck available</div>
                               )}
                             </div>
                           </div>
                         ) : (
                           <div>
-                            <div className="font-medium">Not Available</div>
+                            <div className="font-semibold mb-1">Not Available</div>
                             <div className="text-xs mt-1">
                               {availabilityStatus.reason}
                               {availabilityStatus.deliveryTruckReason && (
-                                <div className="mt-1 p-2 bg-red-50 border border-red-200 rounded text-red-700">
-                                  🚚 <strong>Delivery Truck Unavailable:</strong> {availabilityStatus.deliveryTruckReason}
+                                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-xs">
+                                  <div className="font-medium mb-1">🚚 Delivery Truck Unavailable</div>
+                                  <div>{availabilityStatus.deliveryTruckReason}</div>
                                   {availabilityStatus.nextAvailableDeliveryTime && (
                                     <div className="mt-1 text-xs">
                                       Next available: {new Date(availabilityStatus.nextAvailableDeliveryTime).toLocaleString()}

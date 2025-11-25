@@ -65,7 +65,7 @@ function PayMongoGCashContent() {
       case 'redirecting':
         return 'Redirecting to GCash...';
       case 'processing':
-        return 'Setting up payment...';
+        return 'Processing payment... Payment successful!';
       case 'success':
         return 'Payment successful! Redirecting...';
       case 'failed':
@@ -78,6 +78,8 @@ function PayMongoGCashContent() {
   const getStatusColor = () => {
     switch (paymentStatus) {
       case 'success':
+        return 'text-green-600';
+      case 'processing':
         return 'text-green-600';
       case 'failed':
         return 'text-red-600';

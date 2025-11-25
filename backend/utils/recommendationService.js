@@ -104,11 +104,18 @@ const findAlternativeServices = async (originalServiceId, bookingDate, requested
 // Process reservation queue - check if any queued reservations can now be fulfilled
 const processReservationQueue = async () => {
   try {
+    // First, calculate priorities for reservations that don't have them set
+    await ReservationQueue.updateMany(
+      { status: 'queued', priority: 0 },
+      [{ $set: { priority: { $add: ['$priority', 1] } } }] // Simple priority calculation
+    );
 
     const queuedReservations = await ReservationQueue.find({
       status: 'queued',
       expiresAt: { $gt: new Date() }
-    }).sort({ createdAt: 1 }); // First-come, first-served
+    })
+    .populate('customerId', 'name email')
+    .sort({ priority: -1, createdAt: 1 }); // Priority first, then first-come, first-served
 
     let processedCount = 0;
 

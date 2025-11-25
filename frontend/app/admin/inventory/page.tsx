@@ -46,6 +46,20 @@ export default function InventoryManagement() {
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [newQuantity, setNewQuantity] = useState('');
+  const [lowStockAlerts, setLowStockAlerts] = useState<any>(null);
+  const [showAlerts, setShowAlerts] = useState(false);
+  const [selectedServiceBatches, setSelectedServiceBatches] = useState<any>(null);
+  const [showBatches, setShowBatches] = useState(false);
+  const [showAddBatch, setShowAddBatch] = useState(false);
+  const [newBatch, setNewBatch] = useState({
+    batchId: '',
+    supplier: '',
+    quantity: '',
+    unitCost: '',
+    expiryDate: '',
+    location: '',
+    notes: ''
+  });
 
   const fetchInventory = async () => {
     const token = localStorage.getItem('token');
@@ -77,6 +91,87 @@ export default function InventoryManagement() {
     }
   };
 
+  const fetchLowStockAlerts = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await fetch('http://localhost:5000/api/inventory/low-stock-status', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setLowStockAlerts(data);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch low stock alerts:', error);
+    }
+  };
+
+  const fetchServiceBatches = async (serviceId: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const response = await fetch(`http://localhost:5000/api/inventory/service/${serviceId}/batches`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSelectedServiceBatches(data);
+          setShowBatches(true);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch service batches:', error);
+    }
+  };
+
+  const addBatch = async (serviceId: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const batchData = {
+        ...newBatch,
+        quantity: parseInt(newBatch.quantity),
+        unitCost: parseFloat(newBatch.unitCost) || 0,
+        expiryDate: newBatch.expiryDate ? new Date(newBatch.expiryDate) : undefined
+      };
+
+      const response = await fetch(`http://localhost:5000/api/inventory/service/${serviceId}/batches`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(batchData)
+      });
+
+      if (response.ok) {
+        fetchInventory();
+        fetchServiceBatches(serviceId);
+        setShowAddBatch(false);
+        setNewBatch({
+          batchId: '',
+          supplier: '',
+          quantity: '',
+          unitCost: '',
+          expiryDate: '',
+          location: '',
+          notes: ''
+        });
+      }
+    } catch (error) {
+      console.error('Failed to add batch:', error);
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -85,6 +180,7 @@ export default function InventoryManagement() {
     }
 
     fetchInventory();
+    fetchLowStockAlerts();
   }, [router]);
 
   // Real-time updates
@@ -189,7 +285,7 @@ export default function InventoryManagement() {
       </div>
 
       {/* Inventory Stats */}
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-4 gap-6">
         <div className="stat-box hover:shadow-lg transition-shadow duration-300">
           <div className="stat-label flex items-center gap-2">
             <span className="text-lg">📦</span>
@@ -211,7 +307,78 @@ export default function InventoryManagement() {
           </div>
           <div className="stat-value text-red-600">{outOfStockItems}</div>
         </div>
+        <div className="stat-box hover:shadow-lg transition-shadow duration-300 cursor-pointer" onClick={() => setShowAlerts(!showAlerts)}>
+          <div className="stat-label flex items-center gap-2">
+            <span className="text-lg">🔔</span>
+            Alerts
+          </div>
+          <div className="stat-value text-blue-600">
+            {(lowStockAlerts?.critical || 0) + (lowStockAlerts?.warning || 0) + (lowStockAlerts?.info || 0)}
+          </div>
+        </div>
       </div>
+
+      {/* Low Stock Alerts */}
+      {showAlerts && lowStockAlerts && (
+        <div className="card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-blue-900 flex items-center gap-2">
+              <span className="text-xl">🔔</span>
+              Low Stock Alerts
+            </h3>
+            <button
+              onClick={fetchLowStockAlerts}
+              className="btn-secondary text-sm"
+            >
+              Refresh
+            </button>
+          </div>
+
+          {lowStockAlerts.items && lowStockAlerts.items.length > 0 ? (
+            <div className="space-y-3">
+              {lowStockAlerts.items.map((item: any) => (
+                <div key={item.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-100">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      item.level === 'out_of_stock' ? 'bg-red-500' :
+                      item.level === 'critical' ? 'bg-red-500' :
+                      item.level === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+                    }`}></div>
+                    <div>
+                      <p className="font-medium text-gray-900">{item.name}</p>
+                      <p className="text-sm text-gray-600 capitalize">{item.category} • {item.level.replace('_', ' ')}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`font-semibold ${
+                      item.quantity === 0 ? 'text-red-600' :
+                      item.quantity <= 2 ? 'text-red-600' :
+                      item.quantity <= 5 ? 'text-yellow-600' : 'text-blue-600'
+                    }`}>
+                      {item.quantity} left
+                    </span>
+                    <button
+                      onClick={() => {
+                        const foundItem = inventory.find(inv => inv._id === item.id);
+                        if (foundItem) openUpdateModal(foundItem);
+                      }}
+                      className="btn-primary text-xs px-3 py-1"
+                    >
+                      Update Stock
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-2">✅</div>
+              <p className="text-green-700 font-medium">All inventory levels are healthy!</p>
+              <p className="text-sm text-gray-600 mt-1">No low stock alerts at this time.</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Inventory Table */}
       <div className="card p-6">
@@ -280,12 +447,20 @@ export default function InventoryManagement() {
                       </td>
                       <td className="py-4 px-4 text-right font-semibold text-[var(--primary)]">₱{isNaN(item.price) ? '0.00' : item.price.toFixed(2)}</td>
                       <td className="py-4 px-4 text-center">
-                        <button
-                          onClick={() => openUpdateModal(item)}
-                          className="btn-primary text-xs px-3 py-1"
-                        >
-                          Update Stock
-                        </button>
+                        <div className="flex gap-2 justify-center">
+                          <button
+                            onClick={() => openUpdateModal(item)}
+                            className="btn-primary text-xs px-2 py-1"
+                          >
+                            Update Stock
+                          </button>
+                          <button
+                            onClick={() => fetchServiceBatches(item._id)}
+                            className="btn-secondary text-xs px-2 py-1"
+                          >
+                            View Batches
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -362,6 +537,227 @@ export default function InventoryManagement() {
                     setShowModal(false);
                     setSelectedItem(null);
                     setNewQuantity('');
+                  }}
+                  className="btn-secondary flex-1"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Management Modal */}
+      {showBatches && selectedServiceBatches && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-2xl font-bold text-[var(--foreground)]">Batch Management</h3>
+                  <p className="text-[var(--muted)] mt-1">{selectedServiceBatches.service.name}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowAddBatch(true)}
+                    className="btn-primary text-sm"
+                  >
+                    Add Batch
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowBatches(false);
+                      setSelectedServiceBatches(null);
+                    }}
+                    className="btn-secondary text-sm"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+
+              {/* Batch Summary */}
+              <div className="grid md:grid-cols-4 gap-4 mb-6">
+                <div className="stat-box">
+                  <div className="stat-label">Total Quantity</div>
+                  <div className="stat-value text-[var(--primary)]">{selectedServiceBatches.batchDetails.totalQuantity}</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">Active Batches</div>
+                  <div className="stat-value text-blue-600">{selectedServiceBatches.batchDetails.totalBatches}</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">Expiring Soon</div>
+                  <div className="stat-value text-yellow-600">{selectedServiceBatches.batchDetails.expiringCount}</div>
+                </div>
+                <div className="stat-box">
+                  <div className="stat-label">Expired</div>
+                  <div className="stat-value text-red-600">{selectedServiceBatches.batchDetails.expiredCount}</div>
+                </div>
+              </div>
+
+              {/* Batches Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--border)]">
+                      <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Batch ID</th>
+                      <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Supplier</th>
+                      <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">Quantity</th>
+                      <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">Unit Cost</th>
+                      <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">Expiry Date</th>
+                      <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Location</th>
+                      <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedServiceBatches.batchDetails.batches.map((batch: any) => (
+                      <tr key={batch._id} className="border-b border-[var(--border)] hover:bg-gray-50">
+                        <td className="py-3 px-4 font-medium">{batch.batchId}</td>
+                        <td className="py-3 px-4">{batch.supplier}</td>
+                        <td className="py-3 px-4 text-center">{batch.quantity}</td>
+                        <td className="py-3 px-4 text-center">₱{batch.unitCost?.toFixed(2) || '0.00'}</td>
+                        <td className="py-3 px-4 text-center">
+                          {batch.expiryDate ? new Date(batch.expiryDate).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="py-3 px-4">{batch.location || 'N/A'}</td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            batch.quantity === 0 ? 'bg-gray-100 text-gray-800' :
+                            batch.expiryDate && new Date(batch.expiryDate) < new Date() ? 'bg-red-100 text-red-800' :
+                            batch.expiryDate && new Date(batch.expiryDate) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-green-100 text-green-800'
+                          }`}>
+                            {batch.quantity === 0 ? 'Empty' :
+                             batch.expiryDate && new Date(batch.expiryDate) < new Date() ? 'Expired' :
+                             batch.expiryDate && new Date(batch.expiryDate) <= new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) ? 'Expiring' :
+                             'Active'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Batch Modal */}
+      {showAddBatch && selectedServiceBatches && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-2xl font-bold text-[var(--foreground)] mb-4">Add New Batch</h3>
+              <p className="text-[var(--muted)] mb-6">{selectedServiceBatches.service.name}</p>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Batch ID *</label>
+                  <input
+                    type="text"
+                    value={newBatch.batchId}
+                    onChange={(e) => setNewBatch({ ...newBatch, batchId: e.target.value })}
+                    className="input-field w-full"
+                    placeholder="e.g., BATCH-001"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Supplier *</label>
+                  <input
+                    type="text"
+                    value={newBatch.supplier}
+                    onChange={(e) => setNewBatch({ ...newBatch, supplier: e.target.value })}
+                    className="input-field w-full"
+                    placeholder="Supplier name"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Quantity *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={newBatch.quantity}
+                      onChange={(e) => setNewBatch({ ...newBatch, quantity: e.target.value })}
+                      className="input-field w-full"
+                      placeholder="0"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Unit Cost</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={newBatch.unitCost}
+                      onChange={(e) => setNewBatch({ ...newBatch, unitCost: e.target.value })}
+                      className="input-field w-full"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Expiry Date</label>
+                  <input
+                    type="date"
+                    value={newBatch.expiryDate}
+                    onChange={(e) => setNewBatch({ ...newBatch, expiryDate: e.target.value })}
+                    className="input-field w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Location</label>
+                  <input
+                    type="text"
+                    value={newBatch.location}
+                    onChange={(e) => setNewBatch({ ...newBatch, location: e.target.value })}
+                    className="input-field w-full"
+                    placeholder="Warehouse location"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Notes</label>
+                  <textarea
+                    value={newBatch.notes}
+                    onChange={(e) => setNewBatch({ ...newBatch, notes: e.target.value })}
+                    className="input-field w-full"
+                    rows={3}
+                    placeholder="Additional notes..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => addBatch(selectedServiceBatches.service.id)}
+                  className="btn-primary flex-1"
+                >
+                  Add Batch
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddBatch(false);
+                    setNewBatch({
+                      batchId: '',
+                      supplier: '',
+                      quantity: '',
+                      unitCost: '',
+                      expiryDate: '',
+                      location: '',
+                      notes: ''
+                    });
                   }}
                   className="btn-secondary flex-1"
                 >

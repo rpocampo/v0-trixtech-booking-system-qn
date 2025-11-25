@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const logger = require('./logger');
 const User = require('../models/User');
 const OTP = require('../models/OTP');
 
@@ -7,7 +8,7 @@ let transporter = null;
 // Initialize email transporter
 const initializeEmailService = () => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-    console.log('Email service disabled - EMAIL_USER or EMAIL_PASSWORD not configured');
+    logger.warn('Email service disabled - EMAIL_USER or EMAIL_PASSWORD not configured');
     return null;
   }
 
@@ -21,7 +22,7 @@ const initializeEmailService = () => {
     },
   });
 
-  console.log('Email service initialized');
+  logger.info('Email service initialized');
   return transporter;
 };
 

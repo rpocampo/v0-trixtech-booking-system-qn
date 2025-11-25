@@ -403,6 +403,12 @@ function PaymentProcessContent() {
 
             <div className="flex justify-center mb-6">
               <div className="bg-white p-4 rounded-lg border-2 border-gray-200 relative">
+                {/* Account Name Display */}
+                <div className="text-center mb-4">
+                  <div className="text-lg font-bold text-gray-800">MI**I M.</div>
+                  <div className="text-sm text-gray-600">GCash Account</div>
+                </div>
+
                 {generatedQRCode || (qrPayment.qrCode && !qrPayment.qrCode.startsWith('000201')) ? (
                   <img
                     src={generatedQRCode || qrPayment.qrCode}
@@ -490,45 +496,43 @@ function PaymentProcessContent() {
                     Waiting for payment...
                   </div>
 
-                  {/* Test verification button (only in development) */}
-                  {process.env.NODE_ENV === 'development' && (
-                    <button
-                      onClick={async () => {
-                        try {
-                          const token = localStorage.getItem('token');
-                          const response = await fetch(`http://localhost:5000/api/payments/verify-qr/${qrPayment.referenceNumber}`, {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${token}`,
-                            },
-                            body: JSON.stringify({
-                              test: true,
-                              amount: qrPayment.instructions.amount,
-                              referenceNumber: qrPayment.referenceNumber
-                            }),
-                          });
+                  {/* Proceed button for test payment */}
+                  <button
+                    onClick={async () => {
+                      try {
+                        const token = localStorage.getItem('token');
+                        const response = await fetch(`http://localhost:5000/api/payments/verify-qr/${qrPayment.referenceNumber}`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${token}`,
+                          },
+                          body: JSON.stringify({
+                            test: true,
+                            amount: qrPayment.instructions.amount,
+                            referenceNumber: qrPayment.referenceNumber
+                          }),
+                        });
 
-                          if (response.ok) {
-                            setPaymentStatus('completed');
-                            // Clear the cart after successful test payment
-                            clearCart();
-                            setTimeout(() => {
-                              router.push('/customer/bookings?payment=success');
-                            }, 2000);
-                          } else {
-                            setPaymentStatus('failed');
-                          }
-                        } catch (error) {
-                          console.error('Test verification failed:', error);
+                        if (response.ok) {
+                          setPaymentStatus('completed');
+                          // Clear the cart after successful test payment
+                          clearCart();
+                          setTimeout(() => {
+                            router.push('/customer/bookings?payment=success');
+                          }, 2000);
+                        } else {
                           setPaymentStatus('failed');
                         }
-                      }}
-                      className="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
-                    >
-                      Test: Mark as Paid
-                    </button>
-                  )}
+                      } catch (error) {
+                        console.error('Test verification failed:', error);
+                        setPaymentStatus('failed');
+                      }
+                    }}
+                    className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium"
+                  >
+                    Proceed
+                  </button>
                 </div>
               )}
               {paymentStatus === 'completed' && (

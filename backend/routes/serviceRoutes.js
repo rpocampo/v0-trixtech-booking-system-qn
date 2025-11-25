@@ -130,6 +130,17 @@ router.get('/:id', async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
 
+    // Track service view for authenticated users
+    if (req.user && req.user.id) {
+      try {
+        const UserPreferences = require('../models/UserPreferences');
+        await UserPreferences.trackServiceView(req.user.id, service._id, service.category, service.basePrice);
+      } catch (preferenceError) {
+        console.error('Error tracking service view:', preferenceError);
+        // Don't fail the request if preference tracking fails
+      }
+    }
+
     // Ensure price is properly set from basePrice
     const serviceObj = service.toObject();
     serviceObj.price = service.basePrice || 0;

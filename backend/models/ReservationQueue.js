@@ -27,6 +27,18 @@ const reservationQueueSchema = new mongoose.Schema(
     priority: {
       type: Number,
       default: 0, // Higher number = higher priority
+      min: 0,
+      max: 100
+    },
+    priorityReason: {
+      type: String,
+      enum: ['vip', 'loyalty', 'bulk_booking', 'event_organizer', 'manual_override', 'none'],
+      default: 'none'
+    },
+    vipLevel: {
+      type: String,
+      enum: ['platinum', 'gold', 'silver', 'bronze', 'none'],
+      default: 'none'
     },
     status: {
       type: String,
@@ -51,8 +63,51 @@ const reservationQueueSchema = new mongoose.Schema(
 );
 
 // Index for efficient queries
-reservationQueueSchema.index({ status: 1, createdAt: 1 });
+reservationQueueSchema.index({ status: 1, priority: -1, createdAt: 1 });
 reservationQueueSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+reservationQueueSchema.index({ customerId: 1, status: 1 });
+
+// Method to calculate priority based on user profile
+reservationQueueSchema.methods.calculatePriority = async function() {
+  const User = mongoose.model('User');
+  const Booking = mongoose.model('Booking');
+
+  const user = await User.findById(this.customerId);
+  if (!user) return 0;
+
+  let priority = 0;
+
+  // VIP level priority
+  switch (this.vipLevel) {
+    case 'platinum': priority += 80; break;
+    case 'gold': priority += 60; break;
+    case 'silver': priority += 40; break;
+    case 'bronze': priority += 20; break;
+  }
+
+  // Priority reason bonus
+  switch (this.priorityReason) {
+    case 'vip': priority += 30; break;
+    case 'loyalty': priority += 20; break;
+    case 'bulk_booking': priority += 15; break;
+    case 'event_organizer': priority += 25; break;
+    case 'manual_override': priority += 50; break;
+  }
+
+  // Loyalty bonus based on booking history
+  const bookingCount = await Booking.countDocuments({
+    customerId: this.customerId,
+    status: 'confirmed'
+  });
+  priority += Math.min(bookingCount * 2, 20); // Max 20 points for loyalty
+
+  // Time decay - newer reservations get slight priority
+  const hoursSinceCreation = (Date.now() - this.createdAt.getTime()) / (1000 * 60 * 60);
+  priority += Math.max(0, 10 - hoursSinceCreation); // Bonus decreases over time
+
+  this.priority = Math.min(100, Math.max(0, priority));
+  return this.save();
+};
 
 // Method to check if reservation can be fulfilled
 reservationQueueSchema.methods.canFulfill = async function() {

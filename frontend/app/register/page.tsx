@@ -285,6 +285,14 @@ export default function Register() {
                 )}
               </button>
             </div>
+
+            {/* Sign In Link */}
+            <div className="text-center mt-4">
+              <span className="text-sm text-[var(--muted)]">Already have an account? </span>
+              <Link href="/login" className="text-sm text-[var(--primary)] hover:text-[var(--primary-dark)] transition-colors font-semibold">
+                Sign In
+              </Link>
+            </div>
           </form>
         ) : (
           <div className="space-y-6">

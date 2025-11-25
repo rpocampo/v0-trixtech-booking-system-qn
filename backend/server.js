@@ -1,9 +1,14 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const http = require('http');
 const socketIo = require('socket.io');
 const connectDB = require('./config/db');
+const { connectRedis } = require('./config/redis');
 const authRoutes = require('./routes/authRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
@@ -15,11 +20,14 @@ const deliveryRoutes = require('./routes/deliveryRoutes');
 const packageRoutes = require('./routes/packageRoutes');
 const eventTypeRoutes = require('./routes/eventTypeRoutes');
 const otpRoutes = require('./routes/otpRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
+const recommendationsRoutes = require('./routes/recommendationsRoutes');
 const { initializeEmailService } = require('./utils/emailService');
 const { processReservationQueue, cleanupExpiredReservations } = require('./utils/recommendationService');
 const { cleanupExpiredOTPs } = require('./utils/otpService');
 const { errorHandler, requestLogger } = require('./middleware/errorHandler');
 const { monitoringMiddleware, healthCheckHandler } = require('./utils/monitoring');
+const logger = require('./utils/logger');
 
 dotenv.config();
 
@@ -27,7 +35,9 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: process.env.NODE_ENV === 'production'
+      ? process.env.FRONTEND_URL || "https://yourdomain.com"
+      : "http://localhost:3000",
     methods: ["GET", "POST"]
   }
 });
@@ -35,13 +45,63 @@ const io = socketIo(server, {
 // Connect to MongoDB (skip in test environment)
 if (process.env.NODE_ENV !== 'test') {
   connectDB();
+  connectRedis(); // Connect to Redis for distributed locking
 }
 
 initializeEmailService();
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Security Middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: (process.env.RATE_LIMIT_WINDOW || 15) * 60 * 1000, // 15 minutes default
+  max: process.env.RATE_LIMIT_MAX_REQUESTS || 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', limiter);
+
+// CORS configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = process.env.NODE_ENV === 'production'
+      ? [process.env.FRONTEND_URL || "https://yourdomain.com"]
+      : ["http://localhost:3000", "http://127.0.0.1:3000"];
+
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+
+// Data sanitization against NoSQL query injection
+app.use(mongoSanitize());
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request logging and monitoring
 app.use(requestLogger);
 app.use(monitoringMiddleware);
 
@@ -60,9 +120,40 @@ app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/packages', packageRoutes);
 app.use('/api/event-types', eventTypeRoutes);
 app.use('/api/otp', otpRoutes);
+app.use('/api/inventory', inventoryRoutes);
+app.use('/api/recommendations', recommendationsRoutes);
 
 // Enhanced health check with monitoring
 app.get('/api/health', healthCheckHandler);
+
+// Readiness check endpoint
+app.get('/api/ready', async (req, res) => {
+  try {
+    // Check database connectivity
+    await mongoose.connection.db.admin().ping();
+
+    // Check Redis connectivity if available
+    if (global.redisClient) {
+      await global.redisClient.ping();
+    }
+
+    res.json({
+      status: 'ready',
+      timestamp: new Date().toISOString(),
+      services: {
+        database: 'connected',
+        redis: global.redisClient ? 'connected' : 'not configured',
+        email: 'configured' // Email service is initialized at startup
+      }
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'not ready',
+      timestamp: new Date().toISOString(),
+      error: error.message
+    });
+  }
+});
 
 // Handle root path requests
 app.all('/', (req, res) => {
@@ -81,6 +172,8 @@ app.all('/', (req, res) => {
       '/api/packages',
       '/api/event-types',
       '/api/otp',
+      '/api/inventory',
+      '/api/recommendations',
       '/api/health'
     ]
   });
@@ -147,6 +240,6 @@ module.exports = app;
 // Start server only if not in test environment
 if (process.env.NODE_ENV !== 'test') {
   server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    logger.info(`Server running on port ${PORT}`);
   });
 }

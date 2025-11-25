@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const Booking = require('../models/Booking');
 const Service = require('../models/Service');
 const User = require('../models/User');
@@ -8,6 +9,8 @@ const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { sendBookingConfirmation, sendAdminBookingNotification, sendLowStockAlert } = require('../utils/emailService');
 const { sendTemplateNotification } = require('../utils/notificationService');
 const { findAlternativeServices, processReservationQueue } = require('../utils/recommendationService');
+const { triggerLowStockCheck } = require('../utils/lowStockAlertService');
+const lockService = require('../utils/lockService');
 
 const router = express.Router();
 
@@ -39,87 +42,96 @@ router.get('/check-availability/:serviceId', authMiddleware, async (req, res, ne
       });
     }
 
-    let isAvailable = true;
-    let availableQuantity = service.quantity || 1;
-    let reason = '';
-    let deliveryTruckAvailable = true;
-    let deliveryTruckReason = '';
-    let nextAvailableDeliveryTime = null;
+    // Generate lock key for this availability check
+    const lockKey = lockService.generateBookingLockKey(serviceId, date);
+    const lockOwner = `check-${req.user.id}-${Date.now()}`;
 
-    // Import delivery service
-    const { requiresDeliveryTruck, checkDeliveryTruckAvailability } = require('../utils/deliveryService');
+    // Use distributed locking to prevent race conditions
+    const result = await lockService.withLock(lockKey, lockOwner, async () => {
+      let isAvailable = true;
+      let availableQuantity = service.quantity || 1;
+      let reason = '';
+      let deliveryTruckAvailable = true;
+      let deliveryTruckReason = '';
+      let nextAvailableDeliveryTime = null;
 
-    // Check delivery truck availability if service requires delivery
-    const serviceRequiresDelivery = requiresDeliveryTruck(service);
-    if (serviceRequiresDelivery && deliveryTime) {
-      const deliveryDateTime = new Date(`${date}T${deliveryTime}`);
-      const deliveryCheck = await checkDeliveryTruckAvailability(deliveryDateTime, 60); // 60 minutes default
+      // Import delivery service
+      const { requiresDeliveryTruck, checkDeliveryTruckAvailability } = require('../utils/deliveryService');
 
-      deliveryTruckAvailable = deliveryCheck.available;
-      if (!deliveryTruckAvailable) {
-        deliveryTruckReason = deliveryCheck.reason;
-        nextAvailableDeliveryTime = deliveryCheck.nextAvailableTime;
+      // Check delivery truck availability if service requires delivery
+      const serviceRequiresDelivery = requiresDeliveryTruck(service);
+      if (serviceRequiresDelivery && deliveryTime) {
+        const deliveryDateTime = new Date(`${date}T${deliveryTime}`);
+        const deliveryCheck = await checkDeliveryTruckAvailability(deliveryDateTime, 60); // 60 minutes default
+
+        deliveryTruckAvailable = deliveryCheck.available;
+        if (!deliveryTruckAvailable) {
+          deliveryTruckReason = deliveryCheck.reason;
+          nextAvailableDeliveryTime = deliveryCheck.nextAvailableTime;
+        }
       }
-    }
 
-    if (service.category === 'equipment') {
-      // For equipment, check total booked quantity on this date (only paid bookings)
-      const existingBookings = await Booking.find({
-        serviceId,
-        bookingDate: {
-          $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
-          $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
-        },
-        status: 'confirmed',
-        paymentStatus: { $in: ['partial', 'paid'] },
-      });
+      if (service.category === 'equipment') {
+        // For equipment, check total booked quantity on this date (only paid bookings)
+        const existingBookings = await Booking.find({
+          serviceId,
+          bookingDate: {
+            $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
+            $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
+          },
+          status: 'confirmed',
+          paymentStatus: { $in: ['partial', 'paid'] },
+        });
 
-      const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
-      availableQuantity = Math.max(0, service.quantity - totalBooked);
+        const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+        availableQuantity = Math.max(0, service.quantity - totalBooked);
 
-      if (availableQuantity < requestedQuantity) {
-        isAvailable = false;
-        reason = `Only ${availableQuantity} items available for this date`;
+        if (availableQuantity < requestedQuantity) {
+          isAvailable = false;
+          reason = `Only ${availableQuantity} items available for this date`;
+        }
+      } else {
+        // For services, check if any booking exists on this date (only paid bookings)
+        const existingBooking = await Booking.findOne({
+          serviceId,
+          bookingDate: {
+            $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
+            $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
+          },
+          status: 'confirmed',
+          paymentStatus: { $in: ['partial', 'paid'] },
+        });
+
+        if (existingBooking) {
+          isAvailable = false;
+          availableQuantity = 0;
+          reason = 'This service is already booked for this date';
+        }
       }
-    } else {
-      // For services, check if any booking exists on this date (only paid bookings)
-      const existingBooking = await Booking.findOne({
-        serviceId,
-        bookingDate: {
-          $gte: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate()),
-          $lt: new Date(bookingDate.getFullYear(), bookingDate.getMonth(), bookingDate.getDate() + 1)
-        },
-        status: 'confirmed',
-        paymentStatus: { $in: ['partial', 'paid'] },
-      });
 
-      if (existingBooking) {
-        isAvailable = false;
-        availableQuantity = 0;
-        reason = 'This service is already booked for this date';
-      }
-    }
+      // Overall availability combines service availability and delivery truck availability
+      const overallAvailable = isAvailable && deliveryTruckAvailable;
+      const finalReason = !overallAvailable
+        ? (!deliveryTruckAvailable ? deliveryTruckReason : reason)
+        : '';
 
-    // Overall availability combines service availability and delivery truck availability
-    const overallAvailable = isAvailable && deliveryTruckAvailable;
-    const finalReason = !overallAvailable
-      ? (!deliveryTruckAvailable ? deliveryTruckReason : reason)
-      : '';
-
-    res.json({
-      success: true,
-      available: overallAvailable,
-      availableQuantity,
-      requestedQuantity,
-      reason: finalReason,
-      serviceName: service.name,
-      maxQuantity: service.quantity || 1,
-      requiresDelivery: serviceRequiresDelivery,
-      deliveryTruckAvailable,
-      deliveryTruckReason: deliveryTruckReason || null,
-      nextAvailableDeliveryTime,
-      deliveryTime: deliveryTime || null
+      return {
+        success: true,
+        available: overallAvailable,
+        availableQuantity,
+        requestedQuantity,
+        reason: finalReason,
+        serviceName: service.name,
+        maxQuantity: service.quantity || 1,
+        requiresDelivery: serviceRequiresDelivery,
+        deliveryTruckAvailable,
+        deliveryTruckReason: deliveryTruckReason || null,
+        nextAvailableDeliveryTime,
+        deliveryTime: deliveryTime || null
+      };
     });
+
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -208,12 +220,14 @@ router.post('/', authMiddleware, async (req, res, next) => {
     }
 
     if (isAvailable) {
-      // Create booking with optimistic locking approach
-      // We'll use a unique constraint approach by checking availability again right before saving
+      // Use distributed locking for the booking creation process
+      const bookingLockKey = lockService.generateBookingLockKey(serviceId, bookingDateObj.toISOString().split('T')[0]);
+      const bookingLockOwner = `book-${req.user.id}-${Date.now()}`;
 
-      // Double-check availability right before creating booking
-      let finalAvailable = true;
-      let finalAvailableQuantity = service.quantity || 1;
+      const bookingResult = await lockService.withLock(bookingLockKey, bookingLockOwner, async () => {
+        // Double-check availability right before creating booking
+        let finalAvailable = true;
+        let finalAvailableQuantity = service.quantity || 1;
 
         if (service.category === 'equipment') {
           const existingBookings = await Booking.find({
@@ -268,21 +282,17 @@ router.post('/', authMiddleware, async (req, res, next) => {
 
           await queueEntry.save();
 
-          return res.status(202).json({
-            success: true,
+          return {
             queued: true,
             queueId: queueEntry._id,
             alternatives: alternatives.slice(0, 3),
             message: 'Item became unavailable during booking. Added to reservation queue.'
-          });
+          };
         }
 
         // Validate service has pricing information
         if (!service.basePrice || service.basePrice <= 0 || isNaN(service.basePrice)) {
-          return res.status(400).json({
-            success: false,
-            message: `Service "${service.name}" has invalid pricing (₱${service.basePrice}). Please contact support or try a different service.`
-          });
+          throw new Error(`Service "${service.name}" has invalid pricing (₱${service.basePrice}). Please contact support or try a different service.`);
         }
 
         // Calculate dynamic price based on days before checkout
@@ -294,20 +304,14 @@ router.post('/', authMiddleware, async (req, res, next) => {
 
         // Ensure calculated price is valid
         if (!calculatedPrice || isNaN(calculatedPrice) || calculatedPrice <= 0) {
-          return res.status(400).json({
-            success: false,
-            message: 'Unable to calculate service price. Please try again or contact support.'
-          });
+          throw new Error('Unable to calculate service price. Please try again or contact support.');
         }
 
         const totalPrice = calculatedPrice * requestedQuantity;
 
         // Ensure total price is valid
         if (isNaN(totalPrice) || totalPrice <= 0) {
-          return res.status(400).json({
-            success: false,
-            message: 'Invalid total price calculation. Please contact support.'
-          });
+          throw new Error('Invalid total price calculation. Please contact support.');
         }
 
         // Calculate applied multiplier safely
@@ -341,16 +345,42 @@ router.post('/', authMiddleware, async (req, res, next) => {
           bookingData.deliveryDuration = 60; // 1 hour
         }
 
-        const booking = new Booking(bookingData);
+        // Use MongoDB transaction for atomic booking creation and inventory update
+        const session = await mongoose.startSession();
+        let booking;
 
-        await booking.save();
+        try {
+          await session.withTransaction(async () => {
+            // Create booking within transaction
+            booking = new Booking(bookingData);
+            await booking.save({ session });
 
-        // Decrease inventory if it's equipment or supply
-        // NOTE: Inventory management is handled automatically here when bookings are confirmed
-        // The Inventory module provides the interface for manual stock adjustments
-        if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
-          service.quantity = Math.max(0, service.quantity - requestedQuantity);
-          await service.save();
+            // Decrease inventory if it's equipment or supply (within same transaction)
+                if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+                  // Use batch tracking for inventory reduction (FIFO)
+                  await service.reduceBatchQuantity(requestedQuantity);
+
+                  // Trigger low stock alert check after transaction commits
+                  try {
+                    // Use setImmediate to run after transaction completes
+                    setImmediate(async () => {
+                      await triggerLowStockCheck(serviceId);
+                    });
+                  } catch (alertError) {
+                    console.error('Error triggering low stock alert:', alertError);
+                    // Don't fail the booking if alert fails
+                  }
+                }
+          });
+
+          // Transaction committed successfully
+          console.log('Booking and inventory update completed atomically');
+
+        } catch (transactionError) {
+          console.error('Transaction failed:', transactionError);
+          throw transactionError; // Re-throw to be caught by outer catch
+        } finally {
+          await session.endSession();
         }
 
         await booking.populate('serviceId');
@@ -367,11 +397,11 @@ router.post('/', authMiddleware, async (req, res, next) => {
                       amount: booking.totalPrice,
                     },
                   });
-        
+
                   // Admin notification for new pending booking
                   const adminUsers = await User.find({ role: 'admin' });
                   console.log('Found admin users for pending booking notification:', adminUsers.length);
-        
+
                   for (const admin of adminUsers) {
                     console.log('Sending pending booking notification to admin:', admin._id);
                     await sendTemplateNotification(admin._id, 'NEW_PENDING_BOOKING_ADMIN', {
@@ -414,14 +444,28 @@ router.post('/', authMiddleware, async (req, res, next) => {
           console.error('Error sending pending booking notifications:', notificationError);
         }
 
-        res.status(200).json({
+        return {
           success: true,
           booking,
           requiresPayment: true,
           message: 'Booking created. Please complete payment to confirm.'
+        };
+      });
+
+      // Handle the result from the lock operation
+      if (bookingResult.queued) {
+        return res.status(202).json({
+          success: true,
+          queued: true,
+          queueId: bookingResult.queueId,
+          alternatives: bookingResult.alternatives,
+          message: bookingResult.message
         });
+      } else {
+        return res.status(200).json(bookingResult);
+      }
     } else {
-      // Add to reservation queue
+      // Add to reservation queue when not available
       const alternatives = await findAlternativeServices(serviceId, new Date(bookingDate), requestedQuantity);
 
       const queueEntry = new ReservationQueue({
@@ -954,10 +998,20 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     payment.bookingId = booking._id;
     await payment.save();
 
-    // Decrease inventory for equipment/supply items
+    // Decrease inventory for equipment/supply items using batch tracking
     if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
-      service.quantity = Math.max(0, service.quantity - bookingIntent.quantity);
-      await service.save();
+      // Use batch tracking for inventory reduction (FIFO)
+      await service.reduceBatchQuantity(bookingIntent.quantity);
+
+      console.log('Inventory update completed using batch tracking for booking confirmation');
+
+      // Trigger low stock alert check
+      try {
+        await triggerLowStockCheck(bookingIntent.serviceId);
+      } catch (alertError) {
+        console.error('Error triggering low stock alert:', alertError);
+        // Don't fail the booking if alert fails
+      }
     }
 
     // Send confirmation notifications
@@ -1020,6 +1074,24 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     } catch (analyticsError) {
       console.error('Error recording booking analytics:', analyticsError);
       // Don't fail the booking if analytics recording fails
+    }
+
+    // Track user preferences
+    try {
+      const UserPreferences = require('../models/UserPreferences');
+      const service = await Service.findById(bookingIntent.serviceId);
+      if (service) {
+        await UserPreferences.trackServiceBooking(
+          req.user.id,
+          bookingIntent.serviceId,
+          service.category,
+          bookingIntent.totalPrice,
+          null // eventType - could be added later if available
+        );
+      }
+    } catch (preferenceError) {
+      console.error('Error tracking user preferences:', preferenceError);
+      // Don't fail the booking if preference tracking fails
     }
 
     res.status(201).json({

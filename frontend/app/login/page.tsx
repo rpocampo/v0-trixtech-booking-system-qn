@@ -128,6 +128,14 @@ export default function Login() {
             </Link>
           </div>
 
+          {/* Sign Up Link */}
+          <div className="text-center">
+            <span className="text-sm text-[var(--muted)]">Don't have an account? </span>
+            <Link href="/register" className="text-sm text-[var(--primary)] hover:text-[var(--primary-dark)] transition-colors font-semibold">
+              Sign Up
+            </Link>
+          </div>
+
           <div className="mt-6">
             <Button
               type="submit"

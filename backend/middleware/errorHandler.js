@@ -1,11 +1,8 @@
-const fs = require('fs').promises;
-const path = require('path');
+const logger = require('../utils/logger');
 
-// Enhanced error logging
-const logError = async (err, req = null) => {
-  const timestamp = new Date().toISOString();
+// Enhanced error logging using winston
+const logError = (err, req = null) => {
   const errorLog = {
-    timestamp,
     error: {
       name: err.name,
       message: err.message,
@@ -21,26 +18,13 @@ const logError = async (err, req = null) => {
     } : null,
   };
 
-  // Log to console with colors for development
-  console.error('\x1b[31m[ERROR]\x1b[0m', JSON.stringify(errorLog, null, 2));
-
-  // Log to file for production monitoring
-  try {
-    const logDir = path.join(__dirname, '../logs');
-    await fs.mkdir(logDir, { recursive: true });
-
-    const logFile = path.join(logDir, `error-${new Date().toISOString().split('T')[0]}.log`);
-    await fs.appendFile(logFile, JSON.stringify(errorLog) + '\n');
-  } catch (logErr) {
-    console.error('Failed to write error log:', logErr);
-  }
+  // Log error using winston
+  logger.error('Application Error', errorLog);
 };
 
 // Performance monitoring
 const logPerformance = (req, res, responseTime) => {
-  const timestamp = new Date().toISOString();
   const perfLog = {
-    timestamp,
     method: req.method,
     url: req.url,
     statusCode: res.statusCode,
@@ -49,14 +33,14 @@ const logPerformance = (req, res, responseTime) => {
     ip: req.ip,
   };
 
-  // Log slow requests (>500ms)
+  // Log slow requests (>500ms) as warnings
   if (responseTime > 500) {
-    console.warn('\x1b[33m[SLOW REQUEST]\x1b[0m', JSON.stringify(perfLog));
+    logger.warn('Slow Request', perfLog);
   }
 
-  // Log all requests in development (but not during testing)
+  // Log all requests as http level (only in development)
   if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
-    console.log('\x1b[36m[REQUEST]\x1b[0m', `${req.method} ${req.url} - ${res.statusCode} (${responseTime}ms)`);
+    logger.http(`${req.method} ${req.url} - ${res.statusCode} (${responseTime}ms)`);
   }
 };
 

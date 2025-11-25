@@ -1,5 +1,8 @@
 const QRCode = require('qrcode');
 
+// Static GCash QR Code payload for TRIXTECH
+const STATIC_GCASH_QR_PAYLOAD = '00020101021127830012com.p2pqrpay0111GXCHPHM2XXX02089996440303152170200000006560417DWQM4TK3JDO83CHRX5204601653036085802PH5908MI**I M.6008Caloocan6104123463045192';
+
 // GCash QR Code format for payments (EMV QR Code Specification)
 const generateGCashQRData = (paymentData) => {
   const {
@@ -45,16 +48,9 @@ const generateGCashQRData = (paymentData) => {
 // Generate QR code as data URL (for web display)
 const generateQRCodeDataURL = async (paymentData) => {
   try {
-    let qrData;
-
-    // Check if user has personal GCash QR code data
-    if (paymentData.userQRCode) {
-      // Use user's personal GCash QR code data directly
-      qrData = paymentData.userQRCode;
-    } else {
-      // Generate dynamic QR code for payments to include payment-specific data
-      qrData = generateGCashQRData(paymentData);
-    }
+    // Always use the static GCash QR payload for GCash compatibility
+    // GCash only accepts QR codes from registered merchants
+    const qrData = STATIC_GCASH_QR_PAYLOAD;
 
     const options = {
       errorCorrectionLevel: 'M',
@@ -65,7 +61,7 @@ const generateQRCodeDataURL = async (paymentData) => {
         dark: '#000000',
         light: '#FFFFFF'
       },
-      width: 256
+      width: 300 // Larger size for better scanning
     };
 
     const dataURL = await QRCode.toDataURL(qrData, options);
@@ -158,22 +154,69 @@ const validateQRData = (qrData) => {
   }
 };
 
-// Generate payment instructions for QR code
-const generatePaymentInstructions = (paymentData) => {
-  // Instructions for dynamic QR code (always used now)
+// Generate static GCash QR code for TRIXTECH
+const generateStaticGCashQR = async () => {
+  try {
+    const options = {
+      errorCorrectionLevel: 'M',
+      type: 'image/png',
+      quality: 0.92,
+      margin: 1,
+      color: {
+        dark: '#000000',
+        light: '#FFFFFF'
+      },
+      width: 300 // Larger size for better scanning
+    };
+
+    const dataURL = await QRCode.toDataURL(STATIC_GCASH_QR_PAYLOAD, options);
+    return dataURL;
+  } catch (error) {
+    console.error('Error generating static GCash QR code:', error);
+    throw error;
+  }
+};
+
+// Generate payment instructions for static QR code
+const generateStaticPaymentInstructions = (paymentData) => {
   return {
     title: 'Pay with GCash QR Code',
     instructions: [
       '1. Open your GCash app',
-      '2. Tap the QR scanner icon',
-      '3. Point your camera at the QR code below',
-      '4. Review the payment details (amount and merchant should auto-populate)',
-      '5. Confirm and complete the payment'
+      '2. Tap the QR scanner icon or select "Pay QR"',
+      '3. Scan the QR code below',
+      '4. Enter the exact payment amount: ₱' + paymentData.amount.toFixed(2),
+      '5. Add reference number in the message/notes: ' + paymentData.referenceNumber,
+      '6. Confirm and complete the payment',
+      '7. Use the test payment button below to simulate payment for testing'
     ],
     amount: paymentData.amount,
     reference: paymentData.referenceNumber,
-    merchant: paymentData.merchantName || 'TRIXTECH',
-    note: 'Payment details are embedded in the QR code. Payment will be automatically verified and your booking will be confirmed.'
+    merchant: 'TRIXTECH',
+    accountName: 'MI**I M.',
+    note: 'Please send the exact amount and include the reference number for faster processing.'
+  };
+};
+
+// Generate payment instructions for QR code
+const generatePaymentInstructions = (paymentData) => {
+  // Instructions for static GCash QR code
+  return {
+    title: 'Pay with GCash QR Code',
+    instructions: [
+      '1. Open your GCash app',
+      '2. Tap the QR scanner icon or select "Pay QR"',
+      '3. Scan the QR code below',
+      `4. Enter the exact payment amount: ₱${paymentData.amount.toFixed(2)}`,
+      `5. Add reference number in notes: ${paymentData.referenceNumber}`,
+      '6. Confirm and complete the payment',
+      '7. Payment will be automatically verified and your booking confirmed'
+    ],
+    amount: paymentData.amount,
+    reference: paymentData.referenceNumber,
+    merchant: 'TRIXTECH',
+    accountName: 'MI**I M.',
+    note: 'Please send the exact amount and include the reference number for automatic processing.'
   };
 };
 
@@ -183,5 +226,8 @@ module.exports = {
   generateQRCodeBuffer,
   generateQRCodeBase64,
   validateQRData,
-  generatePaymentInstructions
+  generatePaymentInstructions,
+  generateStaticGCashQR,
+  generateStaticPaymentInstructions,
+  STATIC_GCASH_QR_PAYLOAD
 };

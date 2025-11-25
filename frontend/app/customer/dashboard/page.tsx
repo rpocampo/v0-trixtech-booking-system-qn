@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import PersonalizedRecommendations from '../../../components/PersonalizedRecommendations';
 
 interface User {
   id: string;
@@ -283,6 +284,11 @@ export default function CustomerDashboard() {
             </Link>
           </div>
         )}
+      </div>
+
+      {/* Personalized Recommendations */}
+      <div className="card-elevated p-6 animate-fade-in" style={{ animationDelay: '800ms' }}>
+        <PersonalizedRecommendations limit={6} />
       </div>
     </div>
   );

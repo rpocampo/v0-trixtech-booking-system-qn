@@ -227,11 +227,11 @@ export default function Services() {
       )}
 
       {/* Hero Section */}
-      <div className="text-center mb-12">
-        <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent">
+      <div className="text-center mb-8 sm:mb-12 px-4">
+        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent">
           Our Services
         </h1>
-        <p className="text-xl text-[var(--muted)] max-w-2xl mx-auto">
+        <p className="text-lg sm:text-xl text-[var(--muted)] max-w-2xl mx-auto leading-relaxed">
           Discover our comprehensive range of event services designed to make your special occasions unforgettable
         </p>
       </div>
@@ -357,15 +357,15 @@ export default function Services() {
       ) : (
         <>
           {/* Category Filter */}
-          <div className="flex flex-wrap justify-center gap-2 mb-8">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 px-4">
             {['all', 'party', 'equipment', 'corporate', 'wedding', 'birthday', 'funeral'].map((category) => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-full transition-all duration-200 capitalize ${
+                className={`px-3 sm:px-4 py-2 rounded-full transition-all duration-200 capitalize text-sm sm:text-base font-medium ${
                   selectedCategory === category
-                    ? 'bg-[var(--primary)] text-white'
-                    : 'bg-[var(--surface-secondary)] text-[var(--muted)] hover:bg-[var(--primary)] hover:text-white'
+                    ? 'bg-[var(--primary)] text-white shadow-md'
+                    : 'bg-[var(--surface-secondary)] text-[var(--muted)] hover:bg-[var(--primary)] hover:text-white hover:shadow-sm'
                 }`}
               >
                 {category}
@@ -373,14 +373,15 @@ export default function Services() {
             ))}
           </div>
 
-          {/* Services Grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            {filteredServices.map((service, index) => (
-              <div
-                key={service._id}
-                className="service-card group animate-fade-in"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
+          {/* Services Grid - Full Width Responsive Carousel */}
+          <div className="w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+              {filteredServices.map((service, index) => (
+                <div
+                  key={service._id}
+                  className="service-card group animate-fade-in w-full min-h-[450px] min-w-[320px]"
+                  style={{ animationDelay: `${index * 100}ms` }}
+                >
                 {/* Service Image */}
                 <div className="relative overflow-hidden rounded-t-xl bg-gradient-to-br from-[var(--primary-50)] to-[var(--accent)]/10">
                   {service.image ? (
@@ -394,7 +395,7 @@ export default function Services() {
                     />
                   ) : (
                     <div className="w-full h-48 flex items-center justify-center bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20">
-                      <div className="text-4xl opacity-50">
+                      <div className="text-4xl sm:text-5xl opacity-50">
                         {service.category === 'party' ? '🎉' :
                          service.category === 'wedding' ? '💒' :
                          service.category === 'corporate' ? '🏢' :
@@ -406,15 +407,15 @@ export default function Services() {
                   )}
 
                   {/* Service Type Badge */}
-                  <div className="absolute top-3 left-3 flex gap-2">
-                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                  <div className="absolute top-3 left-3 flex flex-col gap-1">
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
                       service.serviceType === 'service' ? 'bg-blue-500 text-white' :
                       service.serviceType === 'equipment' ? 'bg-green-500 text-white' :
                       'bg-purple-500 text-white'
                     }`}>
                       {service.serviceType}
                     </span>
-                    <span className="px-3 py-1 bg-white/90 backdrop-blur-sm text-[var(--primary)] text-xs font-semibold rounded-full capitalize">
+                    <span className="px-2 py-1 bg-white/95 backdrop-blur-sm text-[var(--primary)] text-xs font-semibold rounded-full capitalize shadow-sm">
                       {service.category.replace('-', ' ')}
                     </span>
                   </div>
@@ -422,83 +423,87 @@ export default function Services() {
                   {/* Availability Badge */}
                   {(service.serviceType === 'equipment' || service.serviceType === 'supply') && service.quantity !== undefined && (
                     <div className="absolute top-3 right-3">
-                      <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full shadow-sm ${
                         service.quantity > 5 ? 'bg-green-500 text-white' :
                         service.quantity > 0 ? 'bg-yellow-500 text-white' :
                         'bg-red-500 text-white'
                       }`}>
-                        {service.quantity > 0 ? `${service.quantity} available` : 'Out of stock'}
+                        {service.quantity > 0 ? `${service.quantity} left` : 'Out of stock'}
                       </span>
                     </div>
                   )}
                 </div>
 
                 {/* Service Content */}
-                <div className="p-6 flex flex-col flex-1">
-                  <h3 className="text-xl font-bold text-[var(--foreground)] mb-2 group-hover:text-[var(--primary)] transition-colors">
+                <div className="p-4 sm:p-6 flex flex-col flex-1 min-h-[200px]">
+                  <h3 className="text-lg sm:text-xl font-bold text-[var(--foreground)] mb-2 group-hover:text-[var(--primary)] transition-colors line-clamp-2">
                     {service.name}
                   </h3>
 
-                  <p className="text-[var(--muted)] text-sm mb-4 line-clamp-2 flex-1">
+                  <p className="text-[var(--muted)] text-sm mb-4 line-clamp-3 flex-1 leading-relaxed">
                     {service.description}
                   </p>
 
                   {/* Service Details */}
-                  <div className="space-y-3 mb-6">
+                  <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
                     {service.serviceType === 'service' && service.duration && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-[var(--muted)] flex items-center gap-1">
-                          <span>⏱️</span> Duration
+                      <div className="flex items-center justify-between text-xs sm:text-sm">
+                        <span className="text-[var(--muted)] flex items-center gap-1 flex-1 min-w-0">
+                          <span>⏱️</span>
+                          <span className="truncate">Duration</span>
                         </span>
-                        <span className="font-semibold text-[var(--foreground)]">{service.duration} min</span>
+                        <span className="font-semibold text-[var(--foreground)] flex-shrink-0 ml-2">{service.duration} min</span>
                       </div>
                     )}
 
                     {(service.serviceType === 'equipment' || service.serviceType === 'supply') && service.quantity && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-[var(--muted)] flex items-center gap-1">
-                          <span>📦</span> Available
+                      <div className="flex items-center justify-between text-xs sm:text-sm">
+                        <span className="text-[var(--muted)] flex items-center gap-1 flex-1 min-w-0">
+                          <span>📦</span>
+                          <span className="truncate">Available</span>
                         </span>
-                        <span className="font-semibold text-[var(--foreground)]">{service.quantity} units</span>
+                        <span className="font-semibold text-[var(--foreground)] flex-shrink-0 ml-2">{service.quantity} units</span>
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-[var(--muted)] flex items-center gap-1">
-                        <span>💰</span> {(service.priceType || 'flat-rate').replace('-', ' ')}
+                    <div className="flex items-center justify-between text-xs sm:text-sm">
+                      <span className="text-[var(--muted)] flex items-center gap-1 flex-1 min-w-0">
+                        <span>💰</span>
+                        <span className="truncate">{(service.priceType || 'flat-rate').replace('-', ' ')}</span>
                       </span>
-                      <span className="text-2xl font-bold text-[var(--primary)]">₱{isNaN(service.price) ? '0.00' : service.price.toFixed(2)}</span>
+                      <span className="text-xl sm:text-2xl font-bold text-[var(--primary)] flex-shrink-0 ml-2">₱{isNaN(service.price) ? '0.00' : service.price.toFixed(2)}</span>
                     </div>
 
                     {service.location && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-[var(--muted)] flex items-center gap-1">
-                          <span>📍</span> Location
+                      <div className="flex items-center justify-between text-xs sm:text-sm">
+                        <span className="text-[var(--muted)] flex items-center gap-1 flex-1 min-w-0">
+                          <span>📍</span>
+                          <span className="truncate">Location</span>
                         </span>
-                        <span className="font-semibold text-[var(--foreground)] capitalize">{service.location}</span>
+                        <span className="font-semibold text-[var(--foreground)] flex-shrink-0 ml-2 capitalize">{service.location}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2 mt-auto">
                     <button
                       onClick={() => viewServiceDetails(service)}
-                      className="btn-secondary flex-1 text-center"
+                      className="btn-secondary w-full text-center text-sm py-3"
                     >
                       View Details
                     </button>
                     {isInCart(service._id) ? (
-                      <div className="flex gap-2 flex-1">
+                      <div className="flex gap-2">
                         <button
                           onClick={() => handleAddToCart(service)}
-                          className="btn-secondary flex-1 text-center text-green-600 border-green-200 hover:bg-green-50"
+                          className="btn-secondary flex-1 text-center text-green-600 border-green-200 hover:bg-green-50 text-sm py-3"
                         >
                           + Add More
                         </button>
                         <Link
                           href="/customer/cart"
-                          className="btn-primary flex-1 text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300"
+                          className="btn-primary flex-1 text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300 text-sm py-3"
                         >
                           View Cart ({getItemQuantity(service._id)})
                         </Link>
@@ -506,7 +511,7 @@ export default function Services() {
                     ) : (
                       <button
                         onClick={() => handleAddToCart(service)}
-                        className="btn-primary flex-1 text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300"
+                        className="btn-primary w-full text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300 text-sm py-3"
                       >
                         Add to Cart
                       </button>
@@ -515,18 +520,19 @@ export default function Services() {
                 </div>
               </div>
             ))}
+            </div>
           </div>
 
           {/* Call to Action */}
-          <div className="mt-16 text-center">
-            <div className="card-gradient p-8 max-w-2xl mx-auto">
-              <h3 className="text-2xl font-bold text-[var(--foreground)] mb-4">
+          <div className="mt-12 sm:mt-16 text-center px-4">
+            <div className="card-gradient p-6 sm:p-8 max-w-2xl mx-auto">
+              <h3 className="text-xl sm:text-2xl font-bold text-[var(--foreground)] mb-3 sm:mb-4">
                 Need Something Custom?
               </h3>
-              <p className="text-[var(--muted)] mb-6">
+              <p className="text-[var(--muted)] mb-4 sm:mb-6 text-sm sm:text-base leading-relaxed">
                 Can't find exactly what you're looking for? Contact us for custom event planning services.
               </p>
-              <button className="btn-secondary">
+              <button className="btn-secondary text-sm sm:text-base px-6 py-3">
                 Contact Us
               </button>
             </div>
@@ -536,34 +542,34 @@ export default function Services() {
 
       {/* Service Details Modal */}
       {showServiceModal && selectedService && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-3xl font-bold text-[var(--foreground)]">{selectedService.name}</h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+            <div className="p-4 sm:p-6">
+              <div className="flex justify-between items-start mb-4 sm:mb-6">
+                <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--foreground)] pr-4 line-clamp-2">{selectedService.name}</h3>
                 <button
                   onClick={() => setShowServiceModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-3xl"
+                  className="text-gray-500 hover:text-gray-700 text-2xl sm:text-3xl flex-shrink-0"
                 >
                   ×
                 </button>
               </div>
 
-              <div className="grid lg:grid-cols-2 gap-8">
+              <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
                 {/* Service Image */}
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {selectedService.image ? (
                     <img
                       src={selectedService.image.startsWith('/uploads/') ? `http://localhost:5000${selectedService.image}` : selectedService.image}
                       alt={selectedService.name}
-                      className="w-full h-64 object-cover rounded-lg"
+                      className="w-full h-48 sm:h-56 lg:h-64 object-cover rounded-lg"
                       onError={(e) => {
                         e.currentTarget.src = 'https://via.placeholder.com/600x400?text=Service+Image';
                       }}
                     />
                   ) : (
-                    <div className="w-full h-64 bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 rounded-lg flex items-center justify-center">
-                      <div className="text-6xl opacity-50">
+                    <div className="w-full h-48 sm:h-56 lg:h-64 bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 rounded-lg flex items-center justify-center">
+                      <div className="text-4xl sm:text-5xl lg:text-6xl opacity-50">
                         {selectedService.category === 'party' ? '🎉' :
                          selectedService.category === 'wedding' ? '💒' :
                          selectedService.category === 'corporate' ? '🏢' :
@@ -582,7 +588,7 @@ export default function Services() {
                           key={index}
                           src={image.startsWith('/uploads/') ? `http://localhost:5000${image}` : image}
                           alt={`${selectedService.name} ${index + 1}`}
-                          className="w-full h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                          className="w-full h-16 sm:h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
                           onError={(e) => {
                             e.currentTarget.src = 'https://via.placeholder.com/150x100?text=Image';
                           }}
@@ -746,16 +752,16 @@ export default function Services() {
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-4 mt-8 pt-6 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
                 <button
                   onClick={() => setShowServiceModal(false)}
-                  className="btn-secondary flex-1"
+                  className="btn-secondary flex-1 order-2 sm:order-1 text-sm sm:text-base py-3"
                 >
                   Close
                 </button>
                 <Link
                   href={`/customer/booking/${selectedService._id}`}
-                  className="btn-primary flex-1 text-center"
+                  className="btn-primary flex-1 text-center order-1 sm:order-2 text-sm sm:text-base py-3"
                   onClick={() => setShowServiceModal(false)}
                 >
                   Book This Service
