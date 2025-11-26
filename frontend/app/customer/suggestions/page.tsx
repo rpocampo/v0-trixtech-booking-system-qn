@@ -70,7 +70,7 @@ export default function SuggestionsPage() {
       }
 
       // First get all services
-      const servicesResponse = await fetch('http://localhost:5000/api/services', {
+      const servicesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -99,7 +99,7 @@ export default function SuggestionsPage() {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/bookings/suggestions/predictive', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings/suggestions/predictive`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -315,7 +315,7 @@ export default function SuggestionsPage() {
               <div className="w-full h-48 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg mb-4 flex items-center justify-center text-4xl">
                 {rec.service.image ? (
                   <img
-                    src={`http://localhost:5000${rec.service.image}`}
+                    src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${rec.service.image}`}
                     alt={rec.service.name}
                     className="w-full h-full object-cover rounded-lg"
                     onError={(e) => {

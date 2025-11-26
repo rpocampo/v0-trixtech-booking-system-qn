@@ -50,7 +50,7 @@ const bookingSchema = new mongoose.Schema(
     },
     paymentType: {
       type: String,
-      enum: ['full'],
+      enum: ['full', 'down_payment', 'remaining_balance'],
       default: 'full',
     },
     amountPaid: {

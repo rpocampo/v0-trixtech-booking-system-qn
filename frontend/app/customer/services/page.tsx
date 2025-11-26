@@ -74,7 +74,7 @@ export default function Services() {
         }
       });
 
-      const response = await fetch(`http://localhost:5000/api/services?${queryParams}`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services?${queryParams}`);
       const data = await response.json();
       if (data.success) {
         setServices(data.services);
@@ -170,7 +170,6 @@ export default function Services() {
     if (!socket) return;
 
     const handleInventoryUpdate = (data: any) => {
-      console.log('Inventory updated:', data);
       setUpdating(true);
 
       // Update the specific service's quantity
@@ -186,7 +185,6 @@ export default function Services() {
     };
 
     const handleServiceUpdate = (data: any) => {
-      console.log('Service updated:', data);
       setUpdating(true);
 
       // Update the service details
@@ -386,7 +384,7 @@ export default function Services() {
                 <div className="relative overflow-hidden rounded-t-xl bg-gradient-to-br from-[var(--primary-50)] to-[var(--accent)]/10">
                   {service.image ? (
                     <img
-                      src={service.image.startsWith('/uploads/') ? `http://localhost:5000${service.image}` : service.image}
+                      src={service.image.startsWith('/uploads/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${service.image}` : service.image}
                       alt={service.name}
                       className="service-image w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
                       onError={(e) => {
@@ -560,7 +558,7 @@ export default function Services() {
                 <div className="space-y-3 sm:space-y-4">
                   {selectedService.image ? (
                     <img
-                      src={selectedService.image.startsWith('/uploads/') ? `http://localhost:5000${selectedService.image}` : selectedService.image}
+                      src={selectedService.image.startsWith('/uploads/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${selectedService.image}` : selectedService.image}
                       alt={selectedService.name}
                       className="w-full h-48 sm:h-56 lg:h-64 object-cover rounded-lg"
                       onError={(e) => {
@@ -586,7 +584,7 @@ export default function Services() {
                       {selectedService.gallery.slice(0, 3).map((image, index) => (
                         <img
                           key={index}
-                          src={image.startsWith('/uploads/') ? `http://localhost:5000${image}` : image}
+                          src={image.startsWith('/uploads/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${image}` : image}
                           alt={`${selectedService.name} ${index + 1}`}
                           className="w-full h-16 sm:h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
                           onError={(e) => {
@@ -774,3 +772,4 @@ export default function Services() {
     </div>
   );
 }
+

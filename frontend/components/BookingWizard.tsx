@@ -90,7 +90,7 @@ export default function BookingWizard({ service, onComplete, onCancel }: Booking
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch(`http://localhost:5000/api/bookings/check-availability/${service._id}?date=${date}&quantity=${quantity}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings/check-availability/${service._id}?date=${date}&quantity=${quantity}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

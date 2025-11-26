@@ -140,7 +140,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       // Check each item in cart
       for (const item of items) {
         try {
-          const response = await fetch(`http://localhost:5000/api/services/${item.id}`, {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services/${item.id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
 
@@ -189,7 +189,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       const updatedItems = await Promise.all(
         items.map(async (item) => {
           try {
-            const response = await fetch(`http://localhost:5000/api/services/${item.id}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services/${item.id}`, {
               headers: { Authorization: `Bearer ${token}` },
             });
 

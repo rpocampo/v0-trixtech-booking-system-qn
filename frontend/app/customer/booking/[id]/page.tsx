@@ -97,13 +97,13 @@ export default function BookingPage() {
   useEffect(() => {
     const fetchService = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/services/${serviceId}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services/${serviceId}`);
         const data = await response.json();
         if (data.success) {
           setService(data.service);
         }
       } catch (error) {
-        console.error('Failed to fetch service:', error);
+        console.error(`Failed to fetch service:`, error);
       } finally {
         setLoading(false);
       }
@@ -119,13 +119,13 @@ export default function BookingPage() {
       if (!serviceId) return;
 
       try {
-        const response = await fetch(`http://localhost:5000/api/analytics/recommendations/${serviceId}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/analytics/recommendations/${serviceId}`);
         const data = await response.json();
         if (data.success) {
           setRecommendations(data.recommendations);
         }
       } catch (error) {
-        console.error('Failed to fetch recommendations:', error);
+        console.error(`Failed to fetch recommendations:`, error);
       }
     };
 
@@ -146,7 +146,7 @@ export default function BookingPage() {
         return false;
       }
 
-      let url = `http://localhost:5000/api/bookings/check-availability/${serviceId}?date=${date.toISOString().split('T')[0]}&quantity=${quantity}`;
+      let url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings/check-availability/${serviceId}?date=${date.toISOString().split('T')[0]}&quantity=${quantity}`;
       if (deliveryTime) {
         url += `&deliveryTime=${deliveryTime}`;
       }
@@ -196,7 +196,7 @@ export default function BookingPage() {
       const daysBefore = Math.ceil((bookingDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
       const daysBeforeCheckout = Math.max(0, daysBefore);
 
-      const response = await fetch(`http://localhost:5000/api/services/pricing/${service._id}?daysBefore=${daysBeforeCheckout}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services/pricing/${service._id}?daysBefore=${daysBeforeCheckout}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -208,7 +208,7 @@ export default function BookingPage() {
         }
       }
     } catch (error) {
-      console.error('Error calculating price:', error);
+      console.error(`Error calculating price:`, error);
     }
   };
 
@@ -259,10 +259,8 @@ export default function BookingPage() {
   };
 
   const createQRPayment = async (bookingId: string, amount: number, token: string) => {
-    console.log('createQRPayment called with:', { bookingId, amount, token: token ? 'present' : 'missing' });
-
     try {
-      const response = await fetch('http://localhost:5000/api/payments/create-qr', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/create-qr`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -273,22 +271,16 @@ export default function BookingPage() {
           amount,
         }),
       });
-
-      console.log('QR payment API response status:', response.status);
-
       if (response.status === 401) {
         throw new Error('Your session has expired. Please log in again.');
       }
 
       const data = await response.json();
-      console.log('QR payment API response data:', data);
-
       if (!response.ok) {
         throw new Error(data.message || 'Failed to create QR payment');
       }
 
       if (data.success) {
-        console.log('QR payment created successfully:', data);
         setQrPayment({
           qrCode: data.qrCode,
           instructions: data.instructions,
@@ -316,7 +308,7 @@ export default function BookingPage() {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/bookings/confirm', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings/confirm`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -342,7 +334,6 @@ export default function BookingPage() {
 
       if (data.success) {
         // Booking confirmed successfully
-        console.log('Booking confirmed successfully');
         router.push('/customer/bookings?payment=success');
       } else {
         setError('Failed to confirm booking. Please contact support.');
@@ -356,7 +347,7 @@ export default function BookingPage() {
   const startPaymentPolling = (referenceNumber: string, token: string) => {
     const pollInterval = setInterval(async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/payments/status/${referenceNumber}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/status/${referenceNumber}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -462,7 +453,7 @@ export default function BookingPage() {
       }
 
       // Step 1: Create booking intent (payment-first approach)
-      const intentResponse = await fetch('http://localhost:5000/api/bookings/create-intent', {
+      const intentResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings/create-intent`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -499,7 +490,6 @@ export default function BookingPage() {
         setSubmitting(false);
       } else if (intentData.success && intentData.payment) {
         // Payment intent created successfully, show QR code
-        console.log('Booking intent created, showing payment QR code');
         setQrPayment(intentData.payment);
         setCurrentBookingIntent(intentData.bookingIntent);
         setShowPayment(true);
@@ -763,7 +753,7 @@ export default function BookingPage() {
                       onClick={async () => {
                         try {
                           const token = localStorage.getItem('token');
-                          const response = await fetch(`http://localhost:5000/api/payments/verify-qr/${qrPayment.referenceNumber}`, {
+                          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/verify-qr/${qrPayment.referenceNumber}`, {
                             method: 'POST',
                             headers: {
                               'Content-Type': 'application/json',
@@ -1137,7 +1127,7 @@ export default function BookingPage() {
               <div key={rec._id} className="card p-4">
                 {rec.image && (
                   <img
-                    src={rec.image.startsWith('/uploads/') ? `http://localhost:5000${rec.image}` : rec.image}
+                    src={rec.image.startsWith('/uploads/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${rec.image}` : rec.image}
                     alt={rec.name}
                     className="w-full h-32 object-cover rounded-lg mb-3"
                     onError={(e) => {

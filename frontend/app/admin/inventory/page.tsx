@@ -61,12 +61,14 @@ export default function InventoryManagement() {
     notes: ''
   });
 
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
   const fetchInventory = async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
     try {
-      const response = await fetch('http://localhost:5000/api/services', {
+      const response = await fetch(`${apiUrl}/api/services`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -96,7 +98,7 @@ export default function InventoryManagement() {
     if (!token) return;
 
     try {
-      const response = await fetch('http://localhost:5000/api/inventory/low-stock-status', {
+      const response = await fetch(`${apiUrl}/api/inventory/low-stock-status`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -116,7 +118,7 @@ export default function InventoryManagement() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/inventory/service/${serviceId}/batches`, {
+      const response = await fetch(`${apiUrl}/api/inventory/service/${serviceId}/batches`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -144,7 +146,7 @@ export default function InventoryManagement() {
         expiryDate: newBatch.expiryDate ? new Date(newBatch.expiryDate) : undefined
       };
 
-      const response = await fetch(`http://localhost:5000/api/inventory/service/${serviceId}/batches`, {
+      const response = await fetch(`${apiUrl}/api/inventory/service/${serviceId}/batches`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -188,7 +190,6 @@ export default function InventoryManagement() {
     if (!socket) return;
 
     const handleInventoryUpdate = (data: any) => {
-      console.log('Inventory updated:', data);
       setUpdating(true);
       setLastUpdate(new Date());
       fetchInventory();
@@ -207,7 +208,7 @@ export default function InventoryManagement() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/inventory/service/${itemId}/quantity`, {
+      const response = await fetch(`${apiUrl}/api/inventory/service/${itemId}/quantity`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -227,8 +228,6 @@ export default function InventoryManagement() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Inventory updated:', data);
-
         // Update local state immediately for better UX
         setInventory(prev =>
           prev.map(item =>
@@ -433,7 +432,7 @@ export default function InventoryManagement() {
                         <div className="flex items-center gap-3">
                           {item.image ? (
                             <img
-                              src={item.image.startsWith('/uploads/') ? `http://localhost:5000${item.image}` : item.image}
+                              src={item.image.startsWith('/uploads/') ? `${apiUrl}${item.image}` : item.image}
                               alt={item.name}
                               className="w-10 h-10 rounded-lg object-cover"
                               onError={(e) => {
@@ -509,7 +508,7 @@ export default function InventoryManagement() {
                 <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg mb-4">
                   {selectedItem.image ? (
                     <img
-                      src={selectedItem.image.startsWith('/uploads/') ? `http://localhost:5000${selectedItem.image}` : selectedItem.image}
+                      src={selectedItem.image.startsWith('/uploads/') ? `${apiUrl}${selectedItem.image}` : selectedItem.image}
                       alt={selectedItem.name}
                       className="w-12 h-12 rounded-lg object-cover"
                       onError={(e) => {

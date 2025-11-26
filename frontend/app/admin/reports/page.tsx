@@ -36,12 +36,14 @@ export default function Reports() {
   const [updating, setUpdating] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
   const fetchReports = async () => {
     try {
       const token = localStorage.getItem('token');
 
       // Fetch inventory reports
-      const inventoryResponse = await fetch('http://localhost:5000/api/analytics/inventory', {
+      const inventoryResponse = await fetch(`${apiUrl}/api/analytics/inventory`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const inventoryData = await inventoryResponse.json();
@@ -63,7 +65,7 @@ export default function Reports() {
     try {
       const token = localStorage.getItem('token');
       const dateParam = date || selectedDate;
-      const response = await fetch(`http://localhost:5000/api/bookings/admin/delivery-schedules?date=${dateParam}`, {
+      const response = await fetch(`${apiUrl}/api/bookings/admin/delivery-schedules?date=${dateParam}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -85,7 +87,6 @@ export default function Reports() {
     if (!socket) return;
 
     const handleInventoryUpdate = (data: any) => {
-      console.log('Inventory updated for reports:', data);
       setUpdating(true);
 
       // Refresh the reports data
@@ -95,7 +96,6 @@ export default function Reports() {
     };
 
     const handleServiceUpdate = (data: any) => {
-      console.log('Service updated for reports:', data);
       setUpdating(true);
 
       // Refresh the reports data

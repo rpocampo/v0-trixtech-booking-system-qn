@@ -136,10 +136,10 @@ router.get('/export', adminMiddleware, async (req, res, next) => {
         log.timestamp,
         log.eventType,
         log.userId,
-        log.action,
+        log.details.action || '',
         JSON.stringify(log.details),
-        log.metadata.ip || '',
-        log.metadata.userAgent || ''
+        log.ip || '',
+        log.userAgent || ''
       ]);
 
       const csvContent = [csvHeaders, ...csvRows]

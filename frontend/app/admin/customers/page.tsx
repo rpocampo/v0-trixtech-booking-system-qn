@@ -20,7 +20,7 @@ export default function AdminCustomers() {
     const fetchCustomers = async () => {
       const token = localStorage.getItem('token');
       try {
-        const response = await fetch('http://localhost:5000/api/users', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/users`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -79,3 +79,4 @@ export default function AdminCustomers() {
     </div>
   );
 }
+

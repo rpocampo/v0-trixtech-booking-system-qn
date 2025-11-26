@@ -14,7 +14,7 @@ describe('Authentication API', () => {
       const userData = {
         name: 'Test User',
         email: 'test@example.com',
-        password: 'password123'
+        password: 'Password123'
       };
 
       const response = await request(app)
@@ -33,7 +33,7 @@ describe('Authentication API', () => {
       const userData1 = {
         name: 'Test User 1',
         email: 'duplicate@example.com',
-        password: 'password123'
+        password: 'Password123'
       };
 
       await request(app)
@@ -45,7 +45,7 @@ describe('Authentication API', () => {
       const userData2 = {
         name: 'Test User 2',
         email: 'duplicate@example.com', // Same email
-        password: 'password123'
+        password: 'Password123'
       };
 
       const response = await request(app)
@@ -64,7 +64,7 @@ describe('Authentication API', () => {
       const userData = {
         name: 'Login Test User',
         email: 'login@example.com',
-        password: 'password123'
+        password: 'Password123'
       };
 
       await request(app)
@@ -75,7 +75,7 @@ describe('Authentication API', () => {
       // Now login
       const loginData = {
         email: 'login@example.com',
-        password: 'password123'
+        password: 'Password123'
       };
 
       const response = await request(app)
@@ -93,7 +93,7 @@ describe('Authentication API', () => {
       const userData = {
         name: 'Wrong Password User',
         email: 'wrongpass@example.com',
-        password: 'password123'
+        password: 'Password123'
       };
 
       await request(app)

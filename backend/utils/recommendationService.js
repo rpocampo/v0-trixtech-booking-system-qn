@@ -17,6 +17,43 @@ const findAlternativeServices = async (originalServiceId, bookingDate, requested
 
     const alternatives = [];
 
+    // Separate equipment and non-equipment services
+    const equipmentServices = similarServices.filter(s => s.category === 'equipment' && s.quantity);
+    const nonEquipmentServices = similarServices.filter(s => s.category !== 'equipment');
+
+    // Handle equipment availability in batch
+    const equipmentBookingMap = new Map();
+    if (equipmentServices.length > 0) {
+      const equipmentIds = equipmentServices.map(s => s._id);
+      const equipmentBookings = await Booking.find({
+        serviceId: { $in: equipmentIds },
+        bookingDate: bookingDate,
+        status: 'confirmed',
+        paymentStatus: { $in: ['partial', 'paid'] },
+      });
+
+      for (const booking of equipmentBookings) {
+        const key = booking.serviceId.toString();
+        equipmentBookingMap.set(key, (equipmentBookingMap.get(key) || 0) + booking.quantity);
+      }
+    }
+
+    // Handle non-equipment availability in batch
+    const nonEquipmentBookedSet = new Set();
+    if (nonEquipmentServices.length > 0) {
+      const nonEquipmentIds = nonEquipmentServices.map(s => s._id);
+      const nonEquipmentBookings = await Booking.find({
+        serviceId: { $in: nonEquipmentIds },
+        bookingDate: bookingDate,
+        status: 'confirmed',
+        paymentStatus: { $in: ['partial', 'paid'] },
+      });
+
+      for (const booking of nonEquipmentBookings) {
+        nonEquipmentBookedSet.add(booking.serviceId.toString());
+      }
+    }
+
     for (const service of similarServices) {
       let availableQuantity = service.quantity || 1;
       let reason = '';
@@ -24,14 +61,7 @@ const findAlternativeServices = async (originalServiceId, bookingDate, requested
 
       // For equipment, check availability on the specific date
       if (service.category === 'equipment' && service.quantity) {
-        const existingBookings = await Booking.find({
-          serviceId: service._id,
-          bookingDate: bookingDate,
-          status: 'confirmed',
-          paymentStatus: { $in: ['partial', 'paid'] },
-        });
-
-        const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+        const totalBooked = equipmentBookingMap.get(service._id.toString()) || 0;
         availableQuantity = Math.max(0, service.quantity - totalBooked);
 
         if (availableQuantity < requestedQuantity) {
@@ -42,14 +72,7 @@ const findAlternativeServices = async (originalServiceId, bookingDate, requested
         }
       } else if (service.category !== 'equipment') {
         // For services, check if already booked on this date
-        const existingBooking = await Booking.findOne({
-          serviceId: service._id,
-          bookingDate: bookingDate,
-          status: 'confirmed',
-          paymentStatus: { $in: ['partial', 'paid'] },
-        });
-
-        if (existingBooking) {
+        if (nonEquipmentBookedSet.has(service._id.toString())) {
           isAvailable = false;
           reason = 'Already booked on this date';
         } else {

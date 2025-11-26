@@ -264,7 +264,7 @@ export default function CheckoutPage() {
     const pollInterval = setInterval(async () => {
       try {
         // Use enhanced status endpoint for automatic processing
-        const response = await fetch(`http://localhost:5000/api/payments/status-enhanced/${referenceNumber}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/status-enhanced/${referenceNumber}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -281,7 +281,7 @@ export default function CheckoutPage() {
               try {
                 const confirmPromises = Array.isArray(paymentBooking)
                   ? paymentBooking.map(bookingData =>
-                      fetch('http://localhost:5000/api/bookings/confirm', {
+                      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings/confirm`, {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
@@ -294,7 +294,7 @@ export default function CheckoutPage() {
                       })
                     )
                   : [
-                      fetch('http://localhost:5000/api/bookings/confirm', {
+                      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings/confirm`, {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
@@ -374,7 +374,7 @@ export default function CheckoutPage() {
         }
 
         // Create booking intent for each item (payment-first approach)
-        const intentResponse = await fetch('http://localhost:5000/api/bookings/create-intent', {
+        const intentResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings/create-intent`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -521,7 +521,7 @@ export default function CheckoutPage() {
                   <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-2xl">
                     {item.image ? (
                       <img
-                        src={item.image.startsWith('/uploads/') ? `http://localhost:5000${item.image}` : item.image}
+                        src={item.image.startsWith('/uploads/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${item.image}` : item.image}
                         alt={item.name}
                         className="w-full h-full object-cover rounded-lg"
                         onError={(e) => {

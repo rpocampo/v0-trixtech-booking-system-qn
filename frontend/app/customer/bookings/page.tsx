@@ -73,7 +73,7 @@ export default function Bookings() {
           return;
         }
 
-        const response = await fetch('http://localhost:5000/api/bookings', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -102,14 +102,13 @@ export default function Bookings() {
     if (!socket) return;
 
     const handleBookingCreated = async (data: any) => {
-      console.log('New booking created:', data);
       setUpdating(true);
 
       // Refetch bookings to get the complete booking data
       try {
         const token = localStorage.getItem('token');
         if (token) {
-          const response = await fetch('http://localhost:5000/api/bookings', {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings`, {
             headers: { Authorization: `Bearer ${token}` },
           });
 
@@ -240,3 +239,4 @@ export default function Bookings() {
     </div>
   );
 }
+

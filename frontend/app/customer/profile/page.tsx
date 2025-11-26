@@ -35,7 +35,7 @@ export default function Profile() {
         return;
       }
       try {
-        const response = await fetch('http://localhost:5000/api/auth/me', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -74,7 +74,7 @@ export default function Profile() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/users/${user?._id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/users/${user?._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -110,7 +110,7 @@ export default function Profile() {
       const formDataUpload = new FormData();
       formDataUpload.append('qrCode', file);
 
-      const response = await fetch(`http://localhost:5000/api/users/${user?._id}/gcash-qr`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/users/${user?._id}/gcash-qr`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -141,7 +141,7 @@ export default function Profile() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/users/${user?._id}/gcash-qr`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/users/${user?._id}/gcash-qr`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -175,7 +175,7 @@ export default function Profile() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/users/${user?._id}/gcash-qr`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/users/${user?._id}/gcash-qr`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -378,3 +378,4 @@ export default function Profile() {
     </div>
   );
 }
+

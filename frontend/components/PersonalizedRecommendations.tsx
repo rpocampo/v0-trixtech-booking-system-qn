@@ -51,7 +51,7 @@ export default function PersonalizedRecommendations({
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/recommendations/personalized?limit=${limit}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/recommendations/personalized?limit=${limit}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -81,7 +81,7 @@ export default function PersonalizedRecommendations({
     if (!token) return;
 
     try {
-      const response = await fetch('http://localhost:5000/api/recommendations/favorites', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/recommendations/favorites`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ export default function PersonalizedRecommendations({
             {rec.item.image && (
               <div className="mb-3">
                 <img
-                  src={rec.item.image.startsWith('/uploads/') ? `http://localhost:5000${rec.item.image}` : rec.item.image}
+                  src={rec.item.image.startsWith('/uploads/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${rec.item.image}` : rec.item.image}
                   alt={rec.item.name}
                   className="w-full h-32 object-cover rounded-lg"
                   onError={(e) => {

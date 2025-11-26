@@ -28,10 +28,10 @@ export default function AdminDashboard() {
 
     try {
       const [servicesRes, customersRes] = await Promise.all([
-        fetch('http://localhost:5000/api/services', {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        fetch('http://localhost:5000/api/users', {
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/users`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
 
     try {
       setRecentBookingsLoading(true);
-      const response = await fetch('http://localhost:5000/api/bookings/admin/all?limit=10', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings/admin/all?limit=10`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -117,7 +117,6 @@ export default function AdminDashboard() {
     if (!socket) return;
 
     const handleNewBooking = (data: any) => {
-      console.log('New booking received:', data);
       setUpdating(true);
       setLastUpdate(new Date());
 
@@ -128,7 +127,6 @@ export default function AdminDashboard() {
     };
 
     const handleInventoryUpdate = (data: any) => {
-      console.log('Inventory updated:', data);
       setUpdating(true);
       setLastUpdate(new Date());
 
@@ -139,7 +137,6 @@ export default function AdminDashboard() {
     };
 
     const handleServiceUpdate = (data: any) => {
-      console.log('Service updated:', data);
       setUpdating(true);
       setLastUpdate(new Date());
 
@@ -483,3 +480,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+

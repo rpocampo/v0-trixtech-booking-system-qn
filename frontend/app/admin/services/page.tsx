@@ -92,7 +92,7 @@ export default function AdminServices() {
     const fetchServices = async () => {
       const token = localStorage.getItem('token');
       try {
-        const response = await fetch('http://localhost:5000/api/services', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -114,7 +114,6 @@ export default function AdminServices() {
     if (!socket) return;
 
     const handleServiceUpdate = (data: any) => {
-      console.log('Service updated via real-time:', data);
       setUpdating(true);
 
       // Update the specific service
@@ -134,14 +133,13 @@ export default function AdminServices() {
     };
 
     const handleServiceCreated = (data: any) => {
-      console.log('New service created via real-time:', data);
       setUpdating(true);
 
       // Refresh the entire services list to get the new service
       const fetchUpdatedServices = async () => {
         const token = localStorage.getItem('token');
         try {
-          const response = await fetch('http://localhost:5000/api/services', {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           const data = await response.json();
@@ -159,7 +157,6 @@ export default function AdminServices() {
     };
 
     const handleServiceDeleted = (data: any) => {
-      console.log('Service deleted via real-time:', data);
       setUpdating(true);
 
       // Remove the deleted service from the list
@@ -262,7 +259,7 @@ export default function AdminServices() {
         formDataToSend.append('image', formData.image);
       }
 
-      const response = await fetch('http://localhost:5000/api/services', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -304,7 +301,7 @@ export default function AdminServices() {
     const token = localStorage.getItem('token');
 
     try {
-      const response = await fetch(`http://localhost:5000/api/services/${id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -380,7 +377,7 @@ export default function AdminServices() {
         });
       }
 
-      const response = await fetch(`http://localhost:5000/api/services/${editingService._id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services/${editingService._id}`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -695,3 +692,4 @@ export default function AdminServices() {
     </div>
   );
 }
+

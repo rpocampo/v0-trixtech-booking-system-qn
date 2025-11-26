@@ -56,7 +56,6 @@ export default function CartPage() {
     if (!socket) return;
 
     const handleInventoryUpdate = (data: any) => {
-      console.log('Cart: Inventory updated:', data);
       setLastStockUpdate(new Date());
 
       // Refresh stock data for cart items
@@ -186,7 +185,7 @@ export default function CartPage() {
                 <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 flex items-center justify-center text-2xl">
                   {item.image ? (
                     <img
-                      src={item.image.startsWith('/uploads/') ? `http://localhost:5000${item.image}` : item.image}
+                      src={item.image.startsWith('/uploads/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${item.image}` : item.image}
                       alt={item.name}
                       className="w-full h-full object-cover rounded-lg"
                       onError={(e) => {

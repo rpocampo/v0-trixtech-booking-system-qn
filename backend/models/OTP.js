@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const crypto = require('crypto');
 
 const otpSchema = new mongoose.Schema(
   {
@@ -69,8 +70,8 @@ otpSchema.methods.verifyOTP = function(enteredOTP) {
 
 // Static method to generate secure OTP
 otpSchema.statics.generateOTP = function() {
-  // Generate 6-digit numeric OTP
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  // Generate 6-digit numeric OTP using cryptographically secure random
+  return crypto.randomInt(100000, 1000000).toString();
 };
 
 // Static method to find valid OTP

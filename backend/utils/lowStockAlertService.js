@@ -248,7 +248,9 @@ const cleanupAlertHistory = () => {
 };
 
 // Clean up alert history every 24 hours
-setInterval(cleanupAlertHistory, 24 * 60 * 60 * 1000);
+if (process.env.NODE_ENV !== 'test') {
+  setInterval(cleanupAlertHistory, 24 * 60 * 60 * 1000);
+}
 
 module.exports = {
   checkLowStockAlerts,

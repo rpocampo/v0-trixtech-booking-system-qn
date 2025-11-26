@@ -159,29 +159,38 @@ packageSchema.index({ isPopular: -1, priority: -1 });
 
 // Method to calculate total price
 packageSchema.methods.calculateTotalPrice = function() {
-  let total = this.basePrice;
+  try {
+    let total = this.basePrice || 0;
 
-  // Add inclusion prices
-  if (this.inclusions && this.inclusions.length > 0) {
-    total += this.inclusions.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // Add inclusion prices
+    if (this.inclusions && this.inclusions.length > 0) {
+      total += this.inclusions.reduce((sum, item) => {
+        const price = item.price || 0;
+        const quantity = item.quantity || 1;
+        return sum + (price * quantity);
+      }, 0);
+    }
+
+    // Add delivery fee if included
+    if (this.deliveryIncluded && this.deliveryFee) {
+      total += this.deliveryFee;
+    }
+
+    // Add setup fee
+    if (this.setupFee) {
+      total += this.setupFee;
+    }
+
+    // Apply discount
+    if (this.discountPercentage > 0 && this.discountPercentage <= 100) {
+      total = total * (1 - this.discountPercentage / 100);
+    }
+
+    return Math.round(Math.max(0, total));
+  } catch (error) {
+    console.error('Error calculating total price:', error);
+    return 0;
   }
-
-  // Add delivery fee if included
-  if (this.deliveryIncluded && this.deliveryFee) {
-    total += this.deliveryFee;
-  }
-
-  // Add setup fee
-  if (this.setupFee) {
-    total += this.setupFee;
-  }
-
-  // Apply discount
-  if (this.discountPercentage > 0) {
-    total = total * (1 - this.discountPercentage / 100);
-  }
-
-  return Math.round(total);
 };
 
 // Method to check if package is available for given criteria
@@ -203,10 +212,15 @@ packageSchema.methods.isAvailableFor = async function(eventType, guestCount, ser
 
   // Check if all required inclusions are available
   if (this.inclusions && this.inclusions.length > 0) {
-    for (const inclusion of this.inclusions) {
-      if (inclusion.isRequired) {
-        const Service = mongoose.model('Service');
-        const service = await Service.findById(inclusion.serviceId);
+    const requiredInclusions = this.inclusions.filter(inc => inc.isRequired);
+    if (requiredInclusions.length > 0) {
+      const serviceIds = requiredInclusions.map(inc => inc.serviceId);
+      const Service = mongoose.model('Service');
+      const services = await Service.find({ _id: { $in: serviceIds } });
+      const serviceMap = new Map(services.map(s => [s._id.toString(), s]));
+
+      for (const inclusion of requiredInclusions) {
+        const service = serviceMap.get(inclusion.serviceId.toString());
 
         if (!service || !service.isAvailable) {
           return { available: false, reason: `${inclusion.name} is not available` };

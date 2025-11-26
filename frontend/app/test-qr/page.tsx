@@ -17,7 +17,7 @@ export default function TestQRPage() {
       setError('');
 
       // Test QR generation without authentication
-      const response = await fetch('http://localhost:5000/api/payments/test-qr', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/test-qr`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

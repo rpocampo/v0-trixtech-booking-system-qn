@@ -5,10 +5,11 @@ const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
+const path = require('path');
 const http = require('http');
 const socketIo = require('socket.io');
 const connectDB = require('./config/db');
-const { connectRedis } = require('./config/redis');
+const { connectRedis, redisClient } = require('./config/redis');
 const authRoutes = require('./routes/authRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
@@ -61,7 +62,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      imgSrc: ["'self'", "data:", "https:", "http:"],
     },
   },
 }));
@@ -99,6 +100,10 @@ app.use(cors(corsOptions));
 
 // Data sanitization against NoSQL query injection
 app.use(mongoSanitize());
+
+// Input sanitization and validation
+const inputSanitizer = require('./middleware/inputSanitizer');
+app.use(inputSanitizer);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -139,8 +144,8 @@ app.get('/api/ready', async (req, res) => {
     await mongoose.connection.db.admin().ping();
 
     // Check Redis connectivity if available
-    if (global.redisClient) {
-      await global.redisClient.ping();
+    if (redisClient) {
+      await redisClient.ping();
     }
 
     res.json({
@@ -148,7 +153,7 @@ app.get('/api/ready', async (req, res) => {
       timestamp: new Date().toISOString(),
       services: {
         database: 'connected',
-        redis: global.redisClient ? 'connected' : 'not configured',
+        redis: redisClient ? 'connected' : 'not configured',
         email: 'configured' // Email service is initialized at startup
       }
     });
@@ -201,8 +206,7 @@ io.on('connection', (socket) => {
   });
 });
 
-// Make io available globally for emitting events
-global.io = io;
+// Socket.IO instance is available for emitting events (no global pollution)
 
 // Error handling
 app.use(errorHandler);

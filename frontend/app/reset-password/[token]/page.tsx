@@ -26,7 +26,7 @@ export default function ResetPassword() {
     // Verify token on page load
     const verifyToken = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/auth/verify-reset-token/${token}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/verify-reset-token/${token}`);
 
         if (response.ok) {
           setTokenValid(true);
@@ -88,7 +88,7 @@ export default function ResetPassword() {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/reset-password', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

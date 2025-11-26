@@ -5,13 +5,18 @@ const Service = require('../models/Service');
 const User = require('../models/User');
 const ReservationQueue = require('../models/ReservationQueue');
 const BookingAnalytics = require('../models/BookingAnalytics');
+const Payment = require('../models/Payment');
+const UserPreferences = require('../models/UserPreferences');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
-const { sendBookingConfirmation, sendAdminBookingNotification, sendLowStockAlert } = require('../utils/emailService');
+const { sendBookingConfirmation } = require('../utils/emailService');
 const { sendTemplateNotification } = require('../utils/notificationService');
-const { findAlternativeServices, processReservationQueue } = require('../utils/recommendationService');
+const { findAlternativeServices } = require('../utils/recommendationService');
 const { triggerLowStockCheck } = require('../utils/lowStockAlertService');
 const lockService = require('../utils/lockService');
 const { auditService } = require('../utils/auditService');
+const { requiresDeliveryTruck, checkDeliveryTruckAvailability, getDeliverySchedules, getDeliveryTruckStatus } = require('../utils/deliveryService');
+const { generateTransactionId, generateReferenceNumber } = require('../utils/paymentService');
+const { generateQRCodeDataURL, generatePaymentInstructions } = require('../utils/qrCodeService');
 
 const router = express.Router();
 
@@ -56,8 +61,6 @@ router.get('/check-availability/:serviceId', authMiddleware, async (req, res, ne
       let deliveryTruckReason = '';
       let nextAvailableDeliveryTime = null;
 
-      // Import delivery service
-      const { requiresDeliveryTruck, checkDeliveryTruckAvailability } = require('../utils/deliveryService');
 
       // Check delivery truck availability if service requires delivery
       const serviceRequiresDelivery = requiresDeliveryTruck(service);
@@ -155,8 +158,6 @@ router.post('/', authMiddleware, async (req, res, next) => {
     const requestedQuantity = quantity || 1;
     const bookingDateObj = new Date(bookingDate);
 
-    // Import delivery service
-    const { requiresDeliveryTruck, checkDeliveryTruckAvailability } = require('../utils/deliveryService');
     const serviceRequiresDelivery = requiresDeliveryTruck(service);
 
     // Check delivery truck availability if service requires delivery
@@ -529,20 +530,6 @@ router.post('/', authMiddleware, async (req, res, next) => {
             <p>You've been added to our reservation queue with first-come, first-served priority.</p>
             <p><strong>Requested:</strong> ${requestedQuantity} ${service.category === 'equipment' ? 'items' : 'service'}</p>
             <p><strong>Date:</strong> ${new Date(bookingDate).toLocaleDateString()}</p>
-
-            ${alternatives.length > 0 ? `
-            <h3>Alternative Options Available:</h3>
-            <ul>
-              ${alternatives.map(alt => `
-                <li>
-                  <strong>${alt.name}</strong> - ₱${alt.price}
-                  ${alt.isAvailable ? '<span style="color: green;">(Available)</span>' : '<span style="color: red;">(Limited)</span>'}
-                  <br><small>${alt.reason}</small>
-                </li>
-              `).join('')}
-            </ul>
-            ` : ''}
-
             <p>We'll notify you immediately when your reservation becomes available!</p>
             <p>Thank you for your patience.</p>
           `,
@@ -846,8 +833,6 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
     };
 
     // Create payment record for the intent
-    const Payment = require('../models/Payment');
-    const { generateTransactionId, generateReferenceNumber } = require('../utils/paymentService');
 
     const transactionId = generateTransactionId();
     const referenceNumber = generateReferenceNumber();
@@ -877,7 +862,6 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
     await payment.save();
 
     // Generate payment QR code data
-    const { generateQRCodeDataURL, generatePaymentInstructions } = require('../utils/qrCodeService');
 
     // Generate QR code data
     const paymentDescription = `Full Payment - ${transactionId}`;
@@ -929,7 +913,6 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     }
 
     // Find the payment record (it should exist from create-intent)
-    const Payment = require('../models/Payment');
     const payment = await Payment.findOne({
       referenceNumber: paymentReference,
       userId: req.user.id
@@ -1047,7 +1030,6 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       });
 
       // Admin notification
-      const User = require('../models/User');
       const adminUsers = await User.find({ role: 'admin' });
       for (const admin of adminUsers) {
         await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
@@ -1099,7 +1081,6 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
 
     // Track user preferences
     try {
-      const UserPreferences = require('../models/UserPreferences');
       const service = await Service.findById(bookingIntent.serviceId);
       if (service) {
         await UserPreferences.trackServiceBooking(
@@ -1216,7 +1197,6 @@ async function recordBookingAnalytics(customerId, currentServiceId, quantity) {
 router.get('/admin/delivery-schedules', adminMiddleware, async (req, res, next) => {
   try {
     const { date } = req.query;
-    const { getDeliverySchedules } = require('../utils/deliveryService');
 
     const schedules = await getDeliverySchedules(date ? new Date(date) : null);
 
@@ -1233,7 +1213,6 @@ router.get('/admin/delivery-schedules', adminMiddleware, async (req, res, next) 
 // Get delivery truck status (available/busy)
 router.get('/admin/delivery-truck-status', adminMiddleware, async (req, res, next) => {
   try {
-    const { getDeliveryTruckStatus } = require('../utils/deliveryService');
 
     const status = await getDeliveryTruckStatus();
 
@@ -1255,7 +1234,6 @@ router.get('/delivery-slots/available', authMiddleware, async (req, res, next) =
       return res.status(400).json({ success: false, message: 'Date is required' });
     }
 
-    const { checkDeliveryTruckAvailability } = require('../utils/deliveryService');
 
     // Generate time slots from 8 AM to 6 PM (10 hours)
     const timeSlots = [];
