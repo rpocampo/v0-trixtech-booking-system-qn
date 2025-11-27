@@ -1,28 +1,39 @@
+const sgMail = require('@sendgrid/mail');
 const nodemailer = require('nodemailer');
 const User = require('../models/User');
 const OTP = require('../models/OTP');
 
+let emailServiceInitialized = false;
 let transporter = null;
 
-// Initialize email transporter
+// Initialize email service
 const initializeEmailService = () => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-    console.log('Email service disabled - EMAIL_USER or EMAIL_PASSWORD not configured');
-    return null;
+  // Try SendGrid first (preferred for production)
+  if (process.env.SENDGRID_API_KEY) {
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+    emailServiceInitialized = true;
+    console.log('SendGrid email service initialized');
+    return true;
   }
 
-  transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: process.env.EMAIL_PORT || 587,
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD,
-    },
-  });
+  // Fallback to Gmail SMTP for development/testing
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+    transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port: process.env.EMAIL_PORT || 587,
+      secure: false,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
+    emailServiceInitialized = true;
+    console.log('Gmail SMTP email service initialized (development mode)');
+    return true;
+  }
 
-  console.log('Email service initialized');
-  return transporter;
+  console.log('Email service disabled - neither SENDGRID_API_KEY nor EMAIL_USER/EMAIL_PASSWORD configured');
+  return false;
 };
 
 // Retry utility with exponential backoff
@@ -89,7 +100,7 @@ const recordSuccess = () => {
 
 // Send booking confirmation email with fallback
 const sendBookingConfirmation = async (email, bookingDetails) => {
-  if (!transporter) {
+  if (!emailServiceInitialized) {
     console.log('Email service not configured, skipping confirmation');
     return;
   }
@@ -116,7 +127,19 @@ const sendBookingConfirmation = async (email, bookingDetails) => {
 
   try {
     await retryWithBackoff(async () => {
-      await transporter.sendMail(mailOptions);
+      if (process.env.SENDGRID_API_KEY) {
+        // Use SendGrid
+        const msg = {
+          to: email,
+          from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
+          subject: 'Booking Confirmation - TRIXTECH',
+          html: mailOptions.html,
+        };
+        await sgMail.send(msg);
+      } else {
+        // Use nodemailer (Gmail SMTP)
+        await transporter.sendMail(mailOptions);
+      }
     });
 
     recordSuccess();
@@ -145,7 +168,7 @@ const sendBookingConfirmation = async (email, bookingDetails) => {
 
 // Send booking cancellation email
 const sendCancellationEmail = async (email, bookingDetails) => {
-  if (!transporter) return;
+  if (!emailServiceInitialized) return;
 
   const mailOptions = {
     from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
@@ -161,7 +184,17 @@ const sendCancellationEmail = async (email, bookingDetails) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    if (process.env.SENDGRID_API_KEY) {
+      const msg = {
+        to: email,
+        from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
+        subject: 'Booking Cancelled - TRIXTECH',
+        html: mailOptions.html,
+      };
+      await sgMail.send(msg);
+    } else {
+      await transporter.sendMail(mailOptions);
+    }
     console.log(`Cancellation email sent to ${email}`);
   } catch (error) {
     console.error('Error sending email:', error);
@@ -170,7 +203,7 @@ const sendCancellationEmail = async (email, bookingDetails) => {
 
 // Send admin notification for new booking
 const sendAdminBookingNotification = async (bookingDetails, customerDetails) => {
-  if (!transporter || !process.env.ADMIN_EMAIL) return;
+  if (!emailServiceInitialized || !process.env.ADMIN_EMAIL) return;
 
   const mailOptions = {
     from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
@@ -188,7 +221,17 @@ const sendAdminBookingNotification = async (bookingDetails, customerDetails) => 
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    if (process.env.SENDGRID_API_KEY) {
+      const msg = {
+        to: process.env.ADMIN_EMAIL,
+        from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
+        subject: 'New Booking Received - TRIXTECH',
+        html: mailOptions.html,
+      };
+      await sgMail.send(msg);
+    } else {
+      await transporter.sendMail(mailOptions);
+    }
     console.log(`Admin notification sent for new booking`);
   } catch (error) {
     console.error('Error sending admin email:', error);
@@ -197,7 +240,7 @@ const sendAdminBookingNotification = async (bookingDetails, customerDetails) => 
 
 // Send low stock alert to admin
 const sendLowStockAlert = async (serviceName, currentQuantity) => {
-  if (!transporter || !process.env.ADMIN_EMAIL) return;
+  if (!emailServiceInitialized || !process.env.ADMIN_EMAIL) return;
 
   const mailOptions = {
     from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
@@ -212,7 +255,17 @@ const sendLowStockAlert = async (serviceName, currentQuantity) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    if (process.env.SENDGRID_API_KEY) {
+      const msg = {
+        to: process.env.ADMIN_EMAIL,
+        from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
+        subject: 'Low Stock Alert - TRIXTECH',
+        html: mailOptions.html,
+      };
+      await sgMail.send(msg);
+    } else {
+      await transporter.sendMail(mailOptions);
+    }
     console.log(`Low stock alert sent for ${serviceName}`);
   } catch (error) {
     console.error('Error sending low stock email:', error);
@@ -221,7 +274,7 @@ const sendLowStockAlert = async (serviceName, currentQuantity) => {
 
 // Send password reset email
 const sendPasswordResetEmail = async (email, userName, resetUrl) => {
-  if (!transporter) {
+  if (!emailServiceInitialized) {
     console.log('Email service not configured, skipping password reset email');
     return;
   }
@@ -292,7 +345,17 @@ const sendPasswordResetEmail = async (email, userName, resetUrl) => {
 
   try {
     await retryWithBackoff(async () => {
-      await transporter.sendMail(mailOptions);
+      if (process.env.SENDGRID_API_KEY) {
+        const msg = {
+          to: email,
+          from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
+          subject: 'Password Reset - TRIXTECH',
+          html: mailOptions.html,
+        };
+        await sgMail.send(msg);
+      } else {
+        await transporter.sendMail(mailOptions);
+      }
     });
 
     recordSuccess();
@@ -321,15 +384,15 @@ const sendPasswordResetEmail = async (email, userName, resetUrl) => {
 
 // Send OTP email for verification
 const sendOTPEmail = async (email, otp, purpose) => {
-  // In development mode, log OTP to console instead of sending email
-  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+  // In development mode, still send email if Gmail credentials are configured
+  if ((process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') && !process.env.EMAIL_USER) {
     console.log(`🔑 DEVELOPMENT MODE: OTP for ${email} (${purpose}): ${otp}`);
-    console.log(`📧 This OTP would be sent via email in production`);
+    console.log(`📧 This OTP would be sent via email in production (or configure EMAIL_USER for Gmail SMTP)`);
     return { success: true, development: true };
   }
 
-  if (!transporter) {
-    throw new Error('Email service not configured. Please check EMAIL_USER and EMAIL_PASSWORD in .env file');
+  if (!emailServiceInitialized) {
+    throw new Error('Email service not configured. Please check SENDGRID_API_KEY or EMAIL_USER/EMAIL_PASSWORD in .env file');
   }
 
   if (!checkCircuitBreaker()) {
@@ -407,7 +470,17 @@ const sendOTPEmail = async (email, otp, purpose) => {
 
   try {
     await retryWithBackoff(async () => {
-      await transporter.sendMail(mailOptions);
+      if (process.env.SENDGRID_API_KEY) {
+        const msg = {
+          to: email,
+          from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
+          subject: `Your OTP Code - ${purposeText} - TRIXTECH`,
+          html: mailOptions.html,
+        };
+        await sgMail.send(msg);
+      } else {
+        await transporter.sendMail(mailOptions);
+      }
     });
 
     recordSuccess();

@@ -185,6 +185,54 @@ npm install      # Install all dependencies
 npm run dev     # Start both servers
 ```
 
+## Email Configuration
+
+The system uses SendGrid for reliable email delivery. Configure the following environment variables:
+
+```env
+SENDGRID_API_KEY=your-sendgrid-api-key-here
+SENDER_EMAIL=noreply@yourdomain.com
+ADMIN_EMAIL=admin@yourdomain.com
+```
+
+### DNS Records for Email Authentication
+
+To maximize email deliverability and avoid spam filters, configure these DNS records for your domain:
+
+#### SPF Record
+```
+Type: TXT
+Name: @
+Value: "v=spf1 include:sendgrid.net ~all"
+```
+
+#### DKIM Records
+SendGrid will provide DKIM records after domain verification. Add them as CNAME records:
+
+```
+Type: CNAME
+Name: s1._domainkey.yourdomain.com
+Value: s1.domainkey.u123456.wl.sendgrid.net
+
+Type: CNAME
+Name: s2._domainkey.yourdomain.com
+Value: s2.domainkey.u123456.wl.sendgrid.net
+```
+
+#### DMARC Record (Optional but Recommended)
+```
+Type: TXT
+Name: _dmarc.yourdomain.com
+Value: "v=DMARC1; p=quarantine; rua=mailto:dmarc@yourdomain.com"
+```
+
+### SendGrid Setup Steps
+1. Create a SendGrid account at https://sendgrid.com
+2. Verify your domain in SendGrid dashboard
+3. Add the provided DNS records to your domain registrar
+4. Generate an API key with "Full Access" permissions
+5. Update your `.env` file with the API key and verified sender email
+
 ## Demo Credentials
 
 ### Admin Account
@@ -283,11 +331,41 @@ The system uses GCash QR code payments for secure and instant transactions:
 - **Real-time Verification**: Automatic payment confirmation
 - **Transaction Security**: Unique reference numbers and validation
 
+## Testing Email Delivery
+
+### Gmail Inbox Testing Checklist
+
+1. **Configure SendGrid**: Set up your SendGrid account and domain verification
+2. **Update Environment**: Add `SENDGRID_API_KEY` and verified `SENDER_EMAIL` to `.env`
+3. **Test Booking Confirmation**:
+   - Create a booking through the customer interface
+   - Complete payment to trigger confirmation email
+   - Check Gmail inbox (not spam folder)
+4. **Test Password Reset**:
+   - Use "Forgot Password" on login page
+   - Enter a Gmail address
+   - Verify reset email arrives in inbox
+5. **Verify Email Headers**:
+   - Open received email in Gmail
+   - Click "Show original" to check headers
+   - Confirm `From` shows your verified domain
+   - Check for DKIM/SPF pass indicators
+
+### Expected Results
+- ✅ Emails arrive in Gmail Primary inbox (not Spam)
+- ✅ `From` header shows: `"TRIXTECH" <noreply@yourdomain.com>`
+- ✅ DKIM and SPF authentication pass
+- ✅ Email renders properly on mobile Gmail app
+- ✅ Unsubscribe link present (if applicable)
+
+### Troubleshooting
+- If emails go to spam: Check DKIM/SPF setup and domain reputation
+- If authentication fails: Verify DNS records are published and correct
+- If no emails received: Check SendGrid activity feed and API key permissions
+
 ## Future Enhancements
 
-- Email notifications for booking confirmations
 - Additional payment methods (Maya, PayPal)
-- Real-time booking updates with WebSockets
 - Service reviews and ratings
 - Advanced reporting and analytics
 - Multi-language support

@@ -379,7 +379,7 @@ export default function Services() {
               {filteredServices.map((service, index) => (
                 <div
                   key={service._id}
-                  className="service-card group animate-fade-in w-full min-h-[400px] min-w-[320px]"
+                  className="service-card group animate-fade-in w-full min-h-[350px] min-w-[280px]"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                 {/* Service Image */}
@@ -389,6 +389,7 @@ export default function Services() {
                       src={service.image.startsWith('/uploads/') ? `http://localhost:5000${service.image}` : service.image}
                       alt={service.name}
                       className="service-image w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
+                      loading="lazy"
                       onError={(e) => {
                         e.currentTarget.src = 'https://via.placeholder.com/400x240?text=Service+Image';
                       }}
@@ -542,11 +543,17 @@ export default function Services() {
 
       {/* Service Details Modal */}
       {showServiceModal && selectedService && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="service-modal-title"
+          aria-describedby="service-modal-description"
+        >
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
             <div className="p-4 sm:p-6">
               <div className="flex justify-between items-start mb-4 sm:mb-6">
-                <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--foreground)] pr-4 line-clamp-2">{selectedService.name}</h3>
+                <h3 id="service-modal-title" className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--foreground)] pr-4 line-clamp-2">{selectedService.name}</h3>
                 <button
                   onClick={() => setShowServiceModal(false)}
                   className="text-gray-500 hover:text-gray-700 text-2xl sm:text-3xl flex-shrink-0"
@@ -563,6 +570,7 @@ export default function Services() {
                       src={selectedService.image.startsWith('/uploads/') ? `http://localhost:5000${selectedService.image}` : selectedService.image}
                       alt={selectedService.name}
                       className="w-full h-48 sm:h-56 lg:h-64 object-cover rounded-lg"
+                      loading="lazy"
                       onError={(e) => {
                         e.currentTarget.src = 'https://via.placeholder.com/600x400?text=Service+Image';
                       }}
@@ -663,7 +671,7 @@ export default function Services() {
                   </div>
 
                   {/* Description */}
-                  <div className="card p-6">
+                  <div id="service-modal-description" className="card p-6">
                     <h4 className="text-xl font-semibold mb-4">Description</h4>
                     <p className="text-[var(--muted)] leading-relaxed">{selectedService.description}</p>
                     {selectedService.shortDescription && selectedService.shortDescription !== selectedService.description && (

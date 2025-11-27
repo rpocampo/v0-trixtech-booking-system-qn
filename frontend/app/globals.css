@@ -139,6 +139,93 @@
   --bg-celebration-tertiary: #f0f0f0;
 }
 
+.dark {
+  /* DARK MODE THEME */
+  --background: #1a1a1a;
+  --background-secondary: #2a2a2a;
+  --foreground: #e5e5e5;
+  --foreground-secondary: #a3a3a3;
+
+  /* PRIMARY BRAND COLORS - AIRBNB ROSE (adjusted for dark) */
+  --primary: #ff5a5f;
+  --primary-light: #ff7e82;
+  --primary-dark: #e00004;
+  --primary-50: #2a0f0f;
+  --primary-100: #551b1b;
+  --primary-500: #ff5a5f;
+  --primary-600: #e00004;
+  --primary-700: #b91c1c;
+
+  /* SECONDARY COLORS - SOPHISTICATED GRAY */
+  --secondary: #a3a3a3;
+  --secondary-light: #d1d1d1;
+  --secondary-dark: #737373;
+
+  /* ACCENT COLORS - SOFT BLUE */
+  --accent: #008489;
+  --accent-light: #00a699;
+  --accent-dark: #006c70;
+
+  /* AIRBNB STATUS COLORS */
+  --success: #00a699;
+  --success-light: #66d9cf;
+  --success-dark: #007f7a;
+  --warning: #ffb400;
+  --warning-light: #ffcc66;
+  --warning-dark: #cc8800;
+  --danger: #ff5a5f;
+  --danger-light: #ff7e82;
+  --danger-dark: #e00004;
+
+  /* CLEAN BORDERS & SURFACES */
+  --border: #404040;
+  --border-light: #2a2a2a;
+  --border-focus: #ff5a5f;
+  --muted: #a3a3a3;
+  --muted-light: #d1d1d1;
+
+  /* CLEAN SURFACE COLORS */
+  --surface: #262626;
+  --surface-secondary: #333333;
+  --surface-hover: #404040;
+  --surface-celebration: rgba(255, 90, 95, 0.05);
+
+  /* Enhanced Shadows with Celebration Glow */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
+  --shadow-celebration: 0 0 20px rgb(251 191 36 / 0.1);
+
+  /* CLEAN GRADIENTS */
+  --gradient-primary: linear-gradient(135deg, #ff5a5f 0%, #ff7e82 100%);
+  --gradient-accent: linear-gradient(135deg, #008489 0%, #00a699 100%);
+  --gradient-success: linear-gradient(135deg, #00a699 0%, #66d9cf 100%);
+  --gradient-celebration: linear-gradient(135deg, #2a0f0f 0%, #1a1a2e 50%, #16213e 100%);
+  --gradient-party: linear-gradient(45deg, #ff5a5f, #008489, #ffb400, #00a699);
+  --gradient-celebration: linear-gradient(135deg, #2a0f0f 0%, #1a1a2e 50%, #16213e 100%);
+
+  /* Spacing and other variables remain the same */
+
+  /* CLEAN NEUTRAL COLORS */
+  --gray-50: #1a1a1a;
+  --gray-100: #2a2a2a;
+  --gray-200: #404040;
+  --gray-300: #525252;
+  --gray-400: #737373;
+  --gray-500: #a3a3a3;
+  --gray-600: #d1d1d1;
+  --gray-700: #e5e5e5;
+  --gray-800: #f5f5f5;
+  --gray-900: #ffffff;
+
+  /* CLEAN BACKGROUND COLORS */
+  --bg-celebration-light: #1a1a1a;
+  --bg-celebration-secondary: #2a2a2a;
+  --bg-celebration-tertiary: #404040;
+}
+
 * {
   margin: 0;
   padding: 0;

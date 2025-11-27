@@ -36,7 +36,7 @@ export default function Home() {
                   Sign In
                 </Link>
                 <Link href="/register" className="btn-primary">
-                  Get Started
+                  Sign Up
                 </Link>
               </>
             ) : (
@@ -81,7 +81,7 @@ export default function Home() {
               {!isLoggedIn ? (
                 <>
                   <Link href="/register" className="bg-white text-[var(--primary)] px-10 py-4 rounded-2xl font-bold hover:bg-gray-100 hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-white/25">
-                    Get Started Free
+                    Sign Up Free
                   </Link>
                   <Link href="/login" className="border-3 border-white text-white px-10 py-4 rounded-2xl font-bold hover:bg-white hover:text-[var(--primary)] hover:scale-105 transition-all duration-300 backdrop-blur-sm">
                     Sign In

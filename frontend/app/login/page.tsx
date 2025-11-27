@@ -121,8 +121,11 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Forgot Password Link */}
-          <div className="text-right">
+          {/* Links */}
+          <div className="flex justify-between items-center">
+            <Link href="/register" className="text-sm text-[var(--primary)] hover:text-[var(--primary-dark)] transition-colors font-medium">
+              Sign Up
+            </Link>
             <Link href="/forgot-password" className="text-sm text-[var(--primary)] hover:text-[var(--primary-dark)] transition-colors font-medium">
               Forgot Password?
             </Link>

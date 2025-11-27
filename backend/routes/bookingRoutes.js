@@ -1026,6 +1026,18 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
         }
       });
 
+      // Send booking confirmation email
+      const customer = await User.findById(req.user.id);
+      if (customer && customer.email) {
+        await sendBookingConfirmation(customer.email, {
+          serviceName: service.name,
+          quantity: booking.quantity,
+          date: booking.bookingDate,
+          time: booking.bookingDate.toLocaleTimeString(),
+          totalPrice: booking.totalPrice,
+        });
+      }
+
       // Admin notification
       const User = require('../models/User');
       const adminUsers = await User.find({ role: 'admin' });
@@ -1037,6 +1049,19 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
             serviceId: service._id,
             amount: booking.totalPrice,
           }
+        });
+      }
+
+      // Send admin booking notification email
+      if (process.env.ADMIN_EMAIL) {
+        await sendAdminBookingNotification({
+          serviceName: service.name,
+          quantity: booking.quantity,
+          date: booking.bookingDate,
+          totalPrice: booking.totalPrice,
+        }, {
+          name: customer.name,
+          email: customer.email,
         });
       }
 
