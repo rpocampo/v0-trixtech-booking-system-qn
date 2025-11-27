@@ -17,8 +17,6 @@ export default function AdminLayout({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
@@ -38,7 +36,7 @@ export default function AdminLayout({
         const token = localStorage.getItem('token');
         if (!token) return;
 
-        const response = await fetch(`${apiUrl}/api/notifications/unread-count`, {
+        const response = await fetch('http://localhost:5000/api/notifications/unread-count', {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -69,14 +67,17 @@ export default function AdminLayout({
   useEffect(() => {
     if (socket && !isLoading) {
       const handleNewNotification = (notification: any) => {
+        console.log('New admin notification received:', notification);
         setUnreadNotifications(prev => prev + 1);
       };
 
       const handleAdminNotification = (notification: any) => {
+        console.log('New admin-specific notification received:', notification);
         setUnreadNotifications(prev => prev + 1);
       };
 
       const handleNewBooking = (data: any) => {
+        console.log('New booking notification for admin:', data);
         setUnreadNotifications(prev => prev + 1);
       };
 
@@ -255,4 +256,3 @@ export default function AdminLayout({
     </div>
   );
 }
-

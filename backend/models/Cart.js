@@ -62,19 +62,13 @@ cartSchema.pre('save', async function(next) {
     let totalItems = 0;
     let totalPrice = 0;
 
-    if (this.items.length > 0) {
-      const serviceIds = this.items.map(item => item.serviceId);
-      const services = await Service.find({ _id: { $in: serviceIds } });
-      const serviceMap = new Map(services.map(s => [s._id.toString(), s]));
+    for (const item of this.items) {
+      totalItems += item.quantity;
 
-      for (const item of this.items) {
-        totalItems += item.quantity;
-
-        // Get service price
-        const service = serviceMap.get(item.serviceId.toString());
-        if (service) {
-          totalPrice += service.price * item.quantity;
-        }
+      // Get service price
+      const service = await Service.findById(item.serviceId);
+      if (service) {
+        totalPrice += service.price * item.quantity;
       }
     }
 

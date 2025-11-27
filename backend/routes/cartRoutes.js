@@ -52,15 +52,18 @@ router.post('/items', authMiddleware, async (req, res, next) => {
     await cart.populate('items.serviceId', 'name price category serviceType quantity isAvailable image');
 
     // Log audit event
-    await auditService.logEvent(
-      'add_to_cart',
+    await auditService.logAuditEvent(
+      'user_action',
       req.user.id,
+      'add_to_cart',
       {
         serviceId,
         serviceName: service.name,
         quantity,
         cartTotalItems: cart.totalItems,
-        cartTotalPrice: cart.totalPrice,
+        cartTotalPrice: cart.totalPrice
+      },
+      {
         ip: req.ip,
         userAgent: req.get('User-Agent')
       }
@@ -96,14 +99,17 @@ router.put('/items/:serviceId', authMiddleware, async (req, res, next) => {
     await cart.populate('items.serviceId', 'name price category serviceType quantity isAvailable image');
 
     // Log audit event
-    await auditService.logEvent(
-      quantity === 0 ? 'remove_from_cart' : 'update_cart_quantity',
+    await auditService.logAuditEvent(
+      'user_action',
       req.user.id,
+      quantity === 0 ? 'remove_from_cart' : 'update_cart_quantity',
       {
         serviceId,
         newQuantity: quantity,
         cartTotalItems: cart.totalItems,
-        cartTotalPrice: cart.totalPrice,
+        cartTotalPrice: cart.totalPrice
+      },
+      {
         ip: req.ip,
         userAgent: req.get('User-Agent')
       }
@@ -134,13 +140,16 @@ router.delete('/items/:serviceId', authMiddleware, async (req, res, next) => {
     await cart.populate('items.serviceId', 'name price category serviceType quantity isAvailable image');
 
     // Log audit event
-    await auditService.logEvent(
-      'remove_from_cart',
+    await auditService.logAuditEvent(
+      'user_action',
       req.user.id,
+      'remove_from_cart',
       {
         serviceId,
         cartTotalItems: cart.totalItems,
-        cartTotalPrice: cart.totalPrice,
+        cartTotalPrice: cart.totalPrice
+      },
+      {
         ip: req.ip,
         userAgent: req.get('User-Agent')
       }
@@ -169,12 +178,15 @@ router.delete('/', authMiddleware, async (req, res, next) => {
     await cart.clearCart();
 
     // Log audit event
-    await auditService.logEvent(
-      'clear_cart',
+    await auditService.logAuditEvent(
+      'user_action',
       req.user.id,
+      'clear_cart',
       {
         previousTotalItems: oldTotalItems,
-        previousTotalPrice: oldTotalPrice,
+        previousTotalPrice: oldTotalPrice
+      },
+      {
         ip: req.ip,
         userAgent: req.get('User-Agent')
       }
@@ -238,13 +250,16 @@ router.post('/sync', authMiddleware, async (req, res, next) => {
     await cart.populate('items.serviceId', 'name price category serviceType quantity isAvailable image');
 
     // Log audit event
-    await auditService.logEvent(
-      'sync_cart',
+    await auditService.logAuditEvent(
+      'user_action',
       req.user.id,
+      'sync_cart',
       {
         syncedItemsCount: items.length,
         cartTotalItems: cart.totalItems,
-        cartTotalPrice: cart.totalPrice,
+        cartTotalPrice: cart.totalPrice
+      },
+      {
         ip: req.ip,
         userAgent: req.get('User-Agent')
       }

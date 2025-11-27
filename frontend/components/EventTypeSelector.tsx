@@ -41,7 +41,7 @@ export default function EventTypeSelector({
   // Fetch event types
   const fetchEventTypes = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/event-types`);
+      const response = await fetch('http://localhost:5000/api/event-types');
 
       if (response.ok) {
         const data = await response.json();

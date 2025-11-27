@@ -26,7 +26,7 @@ function PayMongoGCashContent() {
       setPaymentStatus('processing');
 
       // Create payment intent via our backend
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/create-intent`, {
+      const response = await fetch('http://localhost:5000/api/payments/create-intent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

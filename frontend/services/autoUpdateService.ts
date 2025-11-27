@@ -167,6 +167,7 @@ export class DataSyncService {
   // Sync data with server
   async syncData(endpoint: string, localData: any): Promise<any> {
     if (this.syncInProgress) {
+      console.log('Sync already in progress, skipping...');
       return localData;
     }
 

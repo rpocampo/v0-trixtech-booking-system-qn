@@ -25,14 +25,21 @@ export default function SocketProvider({ children }: SocketProviderProps) {
   const socketRef = useRef<Socket | null>(null);
 
   useEffect(() => {
-    // Create socket connection
-    socketRef.current = io(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`, {
+    // Create socket connection with enhanced options
+    socketRef.current = io('http://localhost:5000', {
       transports: ['websocket', 'polling'],
+      timeout: 20000,
+      forceNew: false,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
     });
 
     const socket = socketRef.current;
 
     socket.on('connect', () => {
+      console.log('WebSocket connected successfully');
       // Join user room if logged in
       const token = localStorage.getItem('token');
       const role = localStorage.getItem('role');
@@ -49,14 +56,37 @@ export default function SocketProvider({ children }: SocketProviderProps) {
             socket.emit('join-admin');
           }
         } catch (error) {
+          console.error('Token parsing failed:', error);
           // Token parsing failed, continue without joining room
         }
       }
     });
 
+    socket.on('disconnect', (reason) => {
+      console.log('WebSocket disconnected:', reason);
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('WebSocket connection error:', error);
+    });
+
+    socket.on('reconnect', (attemptNumber) => {
+      console.log('WebSocket reconnected after', attemptNumber, 'attempts');
+    });
+
+    socket.on('reconnect_error', (error) => {
+      console.error('WebSocket reconnection failed:', error);
+    });
+
+    socket.on('reconnect_failed', () => {
+      console.error('WebSocket reconnection failed permanently');
+    });
+
     // Cleanup on unmount
     return () => {
-      socket.disconnect();
+      if (socket) {
+        socket.disconnect();
+      }
     };
   }, []);
 

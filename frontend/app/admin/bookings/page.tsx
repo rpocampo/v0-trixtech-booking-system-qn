@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSocket } from '../../../components/SocketProvider';
 
 interface Booking {
   _id: string;
@@ -19,9 +20,11 @@ interface Booking {
 }
 
 export default function AdminBookings() {
+  const { socket } = useSocket();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
   const [filters, setFilters] = useState({
     status: '',
     paymentStatus: '',
@@ -44,7 +47,7 @@ export default function AdminBookings() {
       }
 
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings/admin/all`, {
+        const response = await fetch('http://localhost:5000/api/bookings/admin/all', {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -67,6 +70,62 @@ export default function AdminBookings() {
 
     fetchBookings();
   }, []);
+
+  // Real-time updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const refetchBookings = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const response = await fetch('http://localhost:5000/api/bookings/admin/all', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          if (response.ok) {
+            const bookingData = await response.json();
+            if (bookingData.success) {
+              setBookings(bookingData.bookings);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to refetch admin bookings:', error);
+      }
+    };
+
+    const handleNewPendingBooking = async (data: any) => {
+      console.log('New pending booking:', data);
+      setUpdating(true);
+      await refetchBookings();
+      setTimeout(() => setUpdating(false), 2000);
+    };
+
+    const handleNewConfirmedBooking = async (data: any) => {
+      console.log('New confirmed booking:', data);
+      setUpdating(true);
+      await refetchBookings();
+      setTimeout(() => setUpdating(false), 2000);
+    };
+
+    const handlePaymentReceived = async (data: any) => {
+      console.log('Payment received:', data);
+      setUpdating(true);
+      await refetchBookings();
+      setTimeout(() => setUpdating(false), 2000);
+    };
+
+    socket.on('new-pending-booking', handleNewPendingBooking);
+    socket.on('new-confirmed-booking', handleNewConfirmedBooking);
+    socket.on('payment-received', handlePaymentReceived);
+
+    return () => {
+      socket.off('new-pending-booking', handleNewPendingBooking);
+      socket.off('new-confirmed-booking', handleNewConfirmedBooking);
+      socket.off('payment-received', handlePaymentReceived);
+    };
+  }, [socket]);
 
   useEffect(() => {
     let filtered = bookings;
@@ -93,7 +152,7 @@ export default function AdminBookings() {
   const updateBooking = async (bookingId: string, status: string, paymentStatus: string) => {
     const token = localStorage.getItem('token');
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings/${bookingId}`, {
+      const response = await fetch(`http://localhost:5000/api/bookings/${bookingId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -322,6 +381,14 @@ export default function AdminBookings() {
 
   return (
     <div>
+      {/* Real-time Update Indicator */}
+      {updating && (
+        <div className="fixed top-4 right-4 z-50 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg animate-pulse flex items-center gap-2">
+          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+          <span className="text-sm font-medium">New booking activity!</span>
+        </div>
+      )}
+
       <h1 className="text-4xl font-bold mb-2">Manage Bookings</h1>
       <p className="text-[var(--muted)] mb-8">View and update booking status</p>
 
@@ -626,5 +693,4 @@ export default function AdminBookings() {
     </div>
   );
 }
-
 

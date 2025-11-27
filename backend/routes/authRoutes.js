@@ -17,15 +17,6 @@ router.post('/register', async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
-    // Validate password strength
-    if (password.length < 8) {
-      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long' });
-    }
-
-    if (!/(?=.*[a-z])/.test(password) || !/(?=.*[A-Z])/.test(password) || !/(?=.*\d)/.test(password)) {
-      return res.status(400).json({ success: false, message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' });
-    }
-
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(409).json({ success: false, message: 'Email already registered' });
@@ -43,7 +34,7 @@ router.post('/register', async (req, res, next) => {
 
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'trixtech_secret_key_for_production_min_32_chars_long',
       { expiresIn: '7d' }
     );
 
@@ -79,7 +70,7 @@ router.post('/login', async (req, res, next) => {
 
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET || 'trixtech_secret_key_for_production_min_32_chars_long',
       { expiresIn: '7d' }
     );
 

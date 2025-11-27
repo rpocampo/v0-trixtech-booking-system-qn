@@ -87,6 +87,25 @@ router.put('/:id', authMiddleware, async (req, res, next) => {
       }
     );
 
+    // Emit real-time event for profile update
+    const io = global.io;
+    if (io) {
+      io.to(`user_${req.params.id}`).emit('profile-updated', {
+        userId: req.params.id,
+        updatedFields: { name, phone, address },
+        updatedBy: req.user.id
+      });
+
+      // Notify admin of profile changes
+      if (req.user.role !== 'admin') {
+        io.to('admin').emit('user-profile-updated', {
+          userId: req.params.id,
+          updatedFields: { name, phone, address },
+          updatedBy: req.user.id
+        });
+      }
+    }
+
     res.json({ success: true, user });
   } catch (error) {
     next(error);
@@ -114,6 +133,16 @@ router.post('/:id/gcash-qr', authMiddleware, upload.single('qrCode'), async (req
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Emit real-time event for QR code update
+    const io = global.io;
+    if (io) {
+      io.to(`user_${req.params.id}`).emit('gcash-qr-updated', {
+        userId: req.params.id,
+        qrCodeUrl,
+        updatedBy: req.user.id
+      });
     }
 
     res.json({

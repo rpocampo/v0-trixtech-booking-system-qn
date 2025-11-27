@@ -7,7 +7,7 @@ const authMiddleware = (req, res, next) => {
       return res.status(401).json({ success: false, message: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'trixtech_secret_key_for_production_min_32_chars_long');
     req.user = decoded;
     next();
   } catch (error) {

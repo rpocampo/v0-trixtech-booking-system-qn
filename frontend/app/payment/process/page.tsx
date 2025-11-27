@@ -98,6 +98,8 @@ function PaymentProcessContent() {
 
   const createPaymentIntent = async () => {
     if (!bookingId) return;
+
+    console.log('Creating payment intent for booking:', bookingId);
     setCreatingPayment(true);
     setError('');
     setQrPayment(null);
@@ -109,7 +111,7 @@ function PaymentProcessContent() {
       }
 
       // Get user profile first
-      const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`, {
+      const userResponse = await fetch('http://localhost:5000/api/auth/me', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -119,6 +121,7 @@ function PaymentProcessContent() {
         const userData = await userResponse.json();
         if (userData.success && userData.user) {
           setUser(userData.user);
+          console.log('User profile loaded:', userData.user.name);
         } else {
           console.warn('User profile fetch returned success but no user data');
           setUser(null);
@@ -129,7 +132,8 @@ function PaymentProcessContent() {
       }
 
       // First, get the booking details to get the amount
-      const bookingResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings/${bookingId}`, {
+      console.log('Fetching booking details for ID:', bookingId);
+      const bookingResponse = await fetch(`http://localhost:5000/api/bookings/${bookingId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -151,9 +155,12 @@ function PaymentProcessContent() {
       if (!bookingData.success) {
         throw new Error('Invalid booking data');
       }
+
+      console.log('Booking data loaded:', bookingData.booking);
       setBooking(bookingData.booking);
 
       // Create QR payment using the payment amount (may be different from total price for down payments)
+      console.log('Creating QR payment for amount:', paymentAmount, 'payment type:', paymentType);
       await createQRPayment(paymentAmount, token);
     } catch (error) {
       console.error('Error creating payment:', error);
@@ -165,7 +172,8 @@ function PaymentProcessContent() {
 
   const createQRPayment = async (amount: number, token: string, retryCount = 0) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/create-qr`, {
+      console.log(`Creating QR payment (attempt ${retryCount + 1}) for amount:`, amount);
+      const response = await fetch('http://localhost:5000/api/payments/create-qr', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -177,16 +185,23 @@ function PaymentProcessContent() {
           paymentType,
         }),
       });
+
+      console.log('QR payment API response status:', response.status);
+
       if (response.status === 401) {
         throw new Error('Your session has expired. Please log in again.');
       }
 
       const data = await response.json();
+      console.log('QR payment API response data:', data);
+
       if (!response.ok) {
         throw new Error(data.message || 'Failed to create QR payment');
       }
 
       if (data.success) {
+        console.log('QR payment created successfully:', data);
+
         // Check if qrCode contains raw QR data (starts with numbers) or is already a data URL
         let qrCodeToUse = data.qrCode;
         let qrData = undefined;
@@ -209,6 +224,7 @@ function PaymentProcessContent() {
         setLoading(false); // Set loading to false when QR payment is ready
 
         // Start polling for payment status
+        console.log('Starting payment polling for reference:', data.referenceNumber);
         startPaymentPolling(data.referenceNumber, token);
       } else {
         throw new Error('Invalid QR payment response');
@@ -218,6 +234,7 @@ function PaymentProcessContent() {
 
       // Retry up to 2 times with exponential backoff
       if (retryCount < 2) {
+        console.log(`Retrying QR payment creation (attempt ${retryCount + 1})...`);
         setTimeout(() => {
           createQRPayment(amount, token, retryCount + 1);
         }, Math.pow(2, retryCount) * 1000); // 1s, 2s, 4s delays
@@ -233,7 +250,7 @@ function PaymentProcessContent() {
   const startPaymentPolling = (referenceNumber: string, token: string) => {
     const pollInterval = setInterval(async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/status/${referenceNumber}`, {
+        const response = await fetch(`http://localhost:5000/api/payments/status/${referenceNumber}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -484,7 +501,7 @@ function PaymentProcessContent() {
                     onClick={async () => {
                       try {
                         const token = localStorage.getItem('token');
-                        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/payments/verify-qr/${qrPayment.referenceNumber}`, {
+                        const response = await fetch(`http://localhost:5000/api/payments/verify-qr/${qrPayment.referenceNumber}`, {
                           method: 'POST',
                           headers: {
                             'Content-Type': 'application/json',

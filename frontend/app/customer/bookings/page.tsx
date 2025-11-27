@@ -73,7 +73,7 @@ export default function Bookings() {
           return;
         }
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings`, {
+        const response = await fetch('http://localhost:5000/api/bookings', {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -101,14 +101,11 @@ export default function Bookings() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleBookingCreated = async (data: any) => {
-      setUpdating(true);
-
-      // Refetch bookings to get the complete booking data
+    const refetchBookings = async () => {
       try {
         const token = localStorage.getItem('token');
         if (token) {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings`, {
+          const response = await fetch('http://localhost:5000/api/bookings', {
             headers: { Authorization: `Bearer ${token}` },
           });
 
@@ -122,14 +119,46 @@ export default function Bookings() {
       } catch (error) {
         console.error('Failed to refetch bookings:', error);
       }
+    };
 
+    const handleBookingCreated = async (data: any) => {
+      console.log('New booking created:', data);
+      setUpdating(true);
+      await refetchBookings();
+      setTimeout(() => setUpdating(false), 2000);
+    };
+
+    const handleBookingUpdated = async (data: any) => {
+      console.log('Booking updated:', data);
+      setUpdating(true);
+      await refetchBookings();
+      setTimeout(() => setUpdating(false), 2000);
+    };
+
+    const handleBookingConfirmed = async (data: any) => {
+      console.log('Booking confirmed:', data);
+      setUpdating(true);
+      await refetchBookings();
+      setTimeout(() => setUpdating(false), 2000);
+    };
+
+    const handlePaymentCompleted = async (data: any) => {
+      console.log('Payment completed:', data);
+      setUpdating(true);
+      await refetchBookings();
       setTimeout(() => setUpdating(false), 2000);
     };
 
     socket.on('booking-created', handleBookingCreated);
+    socket.on('booking-updated', handleBookingUpdated);
+    socket.on('booking-confirmed', handleBookingConfirmed);
+    socket.on('payment-completed', handlePaymentCompleted);
 
     return () => {
       socket.off('booking-created', handleBookingCreated);
+      socket.off('booking-updated', handleBookingUpdated);
+      socket.off('booking-confirmed', handleBookingConfirmed);
+      socket.off('payment-completed', handlePaymentCompleted);
     };
   }, [socket]);
 
@@ -239,4 +268,3 @@ export default function Bookings() {
     </div>
   );
 }
-

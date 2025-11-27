@@ -48,7 +48,7 @@ export default function Register() {
 
     try {
       // First, send OTP for email verification
-      const otpResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/otp/send`, {
+      const otpResponse = await fetch('http://localhost:5000/api/otp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -85,7 +85,7 @@ export default function Register() {
 
     try {
       // Verify OTP
-      const verifyResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/otp/verify`, {
+      const verifyResponse = await fetch('http://localhost:5000/api/otp/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -103,7 +103,7 @@ export default function Register() {
       }
 
       // OTP verified, now complete registration
-      const registerResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/register`, {
+      const registerResponse = await fetch('http://localhost:5000/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -141,7 +141,7 @@ export default function Register() {
     setResendDisabled(true);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/otp/send`, {
+      const response = await fetch('http://localhost:5000/api/otp/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -343,4 +343,3 @@ export default function Register() {
     </div>
   );
 }
-

@@ -38,7 +38,7 @@ export default function CustomerLayout({
     // Fetch user data
     const fetchUser = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`, {
+        const response = await fetch('http://localhost:5000/api/auth/me', {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -75,7 +75,7 @@ export default function CustomerLayout({
         const token = localStorage.getItem('token');
         if (!token) return;
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/notifications/unread-count`, {
+        const response = await fetch('http://localhost:5000/api/notifications/unread-count', {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -106,6 +106,7 @@ export default function CustomerLayout({
   useEffect(() => {
     if (socket && user) {
       const handleNewNotification = (notification: any) => {
+        console.log('New notification received:', notification);
         setUnreadNotifications(prev => prev + 1);
       };
 
@@ -391,4 +392,3 @@ export default function CustomerLayout({
     </div>
   );
 }
-

@@ -76,7 +76,7 @@ export default function NotificationPanel({ isOpen, onClose, position = 'default
         return;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/notifications?limit=10`, {
+      const response = await fetch('http://localhost:5000/api/notifications?limit=10', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -102,7 +102,7 @@ export default function NotificationPanel({ isOpen, onClose, position = 'default
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/notifications/unread-count`, {
+      const response = await fetch('http://localhost:5000/api/notifications/unread-count', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -123,7 +123,7 @@ export default function NotificationPanel({ isOpen, onClose, position = 'default
   const markAsRead = async (notificationId: string) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/notifications/${notificationId}/read`, {
+      await fetch(`http://localhost:5000/api/notifications/${notificationId}/read`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -142,7 +142,7 @@ export default function NotificationPanel({ isOpen, onClose, position = 'default
   const markAllAsRead = async () => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/notifications/mark-all-read`, {
+      await fetch('http://localhost:5000/api/notifications/mark-all-read', {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -229,13 +229,12 @@ export default function NotificationPanel({ isOpen, onClose, position = 'default
               </div>
             ) : (
               notifications.map((notification) => (
-                <button
+                <div
                   key={notification._id}
-                  className={`w-full text-left p-4 border-b border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors ${
+                  className={`p-4 border-b border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors cursor-pointer ${
                     !notification.isRead ? getPriorityColor(notification.priority) : ''
                   }`}
                   onClick={() => !notification.isRead && markAsRead(notification._id)}
-                  aria-label={`Mark notification "${notification.title}" as read`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -266,7 +265,7 @@ export default function NotificationPanel({ isOpen, onClose, position = 'default
                       </div>
                     </div>
                   </div>
-                </button>
+                </div>
               ))
             )}
           </div>

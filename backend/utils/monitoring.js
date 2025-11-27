@@ -29,17 +29,37 @@ class SystemMonitor {
       requests: this.requestCount,
       errors: this.errorCount,
       database: 'unknown',
+      databaseDetails: {},
       services: {}
     };
 
     try {
-      // Check database connection
+      // Check database connection with detailed metrics
+      const dbStart = Date.now();
       await mongoose.connection.db.admin().ping();
+      const dbLatency = Date.now() - dbStart;
+
       health.database = 'healthy';
+      health.databaseDetails = {
+        latency: dbLatency,
+        readyState: mongoose.connection.readyState,
+        name: mongoose.connection.name,
+        host: mongoose.connection.host,
+        poolSize: mongoose.connection.db?.serverConfig?.poolSize || 'unknown',
+        connections: {
+          available: mongoose.connection.db?.serverConfig?.availableConnections || 'unknown',
+          pending: mongoose.connection.db?.serverConfig?.pendingConnections || 'unknown'
+        }
+      };
     } catch (error) {
       health.database = 'unhealthy';
+      health.databaseDetails = {
+        error: error.message,
+        readyState: mongoose.connection.readyState
+      };
       this.recordError(error, 'Database health check');
     }
+
 
     // Check service endpoints
     const services = ['auth', 'services', 'bookings', 'notifications', 'analytics'];
@@ -100,6 +120,26 @@ class SystemMonitor {
           level: 'critical',
           message: 'Database connection lost',
           metric: 'Database: unhealthy'
+        });
+      }
+
+
+      // Database latency alerts
+      if (this.lastHealthCheck.databaseDetails?.latency > 5000) { // 5 seconds
+        alerts.push({
+          level: 'warning',
+          message: 'High database latency detected',
+          metric: `Latency: ${this.lastHealthCheck.databaseDetails.latency}ms`
+        });
+      }
+
+      // Connection pool alerts
+      const poolSize = this.lastHealthCheck.databaseDetails?.connections?.available;
+      if (poolSize !== undefined && poolSize < 5) {
+        alerts.push({
+          level: 'warning',
+          message: 'Low database connection pool availability',
+          metric: `Available connections: ${poolSize}`
         });
       }
     }

@@ -21,8 +21,6 @@ export default function AdminNotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-
   useEffect(() => {
     fetchNotifications();
   }, []);
@@ -32,6 +30,7 @@ export default function AdminNotificationsPage() {
     if (!socket) return;
 
     const handleNewNotification = (notification: Notification) => {
+      console.log('New admin notification received:', notification);
       setNotifications(prev => [notification, ...prev]);
     };
 
@@ -45,7 +44,7 @@ export default function AdminNotificationsPage() {
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/api/notifications`, {
+      const response = await fetch('http://localhost:5000/api/notifications', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -63,7 +62,7 @@ export default function AdminNotificationsPage() {
   const markAsRead = async (notificationId: string) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${apiUrl}/api/notifications/${notificationId}/read`, {
+      await fetch(`http://localhost:5000/api/notifications/${notificationId}/read`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -81,7 +80,7 @@ export default function AdminNotificationsPage() {
   const markAllAsRead = async () => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${apiUrl}/api/notifications/mark-all-read`, {
+      await fetch('http://localhost:5000/api/notifications/mark-all-read', {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });

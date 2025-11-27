@@ -39,7 +39,7 @@ export default function ServiceDetailPage() {
   useEffect(() => {
     const fetchService = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services/${serviceId}`);
+        const response = await fetch(`http://localhost:5000/api/services/${serviceId}`);
         const data = await response.json();
         if (data.success) {
           setService(data.service);
@@ -81,7 +81,7 @@ export default function ServiceDetailPage() {
           <div className="aspect-square rounded-xl overflow-hidden bg-gray-100">
             {selectedImage ? (
               <img
-                src={selectedImage.startsWith('/uploads/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${selectedImage}` : selectedImage}
+                src={selectedImage.startsWith('/uploads/') ? `http://localhost:5000${selectedImage}` : selectedImage}
                 alt={service.name}
                 className="w-full h-full object-cover"
                 onError={(e) => {
@@ -112,7 +112,7 @@ export default function ServiceDetailPage() {
                   }`}
                 >
                   <img
-                    src={image.startsWith('/uploads/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${image}` : image}
+                    src={image.startsWith('/uploads/') ? `http://localhost:5000${image}` : image}
                     alt={`${service.name} ${index + 1}`}
                     className="w-full h-full object-cover"
                     onError={(e) => {

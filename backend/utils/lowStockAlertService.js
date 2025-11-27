@@ -247,7 +247,7 @@ const cleanupAlertHistory = () => {
   }
 };
 
-// Clean up alert history every 24 hours
+// Clean up alert history every 24 hours (skip in test environment)
 if (process.env.NODE_ENV !== 'test') {
   setInterval(cleanupAlertHistory, 24 * 60 * 60 * 1000);
 }

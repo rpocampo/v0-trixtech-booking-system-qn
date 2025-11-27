@@ -5,18 +5,13 @@ const Service = require('../models/Service');
 const User = require('../models/User');
 const ReservationQueue = require('../models/ReservationQueue');
 const BookingAnalytics = require('../models/BookingAnalytics');
-const Payment = require('../models/Payment');
-const UserPreferences = require('../models/UserPreferences');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
-const { sendBookingConfirmation } = require('../utils/emailService');
+const { sendBookingConfirmation, sendAdminBookingNotification, sendLowStockAlert } = require('../utils/emailService');
 const { sendTemplateNotification } = require('../utils/notificationService');
-const { findAlternativeServices } = require('../utils/recommendationService');
+const { findAlternativeServices, processReservationQueue } = require('../utils/recommendationService');
 const { triggerLowStockCheck } = require('../utils/lowStockAlertService');
 const lockService = require('../utils/lockService');
-const { auditService } = require('../utils/auditService');
-const { requiresDeliveryTruck, checkDeliveryTruckAvailability, getDeliverySchedules, getDeliveryTruckStatus } = require('../utils/deliveryService');
-const { generateTransactionId, generateReferenceNumber } = require('../utils/paymentService');
-const { generateQRCodeDataURL, generatePaymentInstructions } = require('../utils/qrCodeService');
+const auditService = require('../utils/auditService');
 
 const router = express.Router();
 
@@ -61,6 +56,8 @@ router.get('/check-availability/:serviceId', authMiddleware, async (req, res, ne
       let deliveryTruckReason = '';
       let nextAvailableDeliveryTime = null;
 
+      // Import delivery service
+      const { requiresDeliveryTruck, checkDeliveryTruckAvailability } = require('../utils/deliveryService');
 
       // Check delivery truck availability if service requires delivery
       const serviceRequiresDelivery = requiresDeliveryTruck(service);
@@ -158,6 +155,8 @@ router.post('/', authMiddleware, async (req, res, next) => {
     const requestedQuantity = quantity || 1;
     const bookingDateObj = new Date(bookingDate);
 
+    // Import delivery service
+    const { requiresDeliveryTruck, checkDeliveryTruckAvailability } = require('../utils/deliveryService');
     const serviceRequiresDelivery = requiresDeliveryTruck(service);
 
     // Check delivery truck availability if service requires delivery
@@ -347,42 +346,75 @@ router.post('/', authMiddleware, async (req, res, next) => {
           bookingData.deliveryDuration = 60; // 1 hour
         }
 
-        // Use MongoDB transaction for atomic booking creation and inventory update
-        const session = await mongoose.startSession();
+        // Use MongoDB transaction for atomic booking creation and inventory update (only in production/replica set)
         let booking;
+        const useTransactions = (process.env.NODE_ENV === 'production' || process.env.MONGODB_URI?.includes('replicaSet')) && false; // Disabled for now
 
-        try {
-          await session.withTransaction(async () => {
-            // Create booking within transaction
-            booking = new Booking(bookingData);
-            await booking.save({ session });
+        if (useTransactions) {
+          const session = await mongoose.startSession();
 
-            // Decrease inventory if it's equipment or supply (within same transaction)
-                if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
-                  // Use batch tracking for inventory reduction (FIFO)
-                  await service.reduceBatchQuantity(requestedQuantity);
+          try {
+            await session.withTransaction(async () => {
+              // Create booking within transaction
+              booking = new Booking(bookingData);
+              await booking.save({ session });
 
-                  // Trigger low stock alert check after transaction commits
-                  try {
-                    // Use setImmediate to run after transaction completes
-                    setImmediate(async () => {
-                      await triggerLowStockCheck(serviceId);
-                    });
-                  } catch (alertError) {
-                    console.error('Error triggering low stock alert:', alertError);
-                    // Don't fail the booking if alert fails
-                  }
+              // Decrease inventory for equipment/supply services OR services with included items
+              if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+                // Use batch tracking for inventory reduction (FIFO)
+                await service.reduceBatchQuantity(requestedQuantity);
+
+                // Trigger low stock alert check after transaction commits
+                try {
+                  // Use setImmediate to run after transaction completes
+                  setImmediate(async () => {
+                    await triggerLowStockCheck(serviceId);
+                  });
+                } catch (alertError) {
+                  console.error('Error triggering low stock alert:', alertError);
+                  // Don't fail the booking if alert fails
                 }
-          });
+              } else if (service.includedItems && service.includedItems.length > 0) {
+                // For bundled services (like Wedding Event), reduce inventory of individual items
+                console.log(`Processing inventory for bundled service: ${service.name}`);
+                await processBundledServiceInventory(service, requestedQuantity);
+              }
+            });
 
-          // Transaction committed successfully
-          console.log('Booking and inventory update completed atomically');
+            // Transaction committed successfully
+            console.log('Booking and inventory update completed atomically');
 
-        } catch (transactionError) {
-          console.error('Transaction failed:', transactionError);
-          throw transactionError; // Re-throw to be caught by outer catch
-        } finally {
-          await session.endSession();
+          } catch (transactionError) {
+            console.error('Transaction failed:', transactionError);
+            throw transactionError; // Re-throw to be caught by outer catch
+          } finally {
+            await session.endSession();
+          }
+        } else {
+          // Non-transactional approach for development
+          console.log('Using non-transactional booking creation for development environment');
+
+          // Create booking without transaction
+          booking = new Booking(bookingData);
+          await booking.save();
+
+          // Decrease inventory for equipment/supply services OR services with included items
+          if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+            // Use batch tracking for inventory reduction (FIFO)
+            await service.reduceBatchQuantity(requestedQuantity);
+
+            // Trigger low stock alert check
+            try {
+              await triggerLowStockCheck(serviceId);
+            } catch (alertError) {
+              console.error('Error triggering low stock alert:', alertError);
+              // Don't fail the booking if alert fails
+            }
+          } else if (service.includedItems && service.includedItems.length > 0) {
+            // For bundled services (like Wedding Event), reduce inventory of individual items
+            console.log(`Processing inventory for bundled service: ${service.name}`);
+            await processBundledServiceInventory(service, requestedQuantity);
+          }
         }
 
         await booking.populate('serviceId');
@@ -420,6 +452,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
           // Emit real-time events for pending booking
           const io = global.io;
           if (io) {
+            console.log(`🔄 SYNC: Emitting booking-created to user_${req.user.id} for booking ${booking._id}`);
             io.to(`user_${req.user.id}`).emit('booking-created', {
               booking: {
                 id: booking._id,
@@ -431,6 +464,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
               }
             });
 
+            console.log(`🔄 SYNC: Emitting new-pending-booking to admin for booking ${booking._id}`);
             io.to('admin').emit('new-pending-booking', {
               booking: {
                 id: booking._id,
@@ -447,18 +481,15 @@ router.post('/', authMiddleware, async (req, res, next) => {
         }
 
         // Log audit event for booking creation
-        await auditService.logAuditEvent(
-          'user_action',
-          req.user.id,
+        auditService.logEvent(
           'create_booking',
+          req.user.id,
           {
             bookingId: booking._id,
             serviceId,
             quantity: requestedQuantity,
             totalPrice,
-            status: 'pending'
-          },
-          {
+            status: 'pending',
             ip: req.ip,
             userAgent: req.get('User-Agent'),
             serviceName: service.name,
@@ -678,6 +709,7 @@ router.put('/:id', adminMiddleware, async (req, res, next) => {
       // Emit real-time event for status update
       const io = global.io;
       if (io && booking.customerId) {
+        console.log(`🔄 SYNC: Emitting booking-updated to user_${booking.customerId._id} for booking ${booking._id}`);
         io.to(`user_${booking.customerId._id}`).emit('booking-updated', {
           booking: {
             id: booking._id,
@@ -833,6 +865,8 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
     };
 
     // Create payment record for the intent
+    const Payment = require('../models/Payment');
+    const { generateTransactionId, generateReferenceNumber } = require('../utils/paymentService');
 
     const transactionId = generateTransactionId();
     const referenceNumber = generateReferenceNumber();
@@ -862,6 +896,7 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
     await payment.save();
 
     // Generate payment QR code data
+    const { generateQRCodeDataURL, generatePaymentInstructions } = require('../utils/qrCodeService');
 
     // Generate QR code data
     const paymentDescription = `Full Payment - ${transactionId}`;
@@ -913,6 +948,7 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     }
 
     // Find the payment record (it should exist from create-intent)
+    const Payment = require('../models/Payment');
     const payment = await Payment.findOne({
       referenceNumber: paymentReference,
       userId: req.user.id
@@ -1030,6 +1066,7 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       });
 
       // Admin notification
+      const User = require('../models/User');
       const adminUsers = await User.find({ role: 'admin' });
       for (const admin of adminUsers) {
         await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
@@ -1045,6 +1082,7 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       // Emit real-time events
       const io = global.io;
       if (io) {
+        console.log(`🔄 SYNC: Emitting booking-confirmed to user_${req.user.id} for booking ${booking._id}`);
         io.to(`user_${req.user.id}`).emit('booking-confirmed', {
           booking: {
             id: booking._id,
@@ -1056,6 +1094,7 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
           }
         });
 
+        console.log(`🔄 SYNC: Emitting new-confirmed-booking to admin for booking ${booking._id}`);
         io.to('admin').emit('new-confirmed-booking', {
           booking: {
             id: booking._id,
@@ -1081,6 +1120,7 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
 
     // Track user preferences
     try {
+      const UserPreferences = require('../models/UserPreferences');
       const service = await Service.findById(bookingIntent.serviceId);
       if (service) {
         await UserPreferences.trackServiceBooking(
@@ -1097,19 +1137,16 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     }
 
     // Log audit event for booking confirmation
-    await auditService.logAuditEvent(
-      'user_action',
-      req.user.id,
+    auditService.logEvent(
       'confirm_booking',
+      req.user.id,
       {
         bookingId: booking._id,
         paymentId: payment._id,
         serviceId: bookingIntent.serviceId,
         quantity: bookingIntent.quantity,
         totalPrice: bookingIntent.totalPrice,
-        paymentMethod: 'gcash_qr'
-      },
-      {
+        paymentMethod: 'gcash_qr',
         ip: req.ip,
         userAgent: req.get('User-Agent'),
         referenceNumber: paymentReference,
@@ -1129,6 +1166,82 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     next(error);
   }
 });
+
+// Function to process inventory for bundled services (services with included items)
+async function processBundledServiceInventory(service, quantity) {
+  try {
+    console.log(`Processing bundled service inventory for ${service.name} with ${service.includedItems.length} items`);
+
+    for (const itemDescription of service.includedItems) {
+      // Parse item description to extract quantity and item name
+      // Example: "100 Uratex Monoblock Chair with covers" -> quantity: 100, name: "Uratex Monoblock Chair"
+      const quantityMatch = itemDescription.match(/^(\d+)\s+/);
+      if (!quantityMatch) {
+        console.warn(`Could not parse quantity from item: ${itemDescription}`);
+        continue;
+      }
+
+      const itemQuantity = parseInt(quantityMatch[1]);
+      const itemName = itemDescription.replace(/^(\d+)\s+/, '').replace(/\s+with\s+covers?$/, '').trim();
+
+      console.log(`Looking for inventory item: "${itemName}" with quantity: ${itemQuantity * quantity}`);
+
+      // Find the corresponding service in inventory with improved matching
+      let inventoryService = await Service.findOne({
+        name: { $regex: itemName, $options: 'i' }, // Case-insensitive match
+        serviceType: { $in: ['equipment', 'supply'] },
+        isAvailable: true
+      });
+
+      // If no exact match, try singular/plural variations
+      if (!inventoryService) {
+        // Try removing 's' from end for plural to singular
+        const singularName = itemName.replace(/s$/i, '');
+        inventoryService = await Service.findOne({
+          name: { $regex: singularName, $options: 'i' },
+          serviceType: { $in: ['equipment', 'supply'] },
+          isAvailable: true
+        });
+
+        // If still no match, try adding 's' for singular to plural
+        if (!inventoryService) {
+          const pluralName = itemName + 's';
+          inventoryService = await Service.findOne({
+            name: { $regex: pluralName, $options: 'i' },
+            serviceType: { $in: ['equipment', 'supply'] },
+            isAvailable: true
+          });
+        }
+      }
+
+      if (inventoryService) {
+        const totalQuantityToReduce = itemQuantity * quantity; // Multiply by booking quantity
+
+        if (inventoryService.quantity >= totalQuantityToReduce) {
+          await inventoryService.reduceBatchQuantity(totalQuantityToReduce);
+          console.log(`Reduced inventory for ${inventoryService.name}: -${totalQuantityToReduce} (now ${inventoryService.quantity})`);
+
+          // Trigger low stock alert check
+          try {
+            await triggerLowStockCheck(inventoryService._id);
+          } catch (alertError) {
+            console.error('Error triggering low stock alert for bundled item:', alertError);
+          }
+        } else {
+          console.error(`Insufficient inventory for ${inventoryService.name}. Required: ${totalQuantityToReduce}, Available: ${inventoryService.quantity}`);
+          throw new Error(`Insufficient inventory for ${inventoryService.name}`);
+        }
+      } else {
+        console.warn(`Could not find inventory service matching: "${itemName}"`);
+      }
+    }
+
+    console.log(`Completed inventory processing for bundled service: ${service.name}`);
+  } catch (error) {
+    console.error('Error processing bundled service inventory:', error);
+    throw error;
+  }
+}
 
 // Function to record booking analytics patterns
 async function recordBookingAnalytics(customerId, currentServiceId, quantity) {
@@ -1197,6 +1310,7 @@ async function recordBookingAnalytics(customerId, currentServiceId, quantity) {
 router.get('/admin/delivery-schedules', adminMiddleware, async (req, res, next) => {
   try {
     const { date } = req.query;
+    const { getDeliverySchedules } = require('../utils/deliveryService');
 
     const schedules = await getDeliverySchedules(date ? new Date(date) : null);
 
@@ -1213,6 +1327,7 @@ router.get('/admin/delivery-schedules', adminMiddleware, async (req, res, next) 
 // Get delivery truck status (available/busy)
 router.get('/admin/delivery-truck-status', adminMiddleware, async (req, res, next) => {
   try {
+    const { getDeliveryTruckStatus } = require('../utils/deliveryService');
 
     const status = await getDeliveryTruckStatus();
 
@@ -1234,6 +1349,7 @@ router.get('/delivery-slots/available', authMiddleware, async (req, res, next) =
       return res.status(400).json({ success: false, message: 'Date is required' });
     }
 
+    const { checkDeliveryTruckAvailability } = require('../utils/deliveryService');
 
     // Generate time slots from 8 AM to 6 PM (10 hours)
     const timeSlots = [];

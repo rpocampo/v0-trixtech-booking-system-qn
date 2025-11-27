@@ -61,8 +61,6 @@ export default function DeliveryManagement() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [filterStatus, setFilterStatus] = useState<string>('');
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-
   // Fetch deliveries
   const fetchDeliveries = async () => {
     try {
@@ -71,7 +69,7 @@ export default function DeliveryManagement() {
       if (selectedDate) params.append('date', selectedDate);
       if (filterStatus) params.append('status', filterStatus);
 
-      const response = await fetch(`${apiUrl}/api/deliveries/schedule?${params}`, {
+      const response = await fetch(`http://localhost:5000/api/deliveries/schedule?${params}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
@@ -88,7 +86,7 @@ export default function DeliveryManagement() {
   const fetchDeliveryStatus = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/api/deliveries/status`, {
+      const response = await fetch('http://localhost:5000/api/deliveries/status', {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
 
@@ -107,7 +105,7 @@ export default function DeliveryManagement() {
   const updateDeliveryStatus = async (deliveryId: string, status: string) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/api/deliveries/${deliveryId}/status`, {
+      const response = await fetch(`http://localhost:5000/api/deliveries/${deliveryId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

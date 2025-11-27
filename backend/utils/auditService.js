@@ -19,7 +19,6 @@ class AuditService {
       eventType,
       userId,
       timestamp: new Date().toISOString(),
-      action: details.action || eventType, // Use action from details or fallback to eventType
       details,
       ip: details.ip || 'unknown',
       userAgent: details.userAgent || 'unknown'
@@ -91,10 +90,6 @@ class AuditService {
       filteredEvents = filteredEvents.filter(event => event.userId === filters.userId);
     }
 
-    if (filters.action) {
-      filteredEvents = filteredEvents.filter(event => event.action === filters.action);
-    }
-
     if (filters.startDate) {
       const startDate = new Date(filters.startDate);
       filteredEvents = filteredEvents.filter(event => new Date(event.timestamp) >= startDate);
@@ -106,69 +101,6 @@ class AuditService {
     }
 
     return filteredEvents.slice(-limit).reverse();
-  }
-
-  /**
-   * Get audit logs (alias for searchEvents for backward compatibility)
-   * @param {Object} filters - Search filters
-   * @param {number} limit - Maximum number of events to return
-   */
-  getAuditLogs(filters = {}, limit = 100) {
-    return this.searchEvents(filters, limit);
-  }
-
-  /**
-   * Get audit summary for the last N hours
-   * @param {number} hours - Number of hours to look back
-   */
-  getAuditSummary(hours = 24) {
-    const cutoffTime = new Date(Date.now() - (hours * 60 * 60 * 1000));
-    const recentEvents = this.events.filter(event => new Date(event.timestamp) >= cutoffTime);
-
-    const summary = {
-      totalEvents: recentEvents.length,
-      uniqueUsers: new Set(recentEvents.map(event => event.userId)).size,
-      eventsByType: {},
-      eventsByHour: {},
-      timeRange: {
-        start: cutoffTime.toISOString(),
-        end: new Date().toISOString(),
-        hours
-      }
-    };
-
-    // Group events by type
-    recentEvents.forEach(event => {
-      summary.eventsByType[event.eventType] = (summary.eventsByType[event.eventType] || 0) + 1;
-
-      // Group by hour
-      const hour = new Date(event.timestamp).getHours();
-      summary.eventsByHour[hour] = (summary.eventsByHour[hour] || 0) + 1;
-    });
-
-    return summary;
-  }
-
-  /**
-   * Clear old audit logs older than specified days
-   * @param {number} daysToKeep - Number of days of logs to keep
-   */
-  clearOldLogs(daysToKeep = 30) {
-    const cutoffDate = new Date(Date.now() - (daysToKeep * 24 * 60 * 60 * 1000));
-    const initialCount = this.events.length;
-
-    this.events = this.events.filter(event => new Date(event.timestamp) >= cutoffDate);
-
-    const removedCount = initialCount - this.events.length;
-
-    // Log the cleanup operation
-    logger.info('AUDIT CLEANUP', {
-      removedCount,
-      daysToKeep,
-      remainingEvents: this.events.length
-    });
-
-    return removedCount;
   }
 }
 

@@ -38,6 +38,8 @@ export default function NotificationsPage() {
     if (!socket) return;
 
     const handleNewNotification = (notificationData: any) => {
+      console.log('New notification received:', notificationData);
+
       // Create a notification object from the socket data
       const newNotification: Notification = {
         _id: `temp_${Date.now()}`, // Temporary ID for real-time notifications
@@ -103,7 +105,7 @@ export default function NotificationsPage() {
         ...(filter === 'unread' && { unreadOnly: 'true' }),
       });
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/notifications?${params}`, {
+      const response = await fetch(`http://localhost:5000/api/notifications?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -134,7 +136,7 @@ export default function NotificationsPage() {
   const markAsRead = async (notificationId: string) => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/notifications/${notificationId}/read`, {
+      await fetch(`http://localhost:5000/api/notifications/${notificationId}/read`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -152,7 +154,7 @@ export default function NotificationsPage() {
   const markAllAsRead = async () => {
     try {
       const token = localStorage.getItem('token');
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/notifications/mark-all-read`, {
+      await fetch('http://localhost:5000/api/notifications/mark-all-read', {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -268,13 +270,12 @@ export default function NotificationsPage() {
         ) : (
           <>
             {filteredNotifications.map((notification) => (
-              <button
+              <div
                 key={notification._id}
-                className={`notification-card p-6 w-full text-left cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                className={`notification-card p-6 cursor-pointer transition-all duration-200 hover:shadow-lg ${
                   !notification.isRead ? 'ring-2 ring-[var(--primary)] ring-opacity-20' : ''
                 }`}
                 onClick={() => !notification.isRead && markAsRead(notification._id)}
-                aria-label={`Mark notification "${notification.title}" as read`}
               >
                 <div className="flex items-start gap-4">
                   <div className="text-2xl flex-shrink-0">
@@ -327,7 +328,7 @@ export default function NotificationsPage() {
                     </div>
                   </div>
                 </div>
-              </button>
+              </div>
             ))}
 
             {/* Load More Button */}

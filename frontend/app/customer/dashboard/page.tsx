@@ -43,10 +43,10 @@ export default function CustomerDashboard() {
     const fetchData = async () => {
       try {
         const [userRes, bookingsRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`, {
+          fetch('http://localhost:5000/api/auth/me', {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/bookings`, {
+          fetch('http://localhost:5000/api/bookings', {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -293,4 +293,3 @@ export default function CustomerDashboard() {
     </div>
   );
 }
-

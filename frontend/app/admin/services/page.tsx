@@ -45,6 +45,7 @@ interface Service {
   minOrder?: number;
   maxOrder?: number;
   leadTime?: number;
+  image?: string;
 }
 
 export default function AdminServices() {
@@ -92,7 +93,7 @@ export default function AdminServices() {
     const fetchServices = async () => {
       const token = localStorage.getItem('token');
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services`, {
+        const response = await fetch('http://localhost:5000/api/services', {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -114,6 +115,7 @@ export default function AdminServices() {
     if (!socket) return;
 
     const handleServiceUpdate = (data: any) => {
+      console.log('Service updated via real-time:', data);
       setUpdating(true);
 
       // Update the specific service
@@ -133,13 +135,14 @@ export default function AdminServices() {
     };
 
     const handleServiceCreated = (data: any) => {
+      console.log('New service created via real-time:', data);
       setUpdating(true);
 
       // Refresh the entire services list to get the new service
       const fetchUpdatedServices = async () => {
         const token = localStorage.getItem('token');
         try {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services`, {
+          const response = await fetch('http://localhost:5000/api/services', {
             headers: { Authorization: `Bearer ${token}` },
           });
           const data = await response.json();
@@ -157,6 +160,7 @@ export default function AdminServices() {
     };
 
     const handleServiceDeleted = (data: any) => {
+      console.log('Service deleted via real-time:', data);
       setUpdating(true);
 
       // Remove the deleted service from the list
@@ -259,7 +263,7 @@ export default function AdminServices() {
         formDataToSend.append('image', formData.image);
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services`, {
+      const response = await fetch('http://localhost:5000/api/services', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -301,7 +305,7 @@ export default function AdminServices() {
     const token = localStorage.getItem('token');
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services/${id}`, {
+      const response = await fetch(`http://localhost:5000/api/services/${id}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -377,7 +381,7 @@ export default function AdminServices() {
         });
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/services/${editingService._id}`, {
+      const response = await fetch(`http://localhost:5000/api/services/${editingService._id}`, {
         method: 'PUT',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -647,43 +651,66 @@ export default function AdminServices() {
       <div className="space-y-4">
         {services.map((service) => (
           <div key={service._id} className="card p-6">
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <h3 className="text-xl font-semibold">{service.name}</h3>
-                <p className="text-[var(--muted)] text-sm mt-1">{service.description}</p>
-                <div className="flex gap-6 mt-4 text-sm">
-                  <span>Category: <span className="font-semibold capitalize">{service.category}</span></span>
-                  <span>Duration: <span className="font-semibold">{service.duration || 1} day{service.duration !== 1 ? 's' : ''}</span></span>
-                  <span>Price: <span className="font-semibold text-[var(--primary)]">₱{service.price}</span></span>
-                  {(service.serviceType === 'equipment' || service.serviceType === 'supply') && (
-                    <span className="flex items-center gap-2">
-                      Stock:
-                      <span className={`font-semibold flex items-center gap-2 ${
-                        (service.quantity || 0) === 0 ? 'text-red-600' :
-                        (service.quantity || 0) <= 5 ? 'text-yellow-600' : 'text-green-600'
-                      }`}>
-                        {service.quantity || 0} available
-                        <span className="text-xs text-gray-500">
-                          (Manage in Inventory)
-                        </span>
-                      </span>
-                    </span>
-                  )}
-                </div>
+            <div className="flex gap-6">
+              {/* Service Image */}
+              <div className="flex-shrink-0">
+                {service.image ? (
+                  <img
+                    src={`http://localhost:5000${service.image}`}
+                    alt={service.name}
+                    className="w-24 h-24 object-cover rounded-lg border border-gray-200"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-24 h-24 bg-gray-100 rounded-lg border border-gray-200 flex items-center justify-center">
+                    <span className="text-gray-400 text-xs">No Image</span>
+                  </div>
+                )}
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => startEditing(service)}
-                  className="text-blue-600 hover:text-blue-800 transition-colors"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => deleteService(service._id)}
-                  className="text-red-600 hover:text-red-800 transition-colors"
-                >
-                  Delete
-                </button>
+
+              {/* Service Details */}
+              <div className="flex-1">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-semibold">{service.name}</h3>
+                    <p className="text-[var(--muted)] text-sm mt-1">{service.description}</p>
+                    <div className="flex gap-6 mt-4 text-sm">
+                      <span>Category: <span className="font-semibold capitalize">{service.category}</span></span>
+                      <span>Duration: <span className="font-semibold">{service.duration || 1} day{service.duration !== 1 ? 's' : ''}</span></span>
+                      <span>Price: <span className="font-semibold text-[var(--primary)]">₱{service.price}</span></span>
+                      {(service.serviceType === 'equipment' || service.serviceType === 'supply') && (
+                        <span className="flex items-center gap-2">
+                          Stock:
+                          <span className={`font-semibold flex items-center gap-2 ${
+                            (service.quantity || 0) === 0 ? 'text-red-600' :
+                            (service.quantity || 0) <= 5 ? 'text-yellow-600' : 'text-green-600'
+                          }`}>
+                            {service.quantity || 0} available
+                            <span className="text-xs text-gray-500">
+                              (Manage in Inventory)
+                            </span>
+                          </span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 ml-4">
+                    <button
+                      onClick={() => startEditing(service)}
+                      className="text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => deleteService(service._id)}
+                      className="text-red-600 hover:text-red-800 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -692,4 +719,3 @@ export default function AdminServices() {
     </div>
   );
 }
-
