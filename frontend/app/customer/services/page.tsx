@@ -374,12 +374,12 @@ export default function Services() {
           </div>
 
           {/* Services Grid - Full Width Responsive Carousel */}
-          <div className="w-full max-w-7xl mx-auto px-12 sm:px-16 lg:px-20 xl:px-28 py-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-12 sm:gap-16 lg:gap-20 xl:gap-24">
+          <div className="w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
               {filteredServices.map((service, index) => (
                 <div
                   key={service._id}
-                  className="service-card group animate-fade-in w-full min-h-[450px] min-w-[320px]"
+                  className="service-card group animate-fade-in w-full min-h-[400px] min-w-[320px]"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                 {/* Service Image */}
@@ -486,24 +486,24 @@ export default function Services() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex flex-col gap-2 mt-auto">
+                  <div className="flex flex-col md:flex-row gap-3 mt-auto">
                     <button
                       onClick={() => viewServiceDetails(service)}
-                      className="btn-secondary w-full text-center text-sm py-3"
+                      className="btn-secondary flex-1 text-center text-sm py-3 sm:py-4"
                     >
                       View Details
                     </button>
                     {isInCart(service._id) ? (
-                      <div className="flex gap-2">
+                      <div className="flex flex-col md:flex-row gap-3 flex-1">
                         <button
                           onClick={() => handleAddToCart(service)}
-                          className="btn-secondary flex-1 text-center text-green-600 border-green-200 hover:bg-green-50 text-sm py-3"
+                          className="btn-secondary flex-1 text-center text-green-600 border-green-200 hover:bg-green-50 text-sm py-3 sm:py-4"
                         >
                           + Add More
                         </button>
                         <Link
                           href="/customer/cart"
-                          className="btn-primary flex-1 text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300 text-sm py-3"
+                          className="btn-primary flex-1 text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300 text-sm py-3 sm:py-4"
                         >
                           View Cart ({getItemQuantity(service._id)})
                         </Link>
@@ -511,7 +511,7 @@ export default function Services() {
                     ) : (
                       <button
                         onClick={() => handleAddToCart(service)}
-                        className="btn-primary w-full text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300 text-sm py-3"
+                        className="btn-primary flex-1 text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300 text-sm py-3 sm:py-4"
                       >
                         Add to Cart
                       </button>

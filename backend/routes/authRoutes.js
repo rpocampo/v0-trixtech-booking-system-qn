@@ -34,7 +34,7 @@ router.post('/register', async (req, res, next) => {
 
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'trixtech_secret_key_for_production_min_32_chars_long',
+      process.env.JWT_SECRET || 'trixtech_secret_key',
       { expiresIn: '7d' }
     );
 
@@ -70,7 +70,7 @@ router.post('/login', async (req, res, next) => {
 
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'trixtech_secret_key_for_production_min_32_chars_long',
+      process.env.JWT_SECRET || 'trixtech_secret_key',
       { expiresIn: '7d' }
     );
 

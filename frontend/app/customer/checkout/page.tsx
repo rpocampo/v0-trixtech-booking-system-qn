@@ -263,8 +263,7 @@ export default function CheckoutPage() {
   const startPaymentPolling = (referenceNumber: string, token: string) => {
     const pollInterval = setInterval(async () => {
       try {
-        // Use enhanced status endpoint for automatic processing
-        const response = await fetch(`http://localhost:5000/api/payments/status-enhanced/${referenceNumber}`, {
+        const response = await fetch(`http://localhost:5000/api/payments/status/${referenceNumber}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -327,28 +326,21 @@ export default function CheckoutPage() {
               }
             } else if (data.payment.status === 'failed') {
               setPaymentStatus('failed');
-              clearInterval(pollInterval);
-              if (data.payment.timeout) {
-                alert('Payment timed out. Please try again.');
-              }
             } else {
               setPaymentStatus('processing');
+              clearInterval(pollInterval);
             }
           }
         }
       } catch (error) {
         console.error('Error polling payment status:', error);
       }
-    }, 2000); // Poll every 2 seconds for faster response
+    }, 3000); // Poll every 3 seconds
 
-    // Stop polling after 15 minutes (matching backend timeout)
+    // Stop polling after 5 minutes
     setTimeout(() => {
       clearInterval(pollInterval);
-      if (paymentStatus === 'unpaid') {
-        setPaymentStatus('failed');
-        alert('Payment session expired. Please try again.');
-      }
-    }, 15 * 60 * 1000);
+    }, 5 * 60 * 1000);
   };
 
   const handleConfirmBooking = async () => {
@@ -1289,6 +1281,10 @@ export default function CheckoutPage() {
 
       {currentStep === 'payment-type' && paymentBooking && (
         <div className="space-y-6">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Choose Payment Option</h1>
+            <p className="text-gray-600">Select how you'd like to pay for your booking</p>
+          </div>
 
           {/* Payment Options */}
           <div className="grid md:grid-cols-1 gap-6 max-w-md mx-auto">
@@ -1521,10 +1517,7 @@ export default function CheckoutPage() {
                   <div className="space-y-3">
                     <div className="inline-flex items-center text-blue-600">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                      <div>
-                        <div className="font-medium">Waiting for payment confirmation...</div>
-                        <div className="text-sm text-blue-500">Payment will be confirmed once received from GCash</div>
-                      </div>
+                      Processing payment...
                     </div>
                   </div>
                 )}
@@ -1533,10 +1526,7 @@ export default function CheckoutPage() {
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    <div>
-                      <div className="font-medium">Payment completed successfully!</div>
-                      <div className="text-sm text-green-500">Booking confirmed automatically. Redirecting...</div>
-                    </div>
+                    Payment completed! Redirecting...
                   </div>
                 )}
                 {paymentStatus === 'failed' && (
@@ -1544,29 +1534,15 @@ export default function CheckoutPage() {
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
-                    <div>
-                      <div className="font-medium">Payment failed or timed out</div>
-                      <div className="text-sm text-red-500">Please try again or contact support</div>
-                    </div>
+                    Payment failed. Please try again.
                   </div>
                 )}
                 {paymentStatus === 'unpaid' && (
-                  <div className="space-y-3">
-                    <div className="inline-flex items-center text-yellow-600">
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <div>
-                        <div className="font-medium">Waiting for payment...</div>
-                        <div className="text-sm text-yellow-500">Scan the QR code with GCash and complete payment</div>
-                      </div>
-                    </div>
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                      <div className="text-sm text-yellow-800">
-                        <strong>Payment Confirmation:</strong> Transaction will be confirmed only after successful payment in GCash.
-                        Booking confirmation happens automatically once payment is received.
-                      </div>
-                    </div>
+                  <div className="inline-flex items-center text-yellow-600">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Payment pending...
                   </div>
                 )}
               </div>

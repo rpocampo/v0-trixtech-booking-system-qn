@@ -4,7 +4,6 @@ const path = require('path');
 const fs = require('fs');
 const User = require('../models/User');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
-const { auditService } = require('../utils/auditService');
 
 // Configure multer for QR code uploads
 const storage = multer.diskStorage({
@@ -70,42 +69,6 @@ router.put('/:id', authMiddleware, async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    // Log audit event for profile update
-    await auditService.logAuditEvent(
-      'user_action',
-      req.user.id,
-      'update_profile',
-      {
-        userId: req.params.id,
-        updatedFields: { name, phone, address },
-        isSelfUpdate: req.user.id === req.params.id
-      },
-      {
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-        targetUserId: req.params.id
-      }
-    );
-
-    // Emit real-time event for profile update
-    const io = global.io;
-    if (io) {
-      io.to(`user_${req.params.id}`).emit('profile-updated', {
-        userId: req.params.id,
-        updatedFields: { name, phone, address },
-        updatedBy: req.user.id
-      });
-
-      // Notify admin of profile changes
-      if (req.user.role !== 'admin') {
-        io.to('admin').emit('user-profile-updated', {
-          userId: req.params.id,
-          updatedFields: { name, phone, address },
-          updatedBy: req.user.id
-        });
-      }
-    }
-
     res.json({ success: true, user });
   } catch (error) {
     next(error);
@@ -133,16 +96,6 @@ router.post('/:id/gcash-qr', authMiddleware, upload.single('qrCode'), async (req
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
-    }
-
-    // Emit real-time event for QR code update
-    const io = global.io;
-    if (io) {
-      io.to(`user_${req.params.id}`).emit('gcash-qr-updated', {
-        userId: req.params.id,
-        qrCodeUrl,
-        updatedBy: req.user.id
-      });
     }
 
     res.json({

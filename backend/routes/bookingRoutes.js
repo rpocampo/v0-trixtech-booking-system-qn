@@ -11,7 +11,6 @@ const { sendTemplateNotification } = require('../utils/notificationService');
 const { findAlternativeServices, processReservationQueue } = require('../utils/recommendationService');
 const { triggerLowStockCheck } = require('../utils/lowStockAlertService');
 const lockService = require('../utils/lockService');
-const auditService = require('../utils/auditService');
 
 const router = express.Router();
 
@@ -346,75 +345,42 @@ router.post('/', authMiddleware, async (req, res, next) => {
           bookingData.deliveryDuration = 60; // 1 hour
         }
 
-        // Use MongoDB transaction for atomic booking creation and inventory update (only in production/replica set)
+        // Use MongoDB transaction for atomic booking creation and inventory update
+        const session = await mongoose.startSession();
         let booking;
-        const useTransactions = (process.env.NODE_ENV === 'production' || process.env.MONGODB_URI?.includes('replicaSet')) && false; // Disabled for now
 
-        if (useTransactions) {
-          const session = await mongoose.startSession();
+        try {
+          await session.withTransaction(async () => {
+            // Create booking within transaction
+            booking = new Booking(bookingData);
+            await booking.save({ session });
 
-          try {
-            await session.withTransaction(async () => {
-              // Create booking within transaction
-              booking = new Booking(bookingData);
-              await booking.save({ session });
+            // Decrease inventory if it's equipment or supply (within same transaction)
+                if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+                  // Use batch tracking for inventory reduction (FIFO)
+                  await service.reduceBatchQuantity(requestedQuantity);
 
-              // Decrease inventory for equipment/supply services OR services with included items
-              if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
-                // Use batch tracking for inventory reduction (FIFO)
-                await service.reduceBatchQuantity(requestedQuantity);
-
-                // Trigger low stock alert check after transaction commits
-                try {
-                  // Use setImmediate to run after transaction completes
-                  setImmediate(async () => {
-                    await triggerLowStockCheck(serviceId);
-                  });
-                } catch (alertError) {
-                  console.error('Error triggering low stock alert:', alertError);
-                  // Don't fail the booking if alert fails
+                  // Trigger low stock alert check after transaction commits
+                  try {
+                    // Use setImmediate to run after transaction completes
+                    setImmediate(async () => {
+                      await triggerLowStockCheck(serviceId);
+                    });
+                  } catch (alertError) {
+                    console.error('Error triggering low stock alert:', alertError);
+                    // Don't fail the booking if alert fails
+                  }
                 }
-              } else if (service.includedItems && service.includedItems.length > 0) {
-                // For bundled services (like Wedding Event), reduce inventory of individual items
-                console.log(`Processing inventory for bundled service: ${service.name}`);
-                await processBundledServiceInventory(service, requestedQuantity);
-              }
-            });
+          });
 
-            // Transaction committed successfully
-            console.log('Booking and inventory update completed atomically');
+          // Transaction committed successfully
+          console.log('Booking and inventory update completed atomically');
 
-          } catch (transactionError) {
-            console.error('Transaction failed:', transactionError);
-            throw transactionError; // Re-throw to be caught by outer catch
-          } finally {
-            await session.endSession();
-          }
-        } else {
-          // Non-transactional approach for development
-          console.log('Using non-transactional booking creation for development environment');
-
-          // Create booking without transaction
-          booking = new Booking(bookingData);
-          await booking.save();
-
-          // Decrease inventory for equipment/supply services OR services with included items
-          if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
-            // Use batch tracking for inventory reduction (FIFO)
-            await service.reduceBatchQuantity(requestedQuantity);
-
-            // Trigger low stock alert check
-            try {
-              await triggerLowStockCheck(serviceId);
-            } catch (alertError) {
-              console.error('Error triggering low stock alert:', alertError);
-              // Don't fail the booking if alert fails
-            }
-          } else if (service.includedItems && service.includedItems.length > 0) {
-            // For bundled services (like Wedding Event), reduce inventory of individual items
-            console.log(`Processing inventory for bundled service: ${service.name}`);
-            await processBundledServiceInventory(service, requestedQuantity);
-          }
+        } catch (transactionError) {
+          console.error('Transaction failed:', transactionError);
+          throw transactionError; // Re-throw to be caught by outer catch
+        } finally {
+          await session.endSession();
         }
 
         await booking.populate('serviceId');
@@ -452,7 +418,6 @@ router.post('/', authMiddleware, async (req, res, next) => {
           // Emit real-time events for pending booking
           const io = global.io;
           if (io) {
-            console.log(`🔄 SYNC: Emitting booking-created to user_${req.user.id} for booking ${booking._id}`);
             io.to(`user_${req.user.id}`).emit('booking-created', {
               booking: {
                 id: booking._id,
@@ -464,7 +429,6 @@ router.post('/', authMiddleware, async (req, res, next) => {
               }
             });
 
-            console.log(`🔄 SYNC: Emitting new-pending-booking to admin for booking ${booking._id}`);
             io.to('admin').emit('new-pending-booking', {
               booking: {
                 id: booking._id,
@@ -479,23 +443,6 @@ router.post('/', authMiddleware, async (req, res, next) => {
         } catch (notificationError) {
           console.error('Error sending pending booking notifications:', notificationError);
         }
-
-        // Log audit event for booking creation
-        auditService.logEvent(
-          'create_booking',
-          req.user.id,
-          {
-            bookingId: booking._id,
-            serviceId,
-            quantity: requestedQuantity,
-            totalPrice,
-            status: 'pending',
-            ip: req.ip,
-            userAgent: req.get('User-Agent'),
-            serviceName: service.name,
-            serviceCategory: service.category
-          }
-        );
 
         return {
           success: true,
@@ -519,6 +466,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
       }
     } else {
       // Add to reservation queue when not available
+      // Add to reservation queue
       const alternatives = await findAlternativeServices(serviceId, new Date(bookingDate), requestedQuantity);
 
       const queueEntry = new ReservationQueue({
@@ -561,6 +509,20 @@ router.post('/', authMiddleware, async (req, res, next) => {
             <p>You've been added to our reservation queue with first-come, first-served priority.</p>
             <p><strong>Requested:</strong> ${requestedQuantity} ${service.category === 'equipment' ? 'items' : 'service'}</p>
             <p><strong>Date:</strong> ${new Date(bookingDate).toLocaleDateString()}</p>
+
+            ${alternatives.length > 0 ? `
+            <h3>Alternative Options Available:</h3>
+            <ul>
+              ${alternatives.map(alt => `
+                <li>
+                  <strong>${alt.name}</strong> - ₱${alt.price}
+                  ${alt.isAvailable ? '<span style="color: green;">(Available)</span>' : '<span style="color: red;">(Limited)</span>'}
+                  <br><small>${alt.reason}</small>
+                </li>
+              `).join('')}
+            </ul>
+            ` : ''}
+
             <p>We'll notify you immediately when your reservation becomes available!</p>
             <p>Thank you for your patience.</p>
           `,
@@ -709,7 +671,6 @@ router.put('/:id', adminMiddleware, async (req, res, next) => {
       // Emit real-time event for status update
       const io = global.io;
       if (io && booking.customerId) {
-        console.log(`🔄 SYNC: Emitting booking-updated to user_${booking.customerId._id} for booking ${booking._id}`);
         io.to(`user_${booking.customerId._id}`).emit('booking-updated', {
           booking: {
             id: booking._id,
@@ -1082,7 +1043,6 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       // Emit real-time events
       const io = global.io;
       if (io) {
-        console.log(`🔄 SYNC: Emitting booking-confirmed to user_${req.user.id} for booking ${booking._id}`);
         io.to(`user_${req.user.id}`).emit('booking-confirmed', {
           booking: {
             id: booking._id,
@@ -1094,7 +1054,6 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
           }
         });
 
-        console.log(`🔄 SYNC: Emitting new-confirmed-booking to admin for booking ${booking._id}`);
         io.to('admin').emit('new-confirmed-booking', {
           booking: {
             id: booking._id,
@@ -1136,24 +1095,6 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       // Don't fail the booking if preference tracking fails
     }
 
-    // Log audit event for booking confirmation
-    auditService.logEvent(
-      'confirm_booking',
-      req.user.id,
-      {
-        bookingId: booking._id,
-        paymentId: payment._id,
-        serviceId: bookingIntent.serviceId,
-        quantity: bookingIntent.quantity,
-        totalPrice: bookingIntent.totalPrice,
-        paymentMethod: 'gcash_qr',
-        ip: req.ip,
-        userAgent: req.get('User-Agent'),
-        referenceNumber: paymentReference,
-        serviceName: service.name
-      }
-    );
-
     res.status(201).json({
       success: true,
       booking,
@@ -1166,82 +1107,6 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     next(error);
   }
 });
-
-// Function to process inventory for bundled services (services with included items)
-async function processBundledServiceInventory(service, quantity) {
-  try {
-    console.log(`Processing bundled service inventory for ${service.name} with ${service.includedItems.length} items`);
-
-    for (const itemDescription of service.includedItems) {
-      // Parse item description to extract quantity and item name
-      // Example: "100 Uratex Monoblock Chair with covers" -> quantity: 100, name: "Uratex Monoblock Chair"
-      const quantityMatch = itemDescription.match(/^(\d+)\s+/);
-      if (!quantityMatch) {
-        console.warn(`Could not parse quantity from item: ${itemDescription}`);
-        continue;
-      }
-
-      const itemQuantity = parseInt(quantityMatch[1]);
-      const itemName = itemDescription.replace(/^(\d+)\s+/, '').replace(/\s+with\s+covers?$/, '').trim();
-
-      console.log(`Looking for inventory item: "${itemName}" with quantity: ${itemQuantity * quantity}`);
-
-      // Find the corresponding service in inventory with improved matching
-      let inventoryService = await Service.findOne({
-        name: { $regex: itemName, $options: 'i' }, // Case-insensitive match
-        serviceType: { $in: ['equipment', 'supply'] },
-        isAvailable: true
-      });
-
-      // If no exact match, try singular/plural variations
-      if (!inventoryService) {
-        // Try removing 's' from end for plural to singular
-        const singularName = itemName.replace(/s$/i, '');
-        inventoryService = await Service.findOne({
-          name: { $regex: singularName, $options: 'i' },
-          serviceType: { $in: ['equipment', 'supply'] },
-          isAvailable: true
-        });
-
-        // If still no match, try adding 's' for singular to plural
-        if (!inventoryService) {
-          const pluralName = itemName + 's';
-          inventoryService = await Service.findOne({
-            name: { $regex: pluralName, $options: 'i' },
-            serviceType: { $in: ['equipment', 'supply'] },
-            isAvailable: true
-          });
-        }
-      }
-
-      if (inventoryService) {
-        const totalQuantityToReduce = itemQuantity * quantity; // Multiply by booking quantity
-
-        if (inventoryService.quantity >= totalQuantityToReduce) {
-          await inventoryService.reduceBatchQuantity(totalQuantityToReduce);
-          console.log(`Reduced inventory for ${inventoryService.name}: -${totalQuantityToReduce} (now ${inventoryService.quantity})`);
-
-          // Trigger low stock alert check
-          try {
-            await triggerLowStockCheck(inventoryService._id);
-          } catch (alertError) {
-            console.error('Error triggering low stock alert for bundled item:', alertError);
-          }
-        } else {
-          console.error(`Insufficient inventory for ${inventoryService.name}. Required: ${totalQuantityToReduce}, Available: ${inventoryService.quantity}`);
-          throw new Error(`Insufficient inventory for ${inventoryService.name}`);
-        }
-      } else {
-        console.warn(`Could not find inventory service matching: "${itemName}"`);
-      }
-    }
-
-    console.log(`Completed inventory processing for bundled service: ${service.name}`);
-  } catch (error) {
-    console.error('Error processing bundled service inventory:', error);
-    throw error;
-  }
-}
 
 // Function to record booking analytics patterns
 async function recordBookingAnalytics(customerId, currentServiceId, quantity) {

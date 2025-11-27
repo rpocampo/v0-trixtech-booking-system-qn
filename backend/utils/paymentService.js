@@ -17,7 +17,7 @@ const generateReferenceNumber = () => {
   return `QR_${timestamp}_${random}`.toUpperCase();
 };
 
-// Create QR code-based payment for GCash using static QR code
+// Create QR code-based payment for GCash
 const createQRPayment = async (bookingId, amount, userId, paymentType = 'full') => {
   try {
     const transactionId = generateTransactionId();
@@ -52,7 +52,7 @@ const createQRPayment = async (bookingId, amount, userId, paymentType = 'full') 
         createdAt: new Date(),
         qrGenerated: true,
         referenceNumber,
-        usesStaticQR: true, // Track that we're using static QR
+        usesUserQR: !!user.gcashQRCode, // Track if using user's QR
       }
     });
 
@@ -61,16 +61,45 @@ const createQRPayment = async (bookingId, amount, userId, paymentType = 'full') 
     let qrCodeDataURL;
     let paymentInstructions;
 
-    // Use static GCash QR code for TRIXTECH
-    const { generateStaticGCashQR, generateStaticPaymentInstructions } = require('./qrCodeService');
+    if (user.gcashQRCode) {
+      // Use user's personal GCash QR code data directly
+      // Instead of generating a QR code, return the raw data for the frontend to handle
+      qrCodeDataURL = user.gcashQRCode; // Return the raw QR data string
 
-    qrCodeDataURL = await generateStaticGCashQR();
+      // Custom instructions for personal QR code
+      paymentInstructions = {
+        title: 'Pay with GCash QR Code',
+        instructions: [
+          '1. Open your GCash app',
+          '2. Tap the QR scanner icon or select "Pay QR"',
+          '3. Scan the QR code shown below',
+          '4. Verify the amount and recipient details',
+          '5. Confirm and complete the payment, or use the test payment button below to simulate payment for testing',
+          '6. The system will automatically detect your payment'
+        ],
+        amount,
+        reference: referenceNumber,
+        merchant: user.name,
+        note: `Please send exactly ₱${amount.toFixed(2)} to complete your booking payment. Include "${referenceNumber}" in the message/notes field for faster processing.`,
+        qrData: user.gcashQRCode // Include the raw QR data for frontend
+      };
+    } else {
+      // Generate dynamic QR code (fallback)
+      const paymentDescription = `Payment - ${transactionId}`;
 
-    paymentInstructions = generateStaticPaymentInstructions({
-      amount,
-      referenceNumber,
-      merchantName: 'TRIXTECH'
-    });
+      const qrData = {
+        amount,
+        referenceNumber,
+        merchantName: 'TRIXTECH',
+        merchantId: 'TRIXTECH001',
+        description: paymentDescription,
+        paymentId: payment._id.toString(),
+        callbackUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/api/payments/verify-qr/${referenceNumber}`
+      };
+
+      qrCodeDataURL = await generateQRCodeDataURL(qrData);
+      paymentInstructions = generatePaymentInstructions(qrData);
+    }
 
     // Update payment with QR data
     payment.paymentData.qrCode = qrCodeDataURL;
@@ -86,7 +115,7 @@ const createQRPayment = async (bookingId, amount, userId, paymentType = 'full') 
       instructions: paymentInstructions,
       status: 'pending',
       paymentType,
-      usesStaticQR: true // Indicate we're using static QR
+      usesUserQR: !!user.gcashQRCode // Indicate if using user's QR
     };
 
   } catch (error) {
@@ -189,7 +218,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
     }
 
     // Update payment status
-    payment.status = 'completed';
+    payment.status = 'paid';
     payment.completedAt = new Date();
     payment.paymentData = { ...payment.paymentData, ...paymentData, verifiedAt: new Date() };
     await payment.save();

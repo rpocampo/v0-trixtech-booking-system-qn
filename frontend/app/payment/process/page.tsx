@@ -403,12 +403,6 @@ function PaymentProcessContent() {
 
             <div className="flex justify-center mb-6">
               <div className="bg-white p-4 rounded-lg border-2 border-gray-200 relative">
-                {/* Account Name Display */}
-                <div className="text-center mb-4">
-                  <div className="text-lg font-bold text-gray-800">MI**I M.</div>
-                  <div className="text-sm text-gray-600">GCash Account</div>
-                </div>
-
                 {generatedQRCode || (qrPayment.qrCode && !qrPayment.qrCode.startsWith('000201')) ? (
                   <img
                     src={generatedQRCode || qrPayment.qrCode}

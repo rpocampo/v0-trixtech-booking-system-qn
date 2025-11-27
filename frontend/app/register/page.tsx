@@ -34,11 +34,6 @@ export default function Register() {
     e.preventDefault();
     setError('');
 
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
-
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -289,14 +284,6 @@ export default function Register() {
                   'Send Verification Code 📧'
                 )}
               </button>
-            </div>
-
-            {/* Sign In Link */}
-            <div className="text-center mt-4">
-              <span className="text-sm text-[var(--muted)]">Already have an account? </span>
-              <Link href="/login" className="text-sm text-[var(--primary)] hover:text-[var(--primary-dark)] transition-colors font-semibold">
-                Sign In
-              </Link>
             </div>
           </form>
         ) : (

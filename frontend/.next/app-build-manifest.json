@@ -1,5 +1,21 @@
 {
   "pages": {
+    "/customer/services/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/customer/services/page.js"
+    ],
+    "/customer/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/customer/layout.js"
+    ],
+    "/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/layout.css",
+      "static/chunks/app/layout.js"
+    ],
     "/admin/inventory/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -10,21 +26,35 @@
       "static/chunks/main-app.js",
       "static/chunks/app/admin/layout.js"
     ],
-    "/layout": [
+    "/admin/customers/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/css/app/layout.css",
-      "static/chunks/app/layout.js"
+      "static/chunks/app/admin/customers/page.js"
     ],
-    "/customer/services/page": [
+    "/admin/notifications/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/customer/services/page.js"
+      "static/chunks/app/admin/notifications/page.js"
     ],
-    "/customer/layout": [
+    "/admin/reports/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/customer/layout.js"
+      "static/chunks/app/admin/reports/page.js"
+    ],
+    "/admin/services/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/admin/services/page.js"
+    ],
+    "/admin/bookings/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/admin/bookings/page.js"
+    ],
+    "/admin/dashboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/admin/dashboard/page.js"
     ]
   }
 }

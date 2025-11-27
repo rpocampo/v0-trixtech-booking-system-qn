@@ -11,32 +11,65 @@ async function seedDatabase() {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/trixtech');
     console.log('Connected to MongoDB');
 
-    console.log('Database connection verified...');
+    console.log('Initializing database...');
 
-    // Check database connectivity and structure
-    const collections = await mongoose.connection.db.listCollections().toArray();
-    console.log(`Found ${collections.length} collections in database`);
+    // Always clear and recreate basic data for testing
+    await User.deleteMany({});
+    await Service.deleteMany({});
+    console.log('Cleared existing data');
 
-    // Verify essential collections exist
-    const requiredCollections = ['users', 'services', 'bookings'];
-    const existingCollections = collections.map(col => col.name);
-
-    for (const collection of requiredCollections) {
-      if (existingCollections.includes(collection)) {
-        console.log(`✓ Collection '${collection}' exists`);
-      } else {
-        console.log(`⚠️  Collection '${collection}' not found - will be created when first used`);
-      }
+    // Create admin user (always create if doesn't exist)
+    const existingAdmin = await User.findOne({ role: 'admin' });
+    if (!existingAdmin) {
+      const adminUser = new User({
+        name: process.env.ADMIN_NAME || 'System Administrator',
+        email: process.env.ADMIN_EMAIL || 'admin@trixtech.com',
+        password: process.env.ADMIN_PASSWORD || 'admin123',
+        role: 'admin',
+        phone: process.env.ADMIN_PHONE || '',
+        address: process.env.ADMIN_ADDRESS || '',
+      });
+      await adminUser.save();
+      console.log('Admin user created');
+    } else {
+      console.log('Admin user already exists');
     }
 
-    // Note: No data seeding - all data should be synced from external sources
-    // or managed through the admin interface
-    console.log('\n✓ Database structure verified!');
-    console.log('No data seeding performed - sync data from external sources or use admin interface');
+    // Create demo customer only if seeding demo data
+    const existingCustomer = await User.findOne({ email: 'demo@trixtech.com' });
+    if (!existingCustomer) {
+      const customerUser = new User({
+        name: 'Demo Customer',
+        email: 'demo@trixtech.com',
+        password: 'demo1234',
+        role: 'customer',
+        phone: '+63 (999) 123-4567',
+        address: '123 Demo Street, Demo City, Philippines',
+      });
+      await customerUser.save();
+      console.log('Demo customer created');
+    }
+
+    // Create basic services (always create for testing)
+    const services = [
+      // No default services - add them manually through admin interface
+    ];
+
+    // Always create basic services for testing
+    const existingServices = await Service.find({});
+    if (existingServices.length === 0) {
+      await Service.insertMany(services);
+      console.log(`${services.length} basic services created for testing`);
+    } else {
+      console.log(`${existingServices.length} services already exist`);
+    }
+
+    console.log('\n✓ Database initialized successfully!');
+    console.log('Basic services and admin user created for testing');
 
     process.exit(0);
   } catch (error) {
-    console.error('Error verifying database:', error);
+    console.error('Error seeding database:', error);
     process.exit(1);
   }
 }

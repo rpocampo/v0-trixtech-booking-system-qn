@@ -49,6 +49,7 @@ export default function SuggestionsPage() {
   const [filters, setFilters] = useState({
     category: '',
     priceRange: '',
+    availability: '',
   });
   const [userPreferences, setUserPreferences] = useState({
     eventType: '',
@@ -191,6 +192,8 @@ export default function SuggestionsPage() {
       if (filters.priceRange === 'medium' && (price <= 1000 || price > 5000)) return false;
       if (filters.priceRange === 'high' && price <= 5000) return false;
     }
+    if (filters.availability === 'available' && !rec.isAvailable) return false;
+    if (filters.availability === 'high-stock' && (!rec.availableQuantity || rec.availableQuantity <= 5)) return false;
     return true;
   });
 
@@ -234,7 +237,7 @@ export default function SuggestionsPage() {
       {/* Filters */}
       <div className="card p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">Preferences</h2>
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">Event Type</label>
             <select
@@ -264,10 +267,22 @@ export default function SuggestionsPage() {
               <option value="high">₱5,001+</option>
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-2">Availability</label>
+            <select
+              value={filters.availability}
+              onChange={(e) => setFilters({ ...filters, availability: e.target.value })}
+              className="input-field"
+            >
+              <option value="">All Services</option>
+              <option value="available">Available Only</option>
+              <option value="high-stock">High Stock</option>
+            </select>
+          </div>
         </div>
         <div className="mt-4 flex gap-2">
           <button
-            onClick={() => setFilters({ category: '', priceRange: '' })}
+            onClick={() => setFilters({ category: '', priceRange: '', availability: '' })}
             className="btn-secondary"
           >
             Clear Filters
@@ -285,7 +300,7 @@ export default function SuggestionsPage() {
           <h3 className="text-xl font-semibold text-gray-800 mb-2">No recommendations found</h3>
           <p className="text-gray-600 mb-4">Try adjusting your filters to see more options.</p>
           <button
-            onClick={() => setFilters({ category: '', priceRange: '' })}
+            onClick={() => setFilters({ category: '', priceRange: '', availability: '' })}
             className="btn-primary"
           >
             Show All Recommendations

@@ -1,5 +1,4 @@
 const nodemailer = require('nodemailer');
-const logger = require('./logger');
 const User = require('../models/User');
 const OTP = require('../models/OTP');
 
@@ -8,7 +7,7 @@ let transporter = null;
 // Initialize email transporter
 const initializeEmailService = () => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-    logger.warn('Email service disabled - EMAIL_USER or EMAIL_PASSWORD not configured');
+    console.log('Email service disabled - EMAIL_USER or EMAIL_PASSWORD not configured');
     return null;
   }
 
@@ -22,7 +21,7 @@ const initializeEmailService = () => {
     },
   });
 
-  logger.info('Email service initialized');
+  console.log('Email service initialized');
   return transporter;
 };
 
@@ -90,13 +89,6 @@ const recordSuccess = () => {
 
 // Send booking confirmation email with fallback
 const sendBookingConfirmation = async (email, bookingDetails) => {
-  // In development mode, skip email sending
-  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
-    console.log(`📧 DEVELOPMENT MODE: Would send booking confirmation to ${email}`);
-    console.log(`📧 Booking details:`, bookingDetails);
-    return;
-  }
-
   if (!transporter) {
     console.log('Email service not configured, skipping confirmation');
     return;
@@ -329,16 +321,11 @@ const sendPasswordResetEmail = async (email, userName, resetUrl) => {
 
 // Send OTP email for verification
 const sendOTPEmail = async (email, otp, purpose) => {
-  // In test mode, skip email sending entirely
-  if (process.env.NODE_ENV === 'test') {
-    console.log(`🔑 TEST MODE: OTP for ${email} (${purpose}): ${otp}`);
-    console.log(`📧 Email sending skipped in test mode`);
-    return { success: true, test: true };
-  }
-
-  // In development mode, still send OTP emails for testing purposes
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`🔑 DEVELOPMENT MODE: Sending OTP email to ${email} (${purpose}): ${otp}`);
+  // In development mode, log OTP to console instead of sending email
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+    console.log(`🔑 DEVELOPMENT MODE: OTP for ${email} (${purpose}): ${otp}`);
+    console.log(`📧 This OTP would be sent via email in production`);
+    return { success: true, development: true };
   }
 
   if (!transporter) {

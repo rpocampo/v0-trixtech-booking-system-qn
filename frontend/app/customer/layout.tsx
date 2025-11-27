@@ -186,15 +186,15 @@ export default function CustomerLayout({
               </button>
 
               {isUserMenuOpen && (
-                <div className="absolute right-0 mt-2 w-64 max-w-xs bg-white rounded-xl shadow-xl border border-[var(--border)] z-50 animate-slide-in">
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-[var(--border)] z-50 animate-slide-in">
                   <div className="p-4 border-b border-[var(--border)]">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-semibold flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-semibold">
                         {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-[var(--foreground)] truncate">{user?.name}</p>
-                        <p className="text-sm text-[var(--muted)] break-all leading-tight">{user?.email}</p>
+                      <div>
+                        <p className="font-semibold text-[var(--foreground)]">{user?.name}</p>
+                        <p className="text-sm text-[var(--muted)]">{user?.email}</p>
                       </div>
                     </div>
                   </div>
@@ -246,12 +246,12 @@ export default function CustomerLayout({
               {/* User Info */}
               {user && (
                 <div className="flex items-center gap-3 p-3 mb-4 bg-gradient-to-r from-[var(--primary-50)] to-[var(--accent)]/10 rounded-lg">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-semibold flex-shrink-0">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-semibold">
                     {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-[var(--foreground)] text-sm truncate">{user?.name}</p>
-                    <p className="text-xs text-[var(--muted)] break-all leading-tight">{user?.email}</p>
+                  <div>
+                    <p className="font-semibold text-[var(--foreground)] text-sm">{user?.name}</p>
+                    <p className="text-xs text-[var(--muted)]">{user?.email}</p>
                   </div>
                 </div>
               )}
