@@ -276,54 +276,12 @@ export default function CheckoutPage() {
               setPaymentStatus('paid');
               clearInterval(pollInterval);
 
-              // Confirm all bookings after successful payment
-              try {
-                const confirmPromises = Array.isArray(paymentBooking)
-                  ? paymentBooking.map(bookingData =>
-                      fetch('http://localhost:5000/api/bookings/confirm', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({
-                          paymentReference: referenceNumber,
-                          bookingIntent: bookingData.intent,
-                        }),
-                      })
-                    )
-                  : [
-                      fetch('http://localhost:5000/api/bookings/confirm', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${token}`,
-                        },
-                        body: JSON.stringify({
-                          paymentReference: referenceNumber,
-                          bookingIntent: paymentBooking,
-                        }),
-                      })
-                    ];
-
-                const confirmResults = await Promise.allSettled(confirmPromises);
-                const successfulConfirmations = confirmResults.filter(result =>
-                  result.status === 'fulfilled' && result.value.ok
-                ).length;
-
-                if (successfulConfirmations > 0) {
-                  // Clear cart and redirect to success page after a short delay
-                  setTimeout(() => {
-                    clearCart();
-                    router.push('/customer/bookings?payment=success');
-                  }, 2000);
-                } else {
-                  alert('Payment completed but booking confirmation failed. Please contact support.');
-                }
-              } catch (confirmError) {
-                console.error('Error confirming bookings:', confirmError);
-                alert('Payment completed but booking confirmation failed. Please contact support.');
-              }
+              // Clear cart and redirect to success page after a short delay
+              // The payment verification already created the booking and sent notifications
+              setTimeout(() => {
+                clearCart();
+                router.push('/customer/bookings?payment=success');
+              }, 2000);
             } else if (data.payment.status === 'failed') {
               setPaymentStatus('failed');
             } else {
@@ -632,31 +590,9 @@ export default function CheckoutPage() {
                           Duration (Days)
                         </label>
                         <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleDurationChange(item.id, Math.max(1, (item.duration || 1) - 1))}
-                            className="w-6 h-6 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center text-blue-700 font-bold text-xs"
-                            disabled={(item.duration || 1) <= 1}
-                          >
-                            −
-                          </button>
-                          <input
-                            type="number"
-                            min="1"
-                            value={item.duration || 1}
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 1;
-                              handleDurationChange(item.id, Math.max(1, value));
-                            }}
-                            className="w-12 text-center border border-blue-300 rounded px-1 py-0.5 text-xs focus:border-blue-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleDurationChange(item.id, (item.duration || 1) + 1)}
-                            className="w-6 h-6 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center text-blue-700 font-bold text-xs"
-                          >
-                            +
-                          </button>
+                          <span className="text-sm font-medium text-blue-800">
+                            Duration: {item.duration || 1} day{(item.duration || 1) !== 1 ? 's' : ''}
+                          </span>
                           <span
                             className="text-xs text-blue-700 duration-price transition-colors"
                             data-item-id={item.id}
@@ -853,31 +789,9 @@ export default function CheckoutPage() {
                           Duration (Days) <span className="text-red-500">*</span>
                         </label>
                         <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleDurationChange(item.id, Math.max(1, (item.duration || 1) - 1))}
-                            className="w-8 h-8 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center text-blue-700 font-bold"
-                            disabled={(item.duration || 1) <= 1}
-                          >
-                            −
-                          </button>
-                          <input
-                            type="number"
-                            min="1"
-                            value={item.duration || 1}
-                            onChange={(e) => {
-                              const value = parseInt(e.target.value) || 1;
-                              handleDurationChange(item.id, Math.max(1, value));
-                            }}
-                            className="w-16 text-center border border-blue-300 rounded px-2 py-1 text-sm focus:border-blue-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleDurationChange(item.id, (item.duration || 1) + 1)}
-                            className="w-8 h-8 rounded-full bg-blue-200 hover:bg-blue-300 flex items-center justify-center text-blue-700 font-bold"
-                          >
-                            +
-                          </button>
+                          <span className="text-sm font-medium text-blue-800">
+                            Duration: {item.duration || 1} day{(item.duration || 1) !== 1 ? 's' : ''}
+                          </span>
                           <span className="text-sm text-blue-700 ml-2">
                             ₱{(item.dailyRate || item.price).toFixed(2)}/day
                           </span>
@@ -1281,10 +1195,6 @@ export default function CheckoutPage() {
 
       {currentStep === 'payment-type' && paymentBooking && (
         <div className="space-y-6">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Choose Payment Option</h1>
-            <p className="text-gray-600">Select how you'd like to pay for your booking</p>
-          </div>
 
           {/* Payment Options */}
           <div className="grid md:grid-cols-1 gap-6 max-w-md mx-auto">
@@ -1538,11 +1448,57 @@ export default function CheckoutPage() {
                   </div>
                 )}
                 {paymentStatus === 'unpaid' && (
-                  <div className="inline-flex items-center text-yellow-600">
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Payment pending...
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center text-yellow-600">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Payment pending...
+                    </div>
+
+                    {/* Manual Payment Confirmation Button */}
+                    <button
+                      onClick={async () => {
+                        try {
+                          const token = localStorage.getItem('token');
+                          if (!token) {
+                            alert('Please log in to continue');
+                            return;
+                          }
+
+                          const response = await fetch(`http://localhost:5000/api/payments/verify-qr/${qrPayment.referenceNumber}`, {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`,
+                            },
+                            body: JSON.stringify({
+                              test: true,
+                              amount: checkoutTotal,
+                              referenceNumber: qrPayment.referenceNumber
+                            }),
+                          });
+
+                          if (response.ok) {
+                            setPaymentStatus('paid');
+                            // Clear cart and redirect to success page after a short delay
+                            // The payment verification already created the booking and sent notifications
+                            setTimeout(() => {
+                              clearCart();
+                              router.push('/customer/bookings?payment=success');
+                            }, 2000);
+                          } else {
+                            setPaymentStatus('failed');
+                          }
+                        } catch (error) {
+                          console.error('Manual payment confirmation failed:', error);
+                          setPaymentStatus('failed');
+                        }
+                      }}
+                      className="text-sm bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium"
+                    >
+                      Confirm Payment
+                    </button>
                   </div>
                 )}
               </div>

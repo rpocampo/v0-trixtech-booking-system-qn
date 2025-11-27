@@ -403,6 +403,10 @@ function PaymentProcessContent() {
 
             <div className="flex justify-center mb-6">
               <div className="bg-white p-4 rounded-lg border-2 border-gray-200 relative">
+                {/* MI**I label at the top */}
+                <div className="absolute top-2 left-2 right-2 bg-blue-600 text-white rounded px-2 py-1 text-xs text-center font-bold">
+                  MI**I
+                </div>
                 {generatedQRCode || (qrPayment.qrCode && !qrPayment.qrCode.startsWith('000201')) ? (
                   <img
                     src={generatedQRCode || qrPayment.qrCode}
