@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { generateQRCodeDataURL } = require('./utils/qrCodeService');
+const { generateQRCodeDataURL, generateGCashQRData } = require('./utils/qrCodeService');
 
 async function testQR() {
   try {
@@ -10,6 +10,10 @@ async function testQR() {
       referenceNumber: 'TEST123',
       merchantName: 'TRIXTECH'
     };
+
+    // Show the raw QR data first
+    const rawQRData = generateGCashQRData(paymentData);
+    console.log('Raw QR data:', rawQRData);
 
     const qrCode = await generateQRCodeDataURL(paymentData);
     console.log('QR code generated successfully!');

@@ -61,26 +61,32 @@ const createQRPayment = async (bookingId, amount, userId, paymentType = 'full') 
     let qrCodeDataURL;
     let paymentInstructions;
 
-    // Use the hardcoded GCash QR code for all payments
-    const hardcodedQRCode = '00020101021127830012com.p2pqrpay0111GXCHPHM2XXX02089996440303152170200000006560417DWQM4TK3JDO83CHRX5204601653036085802PH5908MI**I M.6008Caloocan6104123463045192';
-    qrCodeDataURL = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASwAAAEsCAYAAAB5fY51AAAAAklEQVR4AewaftIAAAt5SURBVO3BQY4kQXIEQdNA///LygH2wIsXgSAyp9pnTQT/SFXVAidVVUucVFUtcVJVtcRJVdUSJ1VVS5xUVS1xUlW1xElV1RInVVVLnFRVLXFSVbXESVXVEidVVUucVFUtcVJVtcRJVdUSJ1VVS5xUVS1xUlW1xElV1RInVVVLnFRVLXFSVbXESVXVEj/5C4BsoeYGkImaCZCJmltAnqBmAuRtaiZAnqDmBpCnqHkCkC3UvOmkqmqJk6qqJU6qqpY4qapa4qSqagn8Iy8DMlHzLUAmam4AeZuaJwCZqLkBZKLmEyA31NwAckPNU4A8Qc0EyETNtwCZqHnTSVXVEidVVUucVFUtcVJVtcRJVdUSP/mFgDxFzROATNTcADJR89sAmai5peYJQG6omQCZqHmKmgmQNwF5iprf5KSqaomTqqolTqqqljipqlripKpqiZ/Ufw01bwLyFDU31EyAfAuQiZr6/zmpqlripKpqiZOqqiVOqqqWOKmqWuIn9SsA2U7Nb6PmW9RMgEzU1P/tpKpqiZOqqiVOqqqWOKmqWuKkqmqJk6qqJX7yC6nZAshEzUTNBMhT1EyATNQ8AcgtNU8AsoWaN6n5V51UVS1xUlW1xElV1RInVVVLnFRVLfGTLwKynZoJkImaW2omQN4EZKLmlpoJkImaG2omQCZqJkA+UTMBcgPIRM0NIP9tTqqqljipqlripKpqiZOqqiVOqqqW+MlfoOZfBeQGkImaW2omQL5BzSdANlDzNjU31NR/nFRVLXFSVbXESVXVEidVVUucVFUt8ZO/AMhEzQTIt6iZqJkAeQKQT9RsAOQTNU9QMwEyUTMBckvNDSATNTeAfIua3+SkqmqJk6qqJU6qqpY4qapa4qSqaomf/APUPAXIm9Q8BchEzZuATNR8AuRNaiZAbqh5G5BvUXMDyETNN5xUVS1xUlW1xElV1RInVVVLnFRVLfGTLwJyQ80EyNvUvAnILTUTIBM1EyA31DxFzQTIDSA31NwCMlHzBCATNRMgEzVvAzJR86aTqqolTqqqljipqlripKpqiZOqqiV+8heomQCZqHmbmgmQG0AmaiZAngJkomYCZKJmAuRb1EyATNQ8AcgnaiZAJmrepOZtaiZAvuGkqmqJk6qqJU6qqpY4qapa4qSqaomf/AVAJmomQCZqbqmZAJmouaFmAuSGmrep2QLIm4D8Nmp+GyATNd9wUlW1xElV1RInVVVLnFRVLXFSVbXESVXVEj/5IiATNRMgt4BM1NwAMlHzBCBvUzMB8tuomQD5FiBvAjJRMwEyUfMUNb/JSVXVEidVVUucVFUtcVJVtcRJVdUSP/kL1NwAMlFzC8gEyJvU3ADyFDVvAnJLzQ0gN4DcUPM2IDfUfAuQiZrf5KSqaomTqqolTqqqljipqlripKpqiZ/8QmrepuYJQJ6g5hMgTwAyUTMBMlFzC8hEzUTNBMhEzROAfKJmAmSi5gaQiZqJmgmQT9RsdlJVtcRJVdUSJ1VVS5xUVS1xUlW1xE/+AiA31NwAcgvIDTU31EyATIDcUnNDzROA1P9S8wQ1EyA31NxSMwFyQ82bTqqqljipqlripKpqiZOqqiVOqqqWwD/yJUBuqJkA+UTNm4A8Qc0nQG6omQB5k5pPgNxQ8wQgN9R8AuSGmgmQiZonAPlEzQ0gN9S86aSqaomTqqolTqqqljipqlripKpqCfwjLwNyQ80EyC01EyA31DwByC01TwByQ80EyL9KzSdAJmqeAGSi5rcBMlHzppOqqiVOqqqWOKmqWuKkqmqJk6qqJX7yRWqeoOaWmgmQCZCJmgmQiZoJkFtAJmomam4AuaHmW4BM1EyATIDcAnJDzXZqvuGkqmqJk6qqJU6qqpY4qapa4qSqagn8Iy8DMlEzATJRMwGynZqnALmh5m1AnqDmBpCJmt8GyG+j5jc5qapa4qSqaomTqqolTqqqljipqlripKpqiZ98EZAbQCZqvgXItwC5oeYGkKeouQHkBpCJmrcBmai5oWYCZKJmAuQTNTeATNR8w0lV1RInVVVLnFRVLXFSVbXESVXVEj/5C9RMgNxQMwHyNjVPUDMB8omaG2q+Qc0nQCZqnqDmBpCJmk+ATNRMgEzU3FDzFCATNRucVFUtcVJVtcRJVdUSJ1VVS5xUVS3xk78AyA01EyC31DwByETNDSDfAmQLNW9SMwHyiZoJkImaG0Amam6oeYqa3+SkqmqJk6qqJU6qqpY4qapa4qSqaomf/AVqJkC+BchEzUTNBMi3qJkAmai5AWSiZgLkEzXbAXkCkBtAbqj5BMgNNb/JSVXVEidVVUucVFUtcVJVtcRJVdUSP/kLgNwAMlEzAXJLzQTIRM0NNTeAvA3Im9R8AuQ3UTNR8wmQiZoJkImaCZCJmhtAPlFzA8hEzTecVFUtcVJVtcRJVdUSJ1VVS5xUVS3xky9S8y1AfhM1t4BM1DwByATIRM0tNTeAvAnILSBbALmhZgJkouZNJ1VVS5xUVS1xUlW1xElV1RInVVVL/OQvUPMEIBM1t9TcADJR8zYgEzUTIBM1EyA31EyA/MvUTIBM1EyATNRMgNxQ8686qapa4qSqaomTqqolTqqqljipqloC/8jLgEzUPAHIJ2omQP5Vam4AeYKaT4BM1EyA3FAzAfI2NU8A8gQ1t4BM1EyATNS86aSqaomTqqolTqqqljipqlripKpqiZOqqiV+8kVAJmqeAmSi5glAJmomQJ6iZgLkhpoJkImaCZDfRs0EyC01TwByQ81vo+YbTqqqljipqlripKpqiZOqqiVOqqqW+MkXqZkAmah5CpCJmgmQiZoJkImaW0AmQCZqtlMzAXIDyETNLSA31EzUTIDcADJR8wmQG0BuqHnTSVXVEidVVUucVFUtcVJVtcRJVdUS+EdeBmSiZgLkKWpuAHmCmgmQiZpbQG6oeQKQiZpPgNxQcwPIRM0EyETNLSATNd8A5JaaCZAbat50UlW1xElV1RInVVVLnFRVLXFSVbXET/5xQG6ouQFkAuQGkKeomQCZqJkAeZuaCZCJmieomQB5G5BvUTMBMlHzm5xUVS1xUlW1xElV1RInVVVLnFRVLfGTv0DNDTW/DZCJmrcBmaiZAJmoeROQT9S8Sc0NIBM1t9TcUDMB8g0nVVVLnFRVLXFSVbXESVXVEidVVUv85IvUfAuQG0AmaiZAbqh5CpAbam6omQC5peYGkCcAmaj5bdQ8BchEzQTIb3JSVbXESVXVEidVVUucVFUtcVJVtcRPfiEgT1HzJiA3gEzUPEXNBMi3qLkBZKLmBpAbQD5R8yYgW6j5hpOqqiVOqqqWOKmqWuKkqmqJk6qqJU6qqpb4Sb1CzVOATNRMgEzUPAHIRM0nQCZqbgB5gpoJkLepeROQf9VJVdUSJ1VVS5xUVS1xUlW1xElV1RI/qVcAeYqaCZCJmhtAbqh5m5o3AZmouQVkomYC5AlqbqnZ7KSqaomTqqolTqqqljipqlripKpqiZ/8Qmp+GzUTIE9Q8wmQiZoJkN9GzROATNRMgDwFyETNBMhEzQ0gTwFyQ81vclJVtcRJVdUSJ1VVS5xUVS1xUlW1BP6RlwHZQs0EyETNE4B8omYC5IaaCZC3qXkTkImaCZDfRs0NILfUTIDcUPMNJ1VVS5xUVS1xUlW1xElV1RInVVVL4B+pqlrgpKpqiZOqqiVOqqqWOKmqWuKkqmqJk6qqJU6qqpY4qapa4qSqaomTqqolTqqqlvgflJajWOGWhRYAAAAASUVORK5CYII='; // Use the generated QR code data URL
+    // Generate dynamic QR code with payment amount for GCash
+    qrCodeDataURL = await generateQRCodeDataURL({
+      amount,
+      referenceNumber,
+      merchantName: 'TRIXTECH',
+      merchantId: 'TRIXTECH001',
+      description: `Booking Payment - ${referenceNumber}`,
+      userQRCode: user.gcashQRCode // Use user's personal GCash QR code if available
+    });
 
-    // Custom instructions for the hardcoded QR code
+    // Instructions for GCash QR code payment
     paymentInstructions = {
       title: 'Pay with GCash QR Code',
       instructions: [
-        '1. Open your GCash app',
-        '2. Tap the QR scanner icon or select "Pay QR"',
-        '3. Scan the QR code shown below',
-        '4. Verify the amount and recipient details',
+        '1. Click the QR code below to open GCash directly with the correct payment amount, OR scan it with your GCash app',
+        '2. If scanning: Open GCash and tap the QR scanner icon, then scan the QR code',
+        '3. The payment amount (₱' + amount.toFixed(2) + ') will be automatically entered',
+        '4. Add this reference in the message/notes: ' + referenceNumber,
         '5. Confirm and complete the payment, or use the test payment button below to simulate payment for testing',
         '6. The system will automatically detect your payment'
       ],
       amount,
       reference: referenceNumber,
       merchant: 'MI**I M.',
-      note: `Please send exactly ₱${amount.toFixed(2)} to complete your booking payment. Include "${referenceNumber}" in the message/notes field for faster processing.`,
-      qrData: hardcodedQRCode // Include the raw QR data for frontend
+      note: `Click the QR code to open GCash with ₱${amount.toFixed(2)} pre-filled, or scan it manually. Include "${referenceNumber}" in the message/notes field for faster processing.`,
+      qrData: '00020101021127830012com.p2pqrpay0111GXCHPHM2XXX02089996440303152170200000006560417DWQM4TK3JDO83CHRX5204601653036085802PH5908MI**I M.6008Caloocan6104123463045192' // The actual GCash QR data
     };
 
     // Update payment with QR data

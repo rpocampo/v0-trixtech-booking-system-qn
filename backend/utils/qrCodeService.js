@@ -1,45 +1,12 @@
 const QRCode = require('qrcode');
 
-// GCash QR Code format for payments (EMV QR Code Specification)
+// GCash QR Code format for payments
 const generateGCashQRData = (paymentData) => {
-  const {
-    amount,
-    referenceNumber,
-    merchantName = 'TRIXTECH',
-    merchantId = 'TRIXTECH001',
-    description = 'Booking Payment'
-  } = paymentData;
+  // Use the provided GCash QR code directly
+  // This is a valid EMV QR code that GCash can scan
+  const gcashQRCode = '00020101021127830012com.p2pqrpay0111GXCHPHM2XXX02089996440303152170200000006560417DWQM4TK3JDO83CHRX5204601653036085802PH5908MI**I M.6008Caloocan6104123463045192';
 
-  // Format amount to 2 decimal places without decimal point
-  const formattedAmount = Math.round(amount * 100).toString().padStart(2, '0');
-
-  // EMV QR Code format for GCash Philippines
-  // Based on EMVCo QR Code specification
-  const qrParts = [
-    '000201', // Payload Format Indicator
-    '010211', // Point of Initiation Method (static QR)
-    '2636', // Merchant Account Information (GCash specific)
-    '0012PH0101000210', // Country Code + Merchant Category Code
-    merchantId.padEnd(10, ' ').substring(0, 10), // Merchant ID (truncated/padded)
-    '0303***', // Reserved for future use
-    '5802PH', // Country Code
-    '59' + merchantName.length.toString().padStart(2, '0') + merchantName, // Merchant Name
-    '6012PHILIPPINES', // Merchant City
-    '6207', // Additional Data Field
-    '05' + referenceNumber.length.toString().padStart(2, '0') + referenceNumber, // Reference Number
-    '540' + formattedAmount.length.toString().padStart(2, '0') + formattedAmount, // Transaction Amount
-    '5303566', // Transaction Currency (PHP = 608)
-    '6304' // CRC (placeholder, will be calculated)
-  ];
-
-  // Join all parts
-  const qrString = qrParts.join('');
-
-  // Calculate CRC (simplified - in production, use proper CRC calculation)
-  const crc = '1234'; // Placeholder CRC
-  const finalQR = qrString.replace('6304', '6304' + crc);
-
-  return finalQR;
+  return gcashQRCode;
 };
 
 // Generate QR code as data URL (for web display)

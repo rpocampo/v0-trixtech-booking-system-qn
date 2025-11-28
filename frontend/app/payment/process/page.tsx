@@ -403,15 +403,38 @@ function PaymentProcessContent() {
 
             <div className="flex justify-center mb-6">
               <div className="bg-white p-4 rounded-lg border-2 border-gray-200 relative">
-                {/* MI**I label at the top */}
-                <div className="absolute top-2 left-2 right-2 bg-blue-600 text-white rounded px-2 py-1 text-xs text-center font-bold">
-                  MI**I
-                </div>
                 {generatedQRCode || (qrPayment.qrCode && !qrPayment.qrCode.startsWith('000201')) ? (
                   <img
                     src={generatedQRCode || qrPayment.qrCode}
                     alt="GCash QR Code"
-                    className="w-64 h-64"
+                    className="w-64 h-64 cursor-pointer hover:opacity-90 transition-opacity"
+                    onClick={() => {
+                      // Try multiple GCash URL schemes to ensure compatibility
+                      const gcashUrls = [
+                        `gcash://pay?amount=${paymentAmount.toFixed(2)}&reference=${qrPayment.referenceNumber}`,
+                        `gcash://pay?amount=${paymentAmount.toFixed(2)}`,
+                        'gcash://', // Just open GCash app
+                      ];
+
+                      let opened = false;
+                      for (const url of gcashUrls) {
+                        try {
+                          window.location.href = url;
+                          opened = true;
+                          console.log('Opened GCash with:', url);
+                          break;
+                        } catch (e) {
+                          console.log('Failed to open:', url);
+                        }
+                      }
+
+                      // Fallback: redirect to Play Store if app not installed
+                      if (!opened) {
+                        setTimeout(() => {
+                          window.location.href = 'https://play.google.com/store/apps/details?id=com.globe.gcash.android';
+                        }, 1000);
+                      }
+                    }}
                     onLoad={() => console.log('QR code loaded successfully')}
                     onError={(e) => {
                       console.error('QR code failed to load, src:', qrPayment.qrCode);
