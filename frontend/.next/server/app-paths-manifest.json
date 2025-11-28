@@ -1,8 +1,8 @@
 {
-  "/login/page": "app/login/page.js",
-  "/page": "app/page.js",
-  "/customer/profile/page": "app/customer/profile/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/admin/customers/page": "app/admin/customers/page.js",
   "/admin/dashboard/page": "app/admin/dashboard/page.js",
-  "/admin/bookings/page": "app/admin/bookings/page.js",
-  "/customer/dashboard/page": "app/customer/dashboard/page.js"
+  "/admin/inventory/page": "app/admin/inventory/page.js",
+  "/customer/dashboard/page": "app/customer/dashboard/page.js",
+  "/customer/suggestions/page": "app/customer/suggestions/page.js"
 }

@@ -126,36 +126,36 @@ export default function CustomerLayout({
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-1">
+            <div className="hidden md:flex items-center gap-2">
             <Link
               href="/customer/dashboard"
-              className={`px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium ${pathname === '/customer/dashboard' ? 'bg-blue-600 text-white shadow-md' : ''}`}
+              className={`px-6 py-3 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 font-semibold text-base ${pathname === '/customer/dashboard' ? 'bg-blue-600 text-white shadow-lg border-b-2 border-blue-300' : ''}`}
             >
-              Dashboard
+              🏠 Dashboard
             </Link>
             <Link
               href="/customer/services"
-              className={`px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium ${pathname === '/customer/services' ? 'bg-blue-600 text-white shadow-md' : ''}`}
+              className={`px-6 py-3 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 font-semibold text-base ${pathname === '/customer/services' ? 'bg-blue-600 text-white shadow-lg border-b-2 border-blue-300' : ''}`}
             >
-              Services
+              🎪 Services
             </Link>
             <Link
               href="/customer/bookings"
-              className={`px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium ${pathname === '/customer/bookings' ? 'bg-blue-600 text-white shadow-md' : ''}`}
+              className={`px-6 py-3 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 font-semibold text-base ${pathname === '/customer/bookings' ? 'bg-blue-600 text-white shadow-lg border-b-2 border-blue-300' : ''}`}
             >
-              Bookings
+              📅 Bookings
             </Link>
             <Link
               href="/customer/suggestions"
-              className={`px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium ${pathname === '/customer/suggestions' ? 'bg-blue-600 text-white shadow-md' : ''}`}
+              className={`px-6 py-3 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 font-semibold text-base ${pathname === '/customer/suggestions' ? 'bg-blue-600 text-white shadow-lg border-b-2 border-blue-300' : ''}`}
             >
-              Suggestions
+              💡 Suggestions
             </Link>
             <Link
               href="/customer/notifications"
-              className={`relative px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium ${pathname === '/customer/notifications' ? 'bg-blue-600 text-white shadow-md' : ''}`}
+              className={`relative px-6 py-3 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 font-semibold text-base ${pathname === '/customer/notifications' ? 'bg-blue-600 text-white shadow-lg border-b-2 border-blue-300' : ''}`}
             >
-              Notifications
+              🔔 Notifications
               {unreadNotifications > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1 animate-pulse shadow-lg">
                   {unreadNotifications > 99 ? '99+' : unreadNotifications}

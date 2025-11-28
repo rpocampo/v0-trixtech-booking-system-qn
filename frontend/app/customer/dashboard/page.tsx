@@ -106,20 +106,20 @@ export default function CustomerDashboard() {
   }
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in space-y-12">
       {/* Hero Header */}
-      <div className="card-gradient p-8 mb-8">
+      <div className="card-gradient p-10 mb-12">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-4xl font-bold text-[var(--foreground)] mb-2">
+            <h1 className="text-5xl font-bold text-[var(--foreground)] mb-4">
               Welcome back, <span className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent">{user?.name}</span>! 👋
             </h1>
-            <p className="text-[var(--muted)] text-lg">Here's your personalized booking dashboard</p>
+            <p className="text-[var(--muted)] text-xl leading-relaxed">Here's your personalized booking dashboard</p>
           </div>
           <div className="hidden md:block">
             <div className="text-right">
               <div className="text-sm text-[var(--muted)]">Member since</div>
-              <div className="font-semibold text-[var(--foreground)]">
+              <div className="font-semibold text-[var(--foreground)] text-lg">
                 {user ? new Date().getFullYear() : '2024'}
               </div>
             </div>
@@ -128,42 +128,42 @@ export default function CustomerDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <div className="card-elevated p-6 hover:shadow-xl transition-all duration-300 animate-fade-in">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+        <div className="card-elevated p-8 hover:shadow-xl transition-all duration-300 animate-fade-in min-h-[160px] flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-3xl font-bold text-[var(--primary)] mb-1">{stats.totalBookings}</div>
-              <div className="text-sm text-[var(--muted)] font-medium">Total Bookings</div>
+              <div className="text-4xl font-bold text-[var(--primary)] mb-2">{stats.totalBookings}</div>
+              <div className="text-base text-[var(--muted)] font-medium">Total Bookings</div>
             </div>
-            <div className="text-4xl opacity-20">📊</div>
+            <div className="text-5xl opacity-20">📊</div>
           </div>
-          <div className="mt-4 flex items-center text-sm">
+          <div className="mt-6 flex items-center text-sm">
             <span className="text-[var(--success)] font-medium">↗️ Active</span>
           </div>
         </div>
 
-        <div className="card-elevated p-6 hover:shadow-xl transition-all duration-300 animate-fade-in" style={{ animationDelay: '100ms' }}>
+        <div className="card-elevated p-8 hover:shadow-xl transition-all duration-300 animate-fade-in min-h-[160px] flex flex-col justify-between" style={{ animationDelay: '100ms' }}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-3xl font-bold text-[var(--accent)] mb-1">{stats.upcomingBookings}</div>
-              <div className="text-sm text-[var(--muted)] font-medium">Upcoming</div>
+              <div className="text-4xl font-bold text-[var(--accent)] mb-2">{stats.upcomingBookings}</div>
+              <div className="text-base text-[var(--muted)] font-medium">Upcoming</div>
             </div>
-            <div className="text-4xl opacity-20">⏰</div>
+            <div className="text-5xl opacity-20">⏰</div>
           </div>
-          <div className="mt-4 flex items-center text-sm">
+          <div className="mt-6 flex items-center text-sm">
             <span className="text-[var(--warning)] font-medium">📅 Scheduled</span>
           </div>
         </div>
 
-        <div className="card-elevated p-6 hover:shadow-xl transition-all duration-300 animate-fade-in" style={{ animationDelay: '200ms' }}>
+        <div className="card-elevated p-8 hover:shadow-xl transition-all duration-300 animate-fade-in min-h-[160px] flex flex-col justify-between" style={{ animationDelay: '200ms' }}>
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-3xl font-bold text-[var(--success)] mb-1">{stats.completedBookings}</div>
-              <div className="text-sm text-[var(--muted)] font-medium">Completed</div>
+              <div className="text-4xl font-bold text-[var(--success)] mb-2">{stats.completedBookings}</div>
+              <div className="text-base text-[var(--muted)] font-medium">Completed</div>
             </div>
-            <div className="text-4xl opacity-20">✅</div>
+            <div className="text-5xl opacity-20">✅</div>
           </div>
-          <div className="mt-4 flex items-center text-sm">
+          <div className="mt-6 flex items-center text-sm">
             <span className="text-[var(--success)] font-medium">✓ Done</span>
           </div>
         </div>
@@ -171,80 +171,85 @@ export default function CustomerDashboard() {
       </div>
 
       {/* Quick Actions - Browse Services First */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in" style={{ animationDelay: '400ms' }}>
-        <Link href="/customer/services" className="card-interactive group p-6 border-l-4 border-l-[var(--primary)]">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="text-4xl group-hover:scale-110 transition-transform duration-300">🎪</div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
+        <Link href="/customer/services" className="card-interactive group p-8 border-l-4 border-l-[var(--primary)] min-h-[160px] flex flex-col justify-between relative bg-gradient-to-br from-[var(--primary-50)] to-white shadow-lg ring-2 ring-[var(--primary)]/20">
+          <div className="absolute top-4 right-4 bg-[var(--primary)] text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse">
+            PRIMARY ACTION
+          </div>
+          <div className="flex items-center gap-4 mb-6">
+            <div className="text-5xl group-hover:scale-110 transition-transform duration-300">🎪</div>
             <div>
-              <h3 className="text-xl font-bold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">
+              <h3 className="text-2xl font-bold text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">
                 Browse Services
               </h3>
-              <p className="text-[var(--muted)] text-sm">Discover amazing event services</p>
+              <p className="text-[var(--muted)] text-base leading-relaxed">Discover amazing event services</p>
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-[var(--primary)] font-medium">Explore now →</span>
+            <span className="text-base text-[var(--primary)] font-bold">Explore now →</span>
           </div>
         </Link>
 
-        <Link href="/customer/profile" className="card-interactive group p-6 border-l-4 border-l-blue-500">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="text-4xl group-hover:scale-110 transition-transform duration-300">👤</div>
+        <Link href="/customer/profile" className="card-interactive group p-8 border-l-4 border-l-blue-500 min-h-[160px] flex flex-col justify-between">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="text-5xl group-hover:scale-110 transition-transform duration-300">👤</div>
             <div>
-              <h3 className="text-xl font-bold text-[var(--foreground)] group-hover:text-blue-600 transition-colors">
+              <h3 className="text-2xl font-bold text-[var(--foreground)] group-hover:text-blue-600 transition-colors">
                 Profile Settings
               </h3>
-              <p className="text-[var(--muted)] text-sm">Update your information</p>
+              <p className="text-[var(--muted)] text-base leading-relaxed">Update your information</p>
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-blue-600 font-medium">Edit profile →</span>
+            <span className="text-base text-blue-600 font-medium">Edit profile →</span>
           </div>
         </Link>
 
-        <Link href="/customer/bookings" className="card-interactive group p-6 border-l-4 border-l-[var(--accent)] sm:col-span-2 lg:col-span-1">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="text-4xl group-hover:scale-110 transition-transform duration-300">📋</div>
+        <Link href="/customer/bookings" className="card-interactive group p-8 border-l-4 border-l-[var(--accent)] sm:col-span-2 lg:col-span-1 min-h-[160px] flex flex-col justify-between">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="text-5xl group-hover:scale-110 transition-transform duration-300">📋</div>
             <div>
-              <h3 className="text-xl font-bold text-[var(--foreground)] group-hover:text-[var(--accent)] transition-colors">
+              <h3 className="text-2xl font-bold text-[var(--foreground)] group-hover:text-[var(--accent)] transition-colors">
                 My Bookings
               </h3>
-              <p className="text-[var(--muted)] text-sm">Manage your reservations</p>
+              <p className="text-[var(--muted)] text-base leading-relaxed">Manage your reservations</p>
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm text-[var(--accent)] font-medium">View bookings →</span>
+            <span className="text-base text-[var(--accent)] font-medium">View bookings →</span>
           </div>
         </Link>
       </div>
 
       {/* Recent Bookings */}
-      <div className="card-elevated p-6 animate-fade-in" style={{ animationDelay: '600ms' }}>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-[var(--foreground)] flex items-center gap-2">
-            <span className="text-2xl">📅</span>
+      <div className="card-elevated p-8 animate-fade-in" style={{ animationDelay: '600ms' }}>
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-bold text-[var(--foreground)] flex items-center gap-3">
+            <span className="text-3xl">📅</span>
             Recent Bookings
           </h2>
-          <Link href="/customer/bookings" className="btn-outline text-sm">
+          <Link href="/customer/bookings" className="btn-outline text-base px-6 py-3">
             View All →
           </Link>
         </div>
 
         {recentBookings.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {recentBookings.map((booking, index) => (
               <div
                 key={booking.id}
-                className="flex items-center justify-between p-4 rounded-xl border border-[var(--border)] hover:border-[var(--primary)] hover:shadow-md transition-all duration-200 animate-fade-in"
+                className={`flex items-center justify-between p-6 rounded-xl border border-[var(--border)] hover:border-[var(--primary)] hover:shadow-lg transition-all duration-300 animate-fade-in ${
+                  index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                }`}
                 style={{ animationDelay: `${700 + index * 100}ms` }}
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 flex items-center justify-center text-xl">
+                <div className="flex items-center gap-6">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 flex items-center justify-center text-2xl font-bold">
                     {booking.serviceId?.name?.charAt(0) || '?'}
                   </div>
                   <div>
-                    <p className="font-semibold text-[var(--foreground)]">{booking.serviceId?.name || 'Unknown Service'}</p>
-                    <p className="text-sm text-[var(--muted)]">
+                    <p className="font-bold text-[var(--foreground)] text-lg">{booking.serviceId?.name || 'Unknown Service'}</p>
+                    <p className="text-base text-[var(--muted)] mt-1">
                       {new Date(booking.bookingDate).toLocaleDateString('en-US', {
                         weekday: 'short',
                         month: 'short',
@@ -258,8 +263,8 @@ export default function CustomerDashboard() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                <div className="flex items-center gap-6">
+                  <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
                     booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
                     booking.status === 'completed' ? 'bg-blue-100 text-blue-700' :
                     booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
@@ -268,18 +273,18 @@ export default function CustomerDashboard() {
                     {booking.status}
                   </span>
                   <div className="text-right">
-                    <p className="font-bold text-[var(--primary)] text-lg">₱{booking.totalPrice}</p>
+                    <p className="font-bold text-[var(--primary)] text-xl">₱{booking.totalPrice}</p>
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4 opacity-50">📅</div>
-            <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">No bookings yet</h3>
-            <p className="text-[var(--muted)] mb-6">Start your journey by booking your first service!</p>
-            <Link href="/customer/services" className="btn-primary">
+          <div className="text-center py-16">
+            <div className="text-7xl mb-6 opacity-50">📅</div>
+            <h3 className="text-2xl font-semibold text-[var(--foreground)] mb-4">No bookings yet</h3>
+            <p className="text-[var(--muted)] mb-8 text-lg">Start your journey by booking your first service!</p>
+            <Link href="/customer/services" className="btn-primary px-8 py-4 text-lg">
               Browse Services
             </Link>
           </div>

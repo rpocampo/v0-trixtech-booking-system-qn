@@ -212,42 +212,52 @@ export default function AdminLayout({
             </div>
           </div>
 
-          <nav className="space-y-4">
-            <Link href="/admin/dashboard" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''} ${pathname === '/admin/dashboard' ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
-              {isSidebarCollapsed ? '🏠' : 'Dashboard'}
+          <nav className="space-y-2">
+            <Link href="/admin/dashboard" className={`flex items-center gap-3 px-4 py-4 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-3 py-3 justify-center' : ''} ${pathname === '/admin/dashboard' ? 'bg-blue-600 text-white shadow-lg border-l-4 border-blue-300' : 'hover:bg-blue-50'}`}>
+              <span className="text-2xl">🏠</span>
+              {!isSidebarCollapsed && <span className="font-medium">Dashboard</span>}
             </Link>
-            <Link href="/admin/bookings" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''} ${pathname === '/admin/bookings' ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
-              {isSidebarCollapsed ? '📅' : 'Bookings'}
+            <Link href="/admin/bookings" className={`flex items-center gap-3 px-4 py-4 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-3 py-3 justify-center' : ''} ${pathname === '/admin/bookings' ? 'bg-blue-600 text-white shadow-lg border-l-4 border-blue-300' : 'hover:bg-blue-50'}`}>
+              <span className="text-2xl">📅</span>
+              {!isSidebarCollapsed && <span className="font-medium">Bookings</span>}
             </Link>
-            <Link href="/admin/inventory" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''} ${pathname === '/admin/inventory' ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
-              {isSidebarCollapsed ? '📦' : 'Inventory'}
+            <Link href="/admin/inventory" className={`flex items-center gap-3 px-4 py-4 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-3 py-3 justify-center' : ''} ${pathname === '/admin/inventory' ? 'bg-blue-600 text-white shadow-lg border-l-4 border-blue-300' : 'hover:bg-blue-50'}`}>
+              <span className="text-2xl">📦</span>
+              {!isSidebarCollapsed && <span className="font-medium">Inventory</span>}
             </Link>
-            <Link href="/admin/services" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''} ${pathname === '/admin/services' ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
-              {isSidebarCollapsed ? '⚙️' : 'Services'}
+            <Link href="/admin/services" className={`flex items-center gap-3 px-4 py-4 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-3 py-3 justify-center' : ''} ${pathname === '/admin/services' ? 'bg-blue-600 text-white shadow-lg border-l-4 border-blue-300' : 'hover:bg-blue-50'}`}>
+              <span className="text-2xl">⚙️</span>
+              {!isSidebarCollapsed && <span className="font-medium">Services</span>}
             </Link>
-            <Link href="/admin/customers" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''} ${pathname === '/admin/customers' ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
-              {isSidebarCollapsed ? '👥' : 'Customers'}
+            <Link href="/admin/customers" className={`flex items-center gap-3 px-4 py-4 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-3 py-3 justify-center' : ''} ${pathname === '/admin/customers' ? 'bg-blue-600 text-white shadow-lg border-l-4 border-blue-300' : 'hover:bg-blue-50'}`}>
+              <span className="text-2xl">👥</span>
+              {!isSidebarCollapsed && <span className="font-medium">Customers</span>}
             </Link>
-            <Link href="/admin/notifications" className={`relative block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''} ${pathname === '/admin/notifications' ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
-              {isSidebarCollapsed ? '🔔' : 'Notifications'}
+            <Link href="/admin/notifications" className={`relative flex items-center gap-3 px-4 py-4 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-3 py-3 justify-center' : ''} ${pathname === '/admin/notifications' ? 'bg-blue-600 text-white shadow-lg border-l-4 border-blue-300' : 'hover:bg-blue-50'}`}>
+              <span className="text-2xl">🔔</span>
+              {!isSidebarCollapsed && <span className="font-medium">Notifications</span>}
               {unreadNotifications > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1 animate-pulse shadow-lg">
                   {unreadNotifications > 99 ? '99+' : unreadNotifications}
                 </span>
               )}
             </Link>
-            <Link href="/admin/reports" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''} ${pathname === '/admin/reports' ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
-              {isSidebarCollapsed ? '📊' : 'Reports'}
+            <Link href="/admin/reports" className={`flex items-center gap-3 px-4 py-4 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-3 py-3 justify-center' : ''} ${pathname === '/admin/reports' ? 'bg-blue-600 text-white shadow-lg border-l-4 border-blue-300' : 'hover:bg-blue-50'}`}>
+              <span className="text-2xl">📊</span>
+              {!isSidebarCollapsed && <span className="font-medium">Reports</span>}
             </Link>
-            <button
-              onClick={() => {
-                logout();
-                router.push('/');
-              }}
-              className={`w-full text-left px-4 py-2 rounded border border-[var(--border)] hover:bg-red-600 transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}
-            >
-              {isSidebarCollapsed ? '🚪' : 'Logout'}
-            </button>
+            <div className="pt-4 border-t border-gray-600">
+              <button
+                onClick={() => {
+                  logout();
+                  router.push('/');
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-red-500 text-red-300 hover:bg-red-600 hover:text-white transition-all duration-200 ${isSidebarCollapsed ? 'px-3 py-3 justify-center' : ''}`}
+              >
+                <span className="text-2xl">🚪</span>
+                {!isSidebarCollapsed && <span className="font-medium">Logout</span>}
+              </button>
+            </div>
           </nav>
         </div>
       </aside>

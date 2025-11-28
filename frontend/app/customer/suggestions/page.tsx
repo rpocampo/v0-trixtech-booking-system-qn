@@ -364,7 +364,7 @@ export default function SuggestionsPage() {
       {/* Filters */}
       <div className="card p-6 mb-8">
         <h2 className="text-xl font-semibold mb-4">Preferences</h2>
-        <div className="grid md:grid-cols-3 gap-4">
+        <div className="grid md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">Event Type</label>
             <select
@@ -392,18 +392,6 @@ export default function SuggestionsPage() {
               <option value="low">₱0 – ₱1,000</option>
               <option value="medium">₱1,001 – ₱5,000</option>
               <option value="high">₱5,001+</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Availability</label>
-            <select
-              value={filters.availability}
-              onChange={(e) => setFilters({ ...filters, availability: e.target.value })}
-              className="input-field"
-            >
-              <option value="">All Services</option>
-              <option value="available">Available Only</option>
-              <option value="high-stock">High Stock</option>
             </select>
           </div>
         </div>
