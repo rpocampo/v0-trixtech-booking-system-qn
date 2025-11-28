@@ -37,14 +37,14 @@ export default function AdminNotificationsPage() {
     socket.on('admin-notification', handleNewNotification);
 
     return () => {
-      socket.off('new-admin-notification', handleNewNotification);
+      socket.off('admin-notification', handleNewNotification);
     };
   }, [socket]);
 
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/notifications', {
+      const response = await fetch('http://localhost:5000/api/notifications/admin', {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -80,7 +80,7 @@ export default function AdminNotificationsPage() {
   const markAllAsRead = async () => {
     try {
       const token = localStorage.getItem('token');
-      await fetch('http://localhost:5000/api/notifications/mark-all-read', {
+      await fetch('http://localhost:5000/api/notifications/admin/mark-all-read', {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}` },
       });

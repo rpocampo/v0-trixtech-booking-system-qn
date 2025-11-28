@@ -282,6 +282,7 @@ export default function AdminServices() {
       formDataToSend.append('name', formData.name.trim());
       formDataToSend.append('description', formData.description.trim());
       formDataToSend.append('category', formData.category);
+      formDataToSend.append('serviceType', formData.serviceType);
       formDataToSend.append('price', formData.price.toString());
       formDataToSend.append('duration', formData.duration.toString());
 

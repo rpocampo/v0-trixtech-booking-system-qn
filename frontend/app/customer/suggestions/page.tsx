@@ -25,11 +25,45 @@ interface Service {
 }
 
 interface Recommendation {
-  service: Service;
+  service?: Service;
+  package?: PackageSuggestion;
   reason: string;
   score: number;
   isAvailable: boolean;
   availableQuantity?: number;
+  type: 'service' | 'package';
+}
+
+interface PackageSuggestion {
+  _id: string;
+  name: string;
+  description: string;
+  shortDescription?: string;
+  category: string;
+  basePrice: number;
+  totalPrice: number;
+  inclusions: Array<{
+    name: string;
+    quantity: number;
+    category: string;
+    description?: string;
+    price: number;
+  }>;
+  addOns?: Array<{
+    name: string;
+    quantity: number;
+    category: string;
+    description?: string;
+    price: number;
+    isPopular?: boolean;
+  }>;
+  deliveryIncluded: boolean;
+  deliveryFee?: number;
+  minGuests?: number;
+  maxGuests?: number;
+  duration?: number;
+  isPopular?: boolean;
+  relevanceScore?: number;
 }
 
 interface PredictiveSuggestion {
@@ -42,9 +76,12 @@ interface PredictiveSuggestion {
 
 export default function SuggestionsPage() {
   const router = useRouter();
+  const [services, setServices] = useState<Service[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [packages, setPackages] = useState<PackageSuggestion[]>([]);
   const [predictiveSuggestions, setPredictiveSuggestions] = useState<PredictiveSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingPackages, setLoadingPackages] = useState(true);
   const [loadingPredictive, setLoadingPredictive] = useState(true);
   const [filters, setFilters] = useState({
     category: '',
@@ -59,8 +96,17 @@ export default function SuggestionsPage() {
 
   useEffect(() => {
     fetchRecommendations();
+    fetchPackages();
     fetchPredictiveSuggestions();
   }, []);
+
+  // Regenerate recommendations when both services and packages are loaded
+  useEffect(() => {
+    if (!loading && !loadingPackages && services.length > 0) {
+      const recommendations = generateRecommendations(services);
+      setRecommendations(recommendations);
+    }
+  }, [loading, loadingPackages, services, packages]);
 
   const fetchRecommendations = async () => {
     try {
@@ -82,13 +128,36 @@ export default function SuggestionsPage() {
       const servicesData = await servicesResponse.json();
       const services = servicesData.services || [];
 
-      // Generate recommendations based on various factors
-      const recommendations = generateRecommendations(services);
-      setRecommendations(recommendations);
+      setServices(services);
     } catch (error) {
       console.error('Error fetching recommendations:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPackages = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
+      const response = await fetch('http://localhost:5000/api/packages?limit=10', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setPackages(data.packages || []);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching packages:', error);
+    } finally {
+      setLoadingPackages(false);
     }
   };
 
@@ -120,6 +189,9 @@ export default function SuggestionsPage() {
   const generateRecommendations = (services: Service[]): Recommendation[] => {
     const recommendations: Recommendation[] = [];
 
+    // Essential items that should always be included
+    const essentialItems = ['chair', 'table', 'tent', 'sound system', 'lighting', 'catering'];
+
     services.forEach(service => {
       let score = 0;
       let reasons: string[] = [];
@@ -130,10 +202,24 @@ export default function SuggestionsPage() {
         reasons.push('Available for booking');
       }
 
+      // Essential items get higher priority
+      const serviceName = service.name.toLowerCase();
+      const isEssential = essentialItems.some(item => serviceName.includes(item));
+      if (isEssential) {
+        score += 25;
+        reasons.push('Essential event item');
+      }
+
       // Category preferences
       if (service.category === 'party' || service.category === 'wedding') {
         score += 15;
         reasons.push('Popular for events');
+      }
+
+      // Equipment category gets priority
+      if (service.category === 'equipment') {
+        score += 10;
+        reasons.push('Equipment rental');
       }
 
       // Price scoring
@@ -169,15 +255,54 @@ export default function SuggestionsPage() {
         reasons.push('Quick setup available');
       }
 
-      if (score > 30) { // Only include services with decent scores
+      // Lower threshold for essential items
+      const threshold = isEssential ? 20 : 30;
+
+      if (score > threshold) { // Include services with decent scores
         recommendations.push({
           service,
           reason: reasons.join(', '),
           score,
           isAvailable: service.isAvailable,
           availableQuantity: service.quantity,
+          type: 'service',
         });
       }
+    });
+
+    // Add package recommendations
+    packages.forEach(pkg => {
+      let score = 50; // Packages get higher base score
+      let reasons: string[] = ['Complete event package'];
+
+      if (pkg.isPopular) {
+        score += 20;
+        reasons.push('Popular choice');
+      }
+
+      if (pkg.deliveryIncluded) {
+        score += 10;
+        reasons.push('Includes delivery');
+      }
+
+      // Check if package includes essential items
+      const hasEssentialItems = pkg.inclusions?.some(inc =>
+        essentialItems.some(item => inc.name.toLowerCase().includes(item))
+      );
+
+      if (hasEssentialItems) {
+        score += 15;
+        reasons.push('Includes essential items');
+      }
+
+      recommendations.push({
+        package: pkg,
+        reason: reasons.join(', '),
+        score,
+        isAvailable: true, // Assume packages are available
+        availableQuantity: undefined,
+        type: 'package',
+      });
     });
 
     // Sort by score (highest first)
@@ -185,15 +310,17 @@ export default function SuggestionsPage() {
   };
 
   const filteredRecommendations = recommendations.filter(rec => {
-    if (filters.category && rec.service.category !== filters.category) return false;
-    if (filters.priceRange) {
-      const price = rec.service.basePrice;
+    const category = rec.type === 'service' ? rec.service?.category : rec.package?.category;
+    const price = rec.type === 'service' ? rec.service?.basePrice : rec.package?.totalPrice;
+
+    if (filters.category && category !== filters.category) return false;
+    if (filters.priceRange && price) {
       if (filters.priceRange === 'low' && price > 1000) return false;
       if (filters.priceRange === 'medium' && (price <= 1000 || price > 5000)) return false;
       if (filters.priceRange === 'high' && price <= 5000) return false;
     }
     if (filters.availability === 'available' && !rec.isAvailable) return false;
-    if (filters.availability === 'high-stock' && (!rec.availableQuantity || rec.availableQuantity <= 5)) return false;
+    if (filters.availability === 'high-stock' && rec.type === 'service' && (!rec.availableQuantity || rec.availableQuantity <= 5)) return false;
     return true;
   });
 
@@ -215,7 +342,7 @@ export default function SuggestionsPage() {
     }
   };
 
-  if (loading) {
+  if (loading || loadingPackages) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center">
@@ -308,108 +435,209 @@ export default function SuggestionsPage() {
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRecommendations.map((rec, index) => (
-            <div key={rec.service._id} className="card p-6 hover:shadow-lg transition-shadow">
-              {/* Recommendation Badge */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl">{getCategoryIcon(rec.service.category)}</span>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    rec.score >= 70 ? 'bg-green-100 text-green-800' :
-                    rec.score >= 50 ? 'bg-blue-100 text-blue-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {rec.score >= 70 ? 'Highly Recommended' :
-                     rec.score >= 50 ? 'Recommended' : 'Good Match'}
-                  </span>
-                </div>
-                <span className="text-sm text-gray-500">#{index + 1}</span>
-              </div>
+          {filteredRecommendations.map((rec, index) => {
+            if (rec.type === 'service' && rec.service) {
+              const service = rec.service;
+              return (
+                <div key={service._id} className="card p-6 hover:shadow-lg transition-shadow">
+                  {/* Recommendation Badge */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{getCategoryIcon(service.category)}</span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        rec.score >= 70 ? 'bg-green-100 text-green-800' :
+                        rec.score >= 50 ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {rec.score >= 70 ? 'Highly Recommended' :
+                         rec.score >= 50 ? 'Recommended' : 'Good Match'}
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-500">#{index + 1}</span>
+                  </div>
 
-              {/* Service Image */}
-              <div className="w-full h-48 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg mb-4 flex items-center justify-center text-4xl">
-                {rec.service.image ? (
-                  <img
-                    src={`http://localhost:5000${rec.service.image}`}
-                    alt={rec.service.name}
-                    className="w-full h-full object-cover rounded-lg"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                      e.currentTarget.parentElement!.innerHTML = getCategoryIcon(rec.service.category);
-                    }}
-                  />
-                ) : (
-                  getCategoryIcon(rec.service.category)
-                )}
-              </div>
+                  {/* Service Image */}
+                  <div className="w-full h-48 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg mb-4 flex items-center justify-center text-4xl">
+                    {service.image ? (
+                      <img
+                        src={`http://localhost:5000${service.image}`}
+                        alt={service.name}
+                        className="w-full h-full object-cover rounded-lg"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          e.currentTarget.parentElement!.innerHTML = getCategoryIcon(service.category);
+                        }}
+                      />
+                    ) : (
+                      getCategoryIcon(service.category)
+                    )}
+                  </div>
 
-              {/* Service Details */}
-              <div className="space-y-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">{rec.service.name}</h3>
-                  <p className="text-sm text-gray-600 capitalize">{rec.service.category.replace('-', ' ')}</p>
-                </div>
-
-                <p className="text-sm text-gray-700 line-clamp-2">{rec.service.description}</p>
-
-                {/* Price and Availability */}
-                <div className="flex items-center justify-between">
-                  <div className="text-xl font-bold text-indigo-600">₱{rec.service.basePrice.toFixed(2)}</div>
-                  <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    rec.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
-                    {rec.isAvailable ? 'Available' : 'Unavailable'}
-                  </span>
-                </div>
-
-                {/* Recommendation Reason */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <div className="flex items-start gap-2">
-                    <span className="text-blue-600 mt-0.5">💡</span>
+                  {/* Service Details */}
+                  <div className="space-y-3">
                     <div>
-                      <p className="text-sm font-medium text-blue-800 mb-1">Why we recommend this:</p>
-                      <p className="text-xs text-blue-700">{rec.reason}</p>
+                      <h3 className="text-lg font-semibold text-gray-800">{service.name}</h3>
+                      <p className="text-sm text-gray-600 capitalize">{service.category.replace('-', ' ')}</p>
+                    </div>
+
+                    <p className="text-sm text-gray-700 line-clamp-2">{service.description}</p>
+
+                    {/* Price and Availability */}
+                    <div className="flex items-center justify-between">
+                      <div className="text-xl font-bold text-indigo-600">₱{service.basePrice.toFixed(2)}</div>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        rec.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {rec.isAvailable ? 'Available' : 'Unavailable'}
+                      </span>
+                    </div>
+
+                    {/* Recommendation Reason */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <span className="text-blue-600 mt-0.5">💡</span>
+                        <div>
+                          <p className="text-sm font-medium text-blue-800 mb-1">Why we recommend this:</p>
+                          <p className="text-xs text-blue-700">{rec.reason}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Service Features */}
+                    {service.features && service.features.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-gray-700">Features:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {service.features.slice(0, 3).map((feature, idx) => (
+                            <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                              {feature}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-2">
+                      <Link
+                        href={`/customer/services/${service._id}`}
+                        className="flex-1 btn-secondary text-center"
+                      >
+                        View Details
+                      </Link>
+                      {rec.isAvailable && (
+                        <button
+                          onClick={() => {
+                            // Add to cart logic would go here
+                            alert(`Added ${service.name} to cart!`);
+                          }}
+                          className="flex-1 btn-primary"
+                        >
+                          Add to Cart
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
+              );
+            } else if (rec.type === 'package' && rec.package) {
+              const pkg = rec.package;
+              return (
+                <div key={pkg._id} className="card p-6 hover:shadow-lg transition-shadow">
+                  {/* Recommendation Badge */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">{getCategoryIcon(pkg.category)}</span>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        rec.score >= 70 ? 'bg-green-100 text-green-800' :
+                        rec.score >= 50 ? 'bg-blue-100 text-blue-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {rec.score >= 70 ? 'Highly Recommended' :
+                         rec.score >= 50 ? 'Recommended' : 'Good Match'}
+                      </span>
+                      <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs font-medium">
+                        Bundle
+                      </span>
+                    </div>
+                    <span className="text-sm text-gray-500">#{index + 1}</span>
+                  </div>
 
-                {/* Service Features */}
-                {rec.service.features && rec.service.features.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-gray-700">Features:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {rec.service.features.slice(0, 3).map((feature, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                          {feature}
-                        </span>
-                      ))}
+                  {/* Package Image */}
+                  <div className="w-full h-48 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg mb-4 flex items-center justify-center text-4xl">
+                    {getCategoryIcon(pkg.category)}
+                  </div>
+
+                  {/* Package Details */}
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800">{pkg.name}</h3>
+                      <p className="text-sm text-gray-600 capitalize">{pkg.category.replace('-', ' ')}</p>
+                    </div>
+
+                    <p className="text-sm text-gray-700 line-clamp-2">{pkg.description}</p>
+
+                    {/* Price and Availability */}
+                    <div className="flex items-center justify-between">
+                      <div className="text-xl font-bold text-indigo-600">₱{pkg.totalPrice.toFixed(2)}</div>
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        rec.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {rec.isAvailable ? 'Available' : 'Unavailable'}
+                      </span>
+                    </div>
+
+                    {/* Recommendation Reason */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-start gap-2">
+                        <span className="text-blue-600 mt-0.5">💡</span>
+                        <div>
+                          <p className="text-sm font-medium text-blue-800 mb-1">Why we recommend this:</p>
+                          <p className="text-xs text-blue-700">{rec.reason}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Package Inclusions */}
+                    {pkg.inclusions && pkg.inclusions.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-gray-700">Includes:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {pkg.inclusions.slice(0, 3).map((inclusion, idx) => (
+                            <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                              {inclusion.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 pt-2">
+                      <Link
+                        href={`/customer/packages/${pkg._id}`}
+                        className="flex-1 btn-secondary text-center"
+                      >
+                        View Details
+                      </Link>
+                      {rec.isAvailable && (
+                        <button
+                          onClick={() => {
+                            // Add to cart logic would go here
+                            alert(`Added ${pkg.name} bundle to cart!`);
+                          }}
+                          className="flex-1 btn-primary"
+                        >
+                          Add to Cart
+                        </button>
+                      )}
                     </div>
                   </div>
-                )}
-
-                {/* Action Buttons */}
-                <div className="flex gap-2 pt-2">
-                  <Link
-                    href={`/customer/services/${rec.service._id}`}
-                    className="flex-1 btn-secondary text-center"
-                  >
-                    View Details
-                  </Link>
-                  {rec.isAvailable && (
-                    <button
-                      onClick={() => {
-                        // Add to cart logic would go here
-                        alert(`Added ${rec.service.name} to cart!`);
-                      }}
-                      className="flex-1 btn-primary"
-                    >
-                      Add to Cart
-                    </button>
-                  )}
                 </div>
-              </div>
-            </div>
-          ))}
+              );
+            }
+            return null;
+          })}
         </div>
       )}
 

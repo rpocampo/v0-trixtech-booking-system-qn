@@ -604,13 +604,16 @@ router.get('/admin/all', adminMiddleware, async (req, res, next) => {
       query = query.where('paymentStatus').in(['partial', 'paid']);
     }
 
+    // Get total count before applying limit
+    const totalCount = await Booking.countDocuments(query.getFilter());
+
     if (limitNum) {
       query = query.limit(limitNum);
     }
 
     const bookings = await query;
 
-    res.json({ success: true, bookings });
+    res.json({ success: true, bookings, total: totalCount });
   } catch (error) {
     next(error);
   }

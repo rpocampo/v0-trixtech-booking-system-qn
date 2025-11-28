@@ -189,7 +189,7 @@ export default function AdminLayout({
       )}
 
       {/* Desktop Sidebar */}
-      <aside className={`hidden md:block bg-[var(--foreground)] text-white sticky top-0 h-screen overflow-y-auto transition-all duration-300 ${isSidebarCollapsed ? 'w-16' : 'w-64'}`}>
+      <aside className={`hidden md:block bg-gradient-to-b from-slate-900 to-slate-800 text-white sticky top-0 h-screen overflow-y-auto transition-all duration-300 shadow-xl ${isSidebarCollapsed ? 'w-16' : 'w-64'}`}>
         <div className="p-4">
           <div className="flex items-center justify-between mb-8">
             {!isSidebarCollapsed && (
@@ -210,22 +210,22 @@ export default function AdminLayout({
           </div>
 
           <nav className="space-y-4">
-            <Link href="/admin/dashboard" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+            <Link href="/admin/dashboard" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
               {isSidebarCollapsed ? '🏠' : 'Dashboard'}
             </Link>
-            <Link href="/admin/bookings" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+            <Link href="/admin/bookings" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
               {isSidebarCollapsed ? '📅' : 'Bookings'}
             </Link>
-            <Link href="/admin/inventory" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+            <Link href="/admin/inventory" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
               {isSidebarCollapsed ? '📦' : 'Inventory'}
             </Link>
-            <Link href="/admin/services" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+            <Link href="/admin/services" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
               {isSidebarCollapsed ? '⚙️' : 'Services'}
             </Link>
-            <Link href="/admin/customers" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+            <Link href="/admin/customers" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
               {isSidebarCollapsed ? '👥' : 'Customers'}
             </Link>
-            <Link href="/admin/notifications" className={`relative block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+            <Link href="/admin/notifications" className={`relative block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
               {isSidebarCollapsed ? '🔔' : 'Notifications'}
               {unreadNotifications > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1 animate-pulse shadow-lg">
@@ -233,7 +233,7 @@ export default function AdminLayout({
                 </span>
               )}
             </Link>
-            <Link href="/admin/reports" className={`block px-4 py-2 rounded hover:bg-[var(--primary)] transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+            <Link href="/admin/reports" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
               {isSidebarCollapsed ? '📊' : 'Reports'}
             </Link>
             <button
@@ -250,7 +250,7 @@ export default function AdminLayout({
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 bg-gray-50">
+      <main className="flex-1 bg-gradient-to-br from-slate-50 to-blue-50/30">
         <div className="p-4 md:p-8">{children}</div>
       </main>
     </div>

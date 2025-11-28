@@ -53,7 +53,7 @@ export default function AdminDashboard() {
         return sum;
       }, 0) || 0;
 
-      const lowStock = servicesData.services?.filter((s: any) => s.category === 'equipment' && s.quantity <= 5) || [];
+      const lowStock = servicesData.services?.filter((s: any) => (s.serviceType === 'equipment' || s.serviceType === 'supply') && s.quantity <= 5) || [];
 
       setStats({
         totalBookings: 0, // Will be updated by fetchRecentBookings
@@ -90,7 +90,7 @@ export default function AdminDashboard() {
 
       setStats(prev => ({
         ...prev,
-        totalBookings: bookings.length,
+        totalBookings: data.total || 0,
       }));
 
       setRecentBookings(bookings);

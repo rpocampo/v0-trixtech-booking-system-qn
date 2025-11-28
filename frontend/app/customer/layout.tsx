@@ -125,7 +125,7 @@ export default function CustomerLayout({
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[var(--background)] to-[var(--surface-secondary)]">
         {/* Navigation */}
-        <nav className="bg-white/80 backdrop-blur-lg border-b border-[var(--border)] sticky top-0 z-50 shadow-sm">
+        <nav className="bg-white/90 backdrop-blur-xl border-b border-slate-200/50 sticky top-0 z-50 shadow-lg">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
             <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent hover:scale-105 transition-transform duration-200">
               TRIXTECH
@@ -135,31 +135,31 @@ export default function CustomerLayout({
             <div className="hidden md:flex items-center gap-1">
             <Link
               href="/customer/dashboard"
-              className="px-4 py-2 rounded-lg text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200 font-medium"
+              className="px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium"
             >
               Dashboard
             </Link>
             <Link
               href="/customer/services"
-              className="px-4 py-2 rounded-lg text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200 font-medium"
+              className="px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium"
             >
               Services
             </Link>
             <Link
               href="/customer/bookings"
-              className="px-4 py-2 rounded-lg text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200 font-medium"
+              className="px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium"
             >
               Bookings
             </Link>
             <Link
               href="/customer/suggestions"
-              className="px-4 py-2 rounded-lg text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200 font-medium"
+              className="px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium"
             >
               Suggestions
             </Link>
             <Link
               href="/customer/notifications"
-              className="relative px-4 py-2 rounded-lg text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200 font-medium"
+              className="relative px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium"
             >
               Notifications
               {unreadNotifications > 0 && (
@@ -336,7 +336,7 @@ export default function CustomerLayout({
       </main>
 
       {/* Footer */}
-      <footer className="bg-gradient-to-r from-[var(--foreground)] to-gray-900 text-white py-12 mt-16">
+      <footer className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white py-16 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div className="md:col-span-2">
