@@ -4,14 +4,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useSocket } from '../../components/SocketProvider';
+import { useUser } from '../../components/UserContext';
 import CartIcon from '../../components/CartIcon';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
 
 export default function CustomerLayout({
   children,
@@ -20,10 +14,9 @@ export default function CustomerLayout({
 }) {
   const router = useRouter();
   const { socket } = useSocket();
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, setUser, isLoading: userLoading, logout } = useUser();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
@@ -35,36 +28,36 @@ export default function CustomerLayout({
       return;
     }
 
-    // Fetch user data
-    const fetchUser = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+    // Fetch user data if not already cached
+    if (!user) {
+      const fetchUser = async () => {
+        try {
+          const response = await fetch('http://localhost:5000/api/auth/me', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
 
-        if (response.status === 401) {
-          // Token expired or invalid, redirect to login
-          localStorage.clear();
-          router.push('/login');
-          return;
+          if (response.status === 401) {
+            // Token expired or invalid, redirect to login
+            logout();
+            router.push('/login');
+            return;
+          }
+
+          const data = await response.json();
+          if (data.success && data.user) {
+            setUser(data.user);
+          } else {
+            console.warn('User fetch returned success but no user data');
+            setUser(null);
+          }
+        } catch (error) {
+          console.error('Failed to fetch user:', error);
         }
+      };
 
-        const data = await response.json();
-        if (data.success && data.user) {
-          setUser(data.user);
-        } else {
-          console.warn('User fetch returned success but no user data');
-          setUser(null);
-        }
-      } catch (error) {
-        console.error('Failed to fetch user:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, [router]);
+      fetchUser();
+    }
+  }, [router, user, setUser, logout]);
 
   // Fetch unread notifications count
   useEffect(() => {
@@ -118,7 +111,7 @@ export default function CustomerLayout({
     }
   }, [socket, user]);
 
-  if (isLoading) {
+  if (userLoading) {
     return <div className="flex items-center justify-center h-screen">Loading...</div>;
   }
 
@@ -209,7 +202,7 @@ export default function CustomerLayout({
                     </Link>
                     <button
                       onClick={() => {
-                        localStorage.clear();
+                        logout();
                         router.push('/');
                         setIsUserMenuOpen(false);
                       }}
@@ -314,7 +307,7 @@ export default function CustomerLayout({
               </Link>
               <button
                 onClick={() => {
-                  localStorage.clear();
+                  logout();
                   router.push('/');
                   setIsMenuOpen(false);
                 }}

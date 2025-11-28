@@ -4,6 +4,7 @@ import './globals.css';
 import SocketProvider from '../components/SocketProvider';
 import NotificationProvider from '../components/NotificationProvider';
 import { CartProvider } from '../components/CartContext';
+import { UserProvider } from '../components/UserContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -22,9 +23,11 @@ export default function RootLayout({
       <body className={inter.className}>
         <SocketProvider>
           <NotificationProvider>
-            <CartProvider>
-              {children}
-            </CartProvider>
+            <UserProvider>
+              <CartProvider>
+                {children}
+              </CartProvider>
+            </UserProvider>
           </NotificationProvider>
         </SocketProvider>
       </body>

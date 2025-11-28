@@ -24,7 +24,26 @@ export default function BookingPage() {
   const serviceId = params.id as string;
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
-  const [booking, setBooking] = useState({
+
+  // Load saved booking data from localStorage
+  const loadSavedBookingData = () => {
+    const saved = localStorage.getItem(`booking_page_${serviceId}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Only return if it's for the same service and not older than 24 hours
+        if (parsed.serviceId === serviceId && Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+          return parsed.data;
+        }
+      } catch (error) {
+        console.error('Failed to load saved booking data:', error);
+      }
+    }
+    return null;
+  };
+
+  const savedData = loadSavedBookingData();
+  const [booking, setBooking] = useState(savedData?.booking || {
     quantity: 1,
     bookingDate: '',
     deliveryTime: '',
@@ -32,16 +51,16 @@ export default function BookingPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [queued, setQueued] = useState(false);
-  const [alternatives, setAlternatives] = useState<any[]>([]);
+  const [queued, setQueued] = useState(savedData?.queued || false);
+  const [alternatives, setAlternatives] = useState<any[]>(savedData?.alternatives || []);
   const [recommendations, setRecommendations] = useState<Service[]>([]);
-  const [showDateTimePicker, setShowDateTimePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedHour, setSelectedHour] = useState(9);
-  const [selectedMinute, setSelectedMinute] = useState(0);
-  const [selectedAmPm, setSelectedAmPm] = useState<'AM' | 'PM'>('AM');
-  const [dateTimeConfirmed, setDateTimeConfirmed] = useState(false);
-  const [availabilityChecked, setAvailabilityChecked] = useState(false);
+  const [showDateTimePicker, setShowDateTimePicker] = useState(savedData?.showDateTimePicker || false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(savedData?.selectedDate ? new Date(savedData.selectedDate) : null);
+  const [selectedHour, setSelectedHour] = useState(savedData?.selectedHour || 9);
+  const [selectedMinute, setSelectedMinute] = useState(savedData?.selectedMinute || 0);
+  const [selectedAmPm, setSelectedAmPm] = useState<'AM' | 'PM'>(savedData?.selectedAmPm || 'AM');
+  const [dateTimeConfirmed, setDateTimeConfirmed] = useState(savedData?.dateTimeConfirmed || false);
+  const [availabilityChecked, setAvailabilityChecked] = useState(savedData?.availabilityChecked || false);
   const [availabilityStatus, setAvailabilityStatus] = useState<{
     available: boolean;
     availableQuantity: number;
@@ -50,21 +69,58 @@ export default function BookingPage() {
     deliveryTruckAvailable?: boolean;
     deliveryTruckReason?: string;
     nextAvailableDeliveryTime?: string;
-  } | null>(null);
-  const [calculatedPrice, setCalculatedPrice] = useState<number>(0);
-  const [pricingInfo, setPricingInfo] = useState<any>(null);
-  const [showPayment, setShowPayment] = useState(false);
+  } | null>(savedData?.availabilityStatus || null);
+  const [calculatedPrice, setCalculatedPrice] = useState<number>(savedData?.calculatedPrice || 0);
+  const [pricingInfo, setPricingInfo] = useState<any>(savedData?.pricingInfo || null);
+  const [showPayment, setShowPayment] = useState(savedData?.showPayment || false);
   const [qrPayment, setQrPayment] = useState<{
     qrCode: string;
     instructions: any;
     referenceNumber: string;
     transactionId: string;
-  } | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed' | 'failed'>('pending');
-  const [currentBookingId, setCurrentBookingId] = useState<string>('');
-  const [currentBookingIntent, setCurrentBookingIntent] = useState<any>(null);
-  const [showBookingSummary, setShowBookingSummary] = useState(false);
-  const [bookingSummaryData, setBookingSummaryData] = useState<any>(null);
+  } | null>(savedData?.qrPayment || null);
+  const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed' | 'failed'>(savedData?.paymentStatus || 'pending');
+  const [currentBookingId, setCurrentBookingId] = useState<string>(savedData?.currentBookingId || '');
+  const [currentBookingIntent, setCurrentBookingIntent] = useState<any>(savedData?.currentBookingIntent || null);
+  const [showBookingSummary, setShowBookingSummary] = useState(savedData?.showBookingSummary || false);
+  const [bookingSummaryData, setBookingSummaryData] = useState<any>(savedData?.bookingSummaryData || null);
+
+  // Save booking data to localStorage whenever it changes
+  useEffect(() => {
+    const dataToSave = {
+      serviceId,
+      timestamp: Date.now(),
+      data: {
+        booking,
+        queued,
+        alternatives,
+        showDateTimePicker,
+        selectedDate: selectedDate?.toISOString(),
+        selectedHour,
+        selectedMinute,
+        selectedAmPm,
+        dateTimeConfirmed,
+        availabilityChecked,
+        availabilityStatus,
+        calculatedPrice,
+        pricingInfo,
+        showPayment,
+        qrPayment,
+        paymentStatus,
+        currentBookingId,
+        currentBookingIntent,
+        showBookingSummary,
+        bookingSummaryData,
+      }
+    };
+    localStorage.setItem(`booking_page_${serviceId}`, JSON.stringify(dataToSave));
+  }, [
+    serviceId, booking, queued, alternatives, showDateTimePicker, selectedDate,
+    selectedHour, selectedMinute, selectedAmPm, dateTimeConfirmed,
+    availabilityChecked, availabilityStatus, calculatedPrice, pricingInfo,
+    showPayment, qrPayment, paymentStatus, currentBookingId,
+    currentBookingIntent, showBookingSummary, bookingSummaryData
+  ]);
 
   // Reset and check availability when selections change
   useEffect(() => {
@@ -343,6 +399,8 @@ export default function BookingPage() {
       if (data.success) {
         // Booking confirmed successfully
         console.log('Booking confirmed successfully');
+        // Clear saved booking data on successful completion
+        localStorage.removeItem(`booking_page_${serviceId}`);
         router.push('/customer/bookings?payment=success');
       } else {
         setError('Failed to confirm booking. Please contact support.');
@@ -520,7 +578,11 @@ export default function BookingPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <Button
-        onClick={() => router.back()}
+        onClick={() => {
+          // Clear saved booking data when going back
+          localStorage.removeItem(`booking_page_${serviceId}`);
+          router.back();
+        }}
         variant="ghost"
         icon="←"
         className="mb-6"

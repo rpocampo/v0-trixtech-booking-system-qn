@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useSocket } from '../../components/SocketProvider';
+import { useUser } from '../../components/UserContext';
 
 export default function AdminLayout({
   children,
@@ -12,6 +13,7 @@ export default function AdminLayout({
 }) {
   const router = useRouter();
   const { socket } = useSocket();
+  const { logout } = useUser();
   const [isLoading, setIsLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -176,7 +178,7 @@ export default function AdminLayout({
             </Link>
             <button
               onClick={() => {
-                localStorage.clear();
+                logout();
                 router.push('/');
                 setIsMenuOpen(false);
               }}
@@ -238,7 +240,7 @@ export default function AdminLayout({
             </Link>
             <button
               onClick={() => {
-                localStorage.clear();
+                logout();
                 router.push('/');
               }}
               className={`w-full text-left px-4 py-2 rounded hover:bg-red-600 transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}

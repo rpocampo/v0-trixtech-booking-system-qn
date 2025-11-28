@@ -31,8 +31,36 @@ interface WizardStep {
 
 export default function BookingWizard({ service, onComplete, onCancel }: BookingWizardProps) {
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState(0);
-  const [bookingData, setBookingData] = useState({
+
+  // Load saved booking data from localStorage
+  const loadSavedBookingData = () => {
+    const saved = localStorage.getItem(`booking_wizard_${service._id}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        // Only return if it's for the same service and not older than 24 hours
+        if (parsed.serviceId === service._id && Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000) {
+          return {
+            currentStep: parsed.currentStep || 0,
+            bookingData: parsed.bookingData || {
+              quantity: 1,
+              bookingDate: '',
+              deliveryTime: '',
+              notes: '',
+              addons: [] as string[]
+            }
+          };
+        }
+      } catch (error) {
+        console.error('Failed to load saved booking data:', error);
+      }
+    }
+    return null;
+  };
+
+  const savedData = loadSavedBookingData();
+  const [currentStep, setCurrentStep] = useState(savedData?.currentStep || 0);
+  const [bookingData, setBookingData] = useState(savedData?.bookingData || {
     quantity: 1,
     bookingDate: '',
     deliveryTime: '',
@@ -43,6 +71,17 @@ export default function BookingWizard({ service, onComplete, onCancel }: Booking
   const [availabilityStatus, setAvailabilityStatus] = useState<any>(null);
   const [calculatedPrice, setCalculatedPrice] = useState(service.basePrice);
   const [loading, setLoading] = useState(false);
+
+  // Save booking data to localStorage whenever it changes
+  useEffect(() => {
+    const dataToSave = {
+      serviceId: service._id,
+      currentStep,
+      bookingData,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(`booking_wizard_${service._id}`, JSON.stringify(dataToSave));
+  }, [currentStep, bookingData, service._id]);
 
   const steps: WizardStep[] = [
     {
@@ -159,6 +198,8 @@ export default function BookingWizard({ service, onComplete, onCancel }: Booking
     setLoading(true);
     try {
       await onComplete(bookingData);
+      // Clear saved booking data on successful completion
+      localStorage.removeItem(`booking_wizard_${service._id}`);
     } catch (error) {
       console.error('Error completing booking:', error);
     } finally {
