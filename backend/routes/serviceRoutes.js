@@ -5,14 +5,15 @@ const Service = require('../models/Service');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 // Validation helper for inclusions
-const validateInclusions = (includedItems) => {
+const validateInclusions = (includedItems, serviceType) => {
   if (!includedItems || !Array.isArray(includedItems)) {
     return { valid: false, message: 'Service inclusions must be provided as an array' };
   }
 
   const validItems = includedItems.filter(item => item && item.trim().length > 0);
 
-  if (validItems.length === 0) {
+  // Skip inclusion requirement for equipment service type
+  if (serviceType !== "equipment" && validItems.length === 0) {
     return { valid: false, message: 'At least one service inclusion is required' };
   }
 
@@ -287,50 +288,76 @@ router.put('/:id', adminMiddleware, upload.fields([
       leadTime
     } = req.body;
 
-    // Validate required fields
-    if (!name || !description) {
-      return res.status(400).json({
-        success: false,
-        message: 'Service name and description are required'
-      });
+    const updateData = {};
+
+    // Only validate and include fields that are provided
+    if (name !== undefined) {
+      updateData.name = name.trim();
+    }
+    if (description !== undefined) {
+      updateData.description = description.trim();
+    }
+    if (shortDescription !== undefined) {
+      updateData.shortDescription = shortDescription;
+    }
+    if (category !== undefined) {
+      updateData.category = category;
+    }
+    if (serviceType !== undefined) {
+      updateData.serviceType = serviceType;
+    }
+    if (eventTypes !== undefined) {
+      updateData.eventTypes = Array.isArray(eventTypes) ? eventTypes : [eventTypes];
     }
 
-    // Validate and parse price
-    const parsedPrice = parseFloat(price);
-    if (isNaN(parsedPrice) || parsedPrice < 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Service price must be a valid positive number'
-      });
+    // Validate and parse price only if provided
+    if (price !== undefined) {
+      const parsedPrice = parseFloat(price);
+      if (isNaN(parsedPrice) || parsedPrice < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Service price must be a valid positive number'
+        });
+      }
+      updateData.price = parsedPrice;
     }
 
-    const updateData = {
-      name,
-      description,
-      shortDescription,
-      category,
-      serviceType: serviceType || 'service',
-      eventTypes: eventTypes ? (Array.isArray(eventTypes) ? eventTypes : [eventTypes]) : [],
-      price: parsedPrice,
-      priceType: priceType || 'flat-rate',
-      location: location || 'both',
-      tags: tags ? (Array.isArray(tags) ? tags : [tags]) : [],
-      features: features ? (Array.isArray(features) ? features : [features]) : [],
-      includedItems: includedItems ? (Array.isArray(includedItems) ? includedItems : [includedItems]) : [],
-      requirements: requirements ? (Array.isArray(requirements) ? requirements : [requirements]) : [],
-      minOrder: minOrder ? parseInt(minOrder) : 1,
-      leadTime: leadTime ? parseInt(leadTime) : 24,
-    };
-
-    // Validate inclusions
-    const inclusionsValidation = validateInclusions(updateData.includedItems);
-    if (!inclusionsValidation.valid) {
-      return res.status(400).json({
-        success: false,
-        message: inclusionsValidation.message
-      });
+    if (priceType !== undefined) {
+      updateData.priceType = priceType;
     }
-    updateData.includedItems = inclusionsValidation.inclusions;
+    if (location !== undefined) {
+      updateData.location = location;
+    }
+    if (tags !== undefined) {
+      updateData.tags = Array.isArray(tags) ? tags : [tags];
+    }
+    if (features !== undefined) {
+      updateData.features = Array.isArray(features) ? features : [features];
+    }
+    if (includedItems !== undefined) {
+      updateData.includedItems = Array.isArray(includedItems) ? includedItems : [includedItems];
+    }
+    if (requirements !== undefined) {
+      updateData.requirements = Array.isArray(requirements) ? requirements : [requirements];
+    }
+    if (minOrder !== undefined) {
+      updateData.minOrder = parseInt(minOrder);
+    }
+    if (leadTime !== undefined) {
+      updateData.leadTime = parseInt(leadTime);
+    }
+
+    // Validate inclusions only if includedItems is being updated
+    if (includedItems !== undefined) {
+      const inclusionsValidation = validateInclusions(updateData.includedItems, serviceType || oldService.serviceType);
+      if (!inclusionsValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: inclusionsValidation.message
+        });
+      }
+      updateData.includedItems = inclusionsValidation.inclusions;
+    }
 
     // Handle duration for services
     if (serviceType === 'service' && duration) {
@@ -338,10 +365,14 @@ router.put('/:id', adminMiddleware, upload.fields([
     }
 
     // Handle quantity for equipment/supplies
-    if ((serviceType === 'equipment' || serviceType === 'supply') && quantity) {
-      updateData.quantity = parseInt(quantity);
-      if (maxOrder) {
-        updateData.maxOrder = parseInt(maxOrder);
+    // Allow quantity updates for equipment/supply items even if serviceType is not in request body
+    if (quantity !== undefined) {
+      // Check if this is an equipment/supply item from the database
+      if (oldService.serviceType === 'equipment' || oldService.serviceType === 'supply') {
+        updateData.quantity = parseInt(quantity);
+        if (maxOrder !== undefined) {
+          updateData.maxOrder = parseInt(maxOrder);
+        }
       }
     }
 

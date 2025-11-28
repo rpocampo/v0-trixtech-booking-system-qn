@@ -1,1 +1,6 @@
-{}
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/admin/inventory/page": "app/admin/inventory/page.js",
+  "/customer/checkout/page": "app/customer/checkout/page.js",
+  "/customer/cart/page": "app/customer/cart/page.js"
+}

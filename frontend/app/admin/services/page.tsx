@@ -119,16 +119,18 @@ export default function AdminServices() {
       newErrors.price = 'Price must be greater than ₱0.00';
     }
 
-    // Validate inclusions
-    const validInclusions = formData.includedItems.filter(item => item.trim());
-    if (validInclusions.length === 0) {
-      newErrors.inclusions = 'At least one inclusion is required';
-    }
+    // Validate inclusions only if serviceType is not equipment
+    if (formData.serviceType !== 'equipment') {
+      const validInclusions = formData.includedItems.filter(item => item.trim());
+      if (validInclusions.length === 0) {
+        newErrors.inclusions = 'At least one inclusion is required';
+      }
 
-    // Check for duplicates
-    const uniqueInclusions = new Set(validInclusions.map(item => item.trim().toLowerCase()));
-    if (uniqueInclusions.size !== validInclusions.length) {
-      newErrors.inclusions = 'Duplicate inclusions are not allowed';
+      // Check for duplicates
+      const uniqueInclusions = new Set(validInclusions.map(item => item.trim().toLowerCase()));
+      if (uniqueInclusions.size !== validInclusions.length) {
+        newErrors.inclusions = 'Duplicate inclusions are not allowed';
+      }
     }
 
     setErrors(newErrors);
@@ -162,8 +164,10 @@ export default function AdminServices() {
         formDataToSend.append('quantity', '10'); // Default quantity for inventory items
       }
 
-      // Add included items (use provided ones or defaults if empty)
-      if (formData.includedItems.length === 0) {
+      // Add included items (skip for equipment, use provided ones or defaults for others)
+      if (formData.serviceType === 'equipment') {
+        // Equipment services don't require inclusions - send empty array
+      } else if (formData.includedItems.length === 0) {
         formDataToSend.append('includedItems', 'Professional service delivery');
         formDataToSend.append('includedItems', 'Standard setup and preparation');
       } else {
@@ -281,12 +285,14 @@ export default function AdminServices() {
       formDataToSend.append('price', formData.price.toString());
       formDataToSend.append('duration', formData.duration.toString());
 
-      // Add included items as separate entries
-      formData.includedItems.forEach(item => {
-        if (item.trim()) {
-          formDataToSend.append('includedItems', item.trim());
-        }
-      });
+      // Add included items as separate entries (skip for equipment)
+      if (formData.serviceType !== 'equipment') {
+        formData.includedItems.forEach(item => {
+          if (item.trim()) {
+            formDataToSend.append('includedItems', item.trim());
+          }
+        });
+      }
 
       const response = await fetch(`http://localhost:5000/api/services/${editingService._id}`, {
         method: 'PUT',
@@ -436,54 +442,66 @@ export default function AdminServices() {
               </div>
             </div>
 
-            {/* Inclusions */}
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  What's Included
-                </label>
-                <button
-                  type="button"
-                  onClick={addInclusion}
-                  className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                >
-                  <span>+</span> Add Item
-                </button>
-              </div>
+            {/* Inclusions - Only show for non-equipment services */}
+            {formData.serviceType !== 'equipment' && (
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    What's Included
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addInclusion}
+                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    <span>+</span> Add Item
+                  </button>
+                </div>
 
-              <div className="space-y-2">
-                {formData.includedItems.length === 0 ? (
-                  <div className="text-center py-4 text-gray-500 text-sm border-2 border-dashed border-gray-300 rounded-md">
-                    No inclusions added yet. Click "Add Item" to get started.
-                  </div>
-                ) : (
-                  formData.includedItems.map((item, index) => (
-                    <div key={index} className="flex gap-2 items-center">
-                      <input
-                        type="text"
-                        value={item}
-                        onChange={(e) => updateInclusion(index, e.target.value)}
-                        className="input-field flex-1"
-                        placeholder="e.g., Professional service delivery"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeInclusion(index)}
-                        className="text-red-500 hover:text-red-700 p-2"
-                        title="Remove this item"
-                      >
-                        ×
-                      </button>
+                <div className="space-y-2">
+                  {formData.includedItems.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500 text-sm border-2 border-dashed border-gray-300 rounded-md">
+                      No inclusions added yet. Click "Add Item" to get started.
                     </div>
-                  ))
-                )}
-              </div>
+                  ) : (
+                    formData.includedItems.map((item, index) => (
+                      <div key={index} className="flex gap-2 items-center">
+                        <input
+                          type="text"
+                          value={item}
+                          onChange={(e) => updateInclusion(index, e.target.value)}
+                          className="input-field flex-1"
+                          placeholder="e.g., Professional service delivery"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeInclusion(index)}
+                          className="text-red-500 hover:text-red-700 p-2"
+                          title="Remove this item"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
 
-              {errors.inclusions && <p className="text-sm text-red-600 mt-1">{errors.inclusions}</p>}
-              <p className="text-xs text-gray-500 mt-2">
-                Add items that are included in this service package
-              </p>
-            </div>
+                {errors.inclusions && <p className="text-sm text-red-600 mt-1">{errors.inclusions}</p>}
+                <p className="text-xs text-gray-500 mt-2">
+                  Add items that are included in this service package
+                </p>
+              </div>
+            )}
+
+            {/* Equipment notice */}
+            {formData.serviceType === 'equipment' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-800 mb-2">Equipment Service</h4>
+                <p className="text-sm text-blue-700">
+                  Equipment services do not require inclusions. The system will allow saving without any inclusions specified.
+                </p>
+              </div>
+            )}
 
             {/* Description */}
             <div>
