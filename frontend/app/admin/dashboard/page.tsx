@@ -196,21 +196,21 @@ export default function AdminDashboard() {
       {/* Stats Grid - Key Metrics */}
       <div className="flex justify-center">
         <div className="grid md:grid-cols-3 gap-8 max-w-6xl">
-          <div className="stat-box hover:shadow-2xl transition-all duration-300 p-8 min-h-[180px] flex flex-col justify-between relative bg-gradient-to-br from-white to-blue-50/50 ring-2 ring-blue-200/50">
+          <div className="stat-box hover:shadow-2xl transition-all duration-300 p-8 min-h-[280px] flex flex-col justify-between relative bg-gradient-to-br from-white to-blue-50/50 ring-2 ring-blue-200/50">
             <div className="stat-label flex items-center gap-3 mb-6">
               <span className="text-4xl">📅</span>
               <span className="text-2xl font-bold">Total Bookings</span>
             </div>
             <div className="stat-value text-[var(--accent)] text-6xl font-black">{stats.totalBookings}</div>
           </div>
-          <div className="stat-box hover:shadow-2xl transition-all duration-300 p-8 min-h-[180px] flex flex-col justify-between relative bg-gradient-to-br from-white to-green-50/50 ring-2 ring-green-200/50">
+          <div className="stat-box hover:shadow-2xl transition-all duration-300 p-8 min-h-[280px] flex flex-col justify-between relative bg-gradient-to-br from-white to-green-50/50 ring-2 ring-green-200/50">
             <div className="stat-label flex items-center gap-3 mb-6">
               <span className="text-4xl">👥</span>
               <span className="text-2xl font-bold">Booked Customers</span>
             </div>
             <div className="stat-value text-blue-600 text-6xl font-black">{stats.bookedCustomers}</div>
           </div>
-          <div className="stat-box hover:shadow-2xl transition-all duration-300 p-8 min-h-[180px] flex flex-col justify-between relative bg-gradient-to-br from-white to-purple-50/50 ring-2 ring-purple-200/50">
+          <div className="stat-box hover:shadow-2xl transition-all duration-300 p-8 min-h-[280px] flex flex-col justify-between relative bg-gradient-to-br from-white to-purple-50/50 ring-2 ring-purple-200/50">
             <div className="stat-label flex items-center gap-3 mb-6">
               <span className="text-4xl">📦</span>
               <span className="text-2xl font-bold">Total Inventory</span>
