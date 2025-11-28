@@ -215,7 +215,7 @@ router.post('/', adminMiddleware, upload.fields([
     };
 
     // Validate inclusions
-    const inclusionsValidation = validateInclusions(serviceData.includedItems);
+    const inclusionsValidation = validateInclusions(serviceData.includedItems, serviceData.serviceType);
     if (!inclusionsValidation.valid) {
       return res.status(400).json({
         success: false,
@@ -349,7 +349,7 @@ router.put('/:id', adminMiddleware, upload.fields([
 
     // Validate inclusions only if includedItems is being updated
     if (includedItems !== undefined) {
-      const inclusionsValidation = validateInclusions(updateData.includedItems, serviceType || oldService.serviceType);
+      const inclusionsValidation = validateInclusions(updateData.includedItems, serviceType !== undefined ? serviceType : oldService.serviceType);
       if (!inclusionsValidation.valid) {
         return res.status(400).json({
           success: false,

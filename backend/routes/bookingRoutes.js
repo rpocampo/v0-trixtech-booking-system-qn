@@ -345,42 +345,31 @@ router.post('/', authMiddleware, async (req, res, next) => {
           bookingData.deliveryDuration = 60; // 1 hour
         }
 
-        // Use MongoDB transaction for atomic booking creation and inventory update
-        const session = await mongoose.startSession();
+        // Create booking (without transaction for standalone MongoDB)
         let booking;
-
         try {
-          await session.withTransaction(async () => {
-            // Create booking within transaction
-            booking = new Booking(bookingData);
-            await booking.save({ session });
+          booking = new Booking(bookingData);
+          await booking.save();
 
-            // Decrease inventory if it's equipment or supply (within same transaction)
-                if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
-                  // Use batch tracking for inventory reduction (FIFO)
-                  await service.reduceBatchQuantity(requestedQuantity);
+          // Decrease inventory if it's equipment or supply
+          if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+            // Use batch tracking for inventory reduction (FIFO)
+            await service.reduceBatchQuantity(requestedQuantity);
 
-                  // Trigger low stock alert check after transaction commits
-                  try {
-                    // Use setImmediate to run after transaction completes
-                    setImmediate(async () => {
-                      await triggerLowStockCheck(serviceId);
-                    });
-                  } catch (alertError) {
-                    console.error('Error triggering low stock alert:', alertError);
-                    // Don't fail the booking if alert fails
-                  }
-                }
-          });
+            // Trigger low stock alert check
+            try {
+              await triggerLowStockCheck(serviceId);
+            } catch (alertError) {
+              console.error('Error triggering low stock alert:', alertError);
+              // Don't fail the booking if alert fails
+            }
+          }
 
-          // Transaction committed successfully
-          console.log('Booking and inventory update completed atomically');
+          console.log('Booking and inventory update completed');
 
-        } catch (transactionError) {
-          console.error('Transaction failed:', transactionError);
-          throw transactionError; // Re-throw to be caught by outer catch
-        } finally {
-          await session.endSession();
+        } catch (bookingError) {
+          console.error('Booking creation failed:', bookingError);
+          throw bookingError; // Re-throw to be caught by outer catch
         }
 
         await booking.populate('serviceId');

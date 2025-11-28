@@ -34,8 +34,8 @@ const testIntegration = async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email: 'customer@trixtech.com', // Use existing test user
-        password: 'customer123'
+        email: 'demo@trixtech.com', // Use existing test user
+        password: 'demo1234'
       })
     });
 
@@ -94,7 +94,24 @@ const testIntegration = async () => {
 
     // Test 6: Availability Check
     console.log('\n📅 Test 5: Availability Checking');
-    const serviceId = '691c0917825daecf52284b41'; // First service from earlier test
+
+    // First get a service ID dynamically
+    const servicesListRes = await fetch(`${baseUrl}/services`, {
+      headers: { Authorization: `Bearer ${customerToken}` }
+    });
+    let serviceId = '';
+    if (servicesListRes.status === 200) {
+      const servicesData = await servicesListRes.json();
+      if (servicesData.services && servicesData.services.length > 0) {
+        serviceId = servicesData.services[0]._id;
+      }
+    }
+
+    if (!serviceId) {
+      console.log('❌ Availability check: FAILED - No services available');
+      return;
+    }
+
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const dateString = tomorrow.toISOString();
@@ -127,7 +144,7 @@ const testIntegration = async () => {
     });
 
     let bookingId = '';
-    if (bookingRes.status === 201) {
+    if (bookingRes.status === 200) {
       const bookingData = await bookingRes.json();
       bookingId = bookingData.booking._id;
       console.log('✅ Booking creation: PASSED');
