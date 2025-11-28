@@ -353,7 +353,7 @@ export default function Profile() {
                   <p className="text-sm text-gray-600">
                     Take a screenshot of your GCash QR code and upload the image.
                   </p>
-                  <label className="btn-secondary cursor-pointer">
+                  <label className="btn-secondary cursor-pointer inline-block">
                     <input
                       type="file"
                       accept="image/*"
@@ -361,7 +361,9 @@ export default function Profile() {
                       disabled={qrUploading}
                       className="hidden"
                     />
-                    {qrUploading ? 'Uploading...' : 'Upload QR Code Image'}
+                    <span className="relative z-10">
+                      {qrUploading ? 'Uploading...' : 'Upload QR Code Image'}
+                    </span>
                   </label>
                 </div>
               </div>

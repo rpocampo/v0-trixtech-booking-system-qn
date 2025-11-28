@@ -20,6 +20,15 @@ interface CheckoutItem {
   dailyRate?: number; // Daily rate for the item
 }
 
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  gcashQRCode?: string;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { socket } = useSocket();
@@ -53,6 +62,9 @@ export default function CheckoutPage() {
   const [creatingPayment, setCreatingPayment] = useState(false);
   const [paymentError, setPaymentError] = useState('');
   const [durationError, setDurationError] = useState('');
+  const [user, setUser] = useState<User | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
+  const [addressComplete, setAddressComplete] = useState(false);
 
   // Initialize checkout items from cart and load scheduled data
   useEffect(() => {
@@ -105,6 +117,37 @@ export default function CheckoutPage() {
       }
     }
   }, [currentStep, paymentBooking, qrPayment]); // Include qrPayment
+
+  // Fetch user data for address validation
+  useEffect(() => {
+    const fetchUser = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setUserLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:5000/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.user) {
+            setUser(data.user);
+            setAddressComplete(!!data.user.address && data.user.address.trim().length > 0);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch user data:', error);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   const validateStock = async () => {
     setIsValidatingStock(true);
@@ -463,6 +506,28 @@ export default function CheckoutPage() {
             </div>
           )}
 
+          {/* Address Validation Warning */}
+          {!userLoading && !addressComplete && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-yellow-800 mb-2">
+                <span className="text-lg">📍</span>
+                <span className="font-semibold">Address Required</span>
+              </div>
+              <p className="text-sm text-yellow-700 mb-3">
+                Please complete your address information before proceeding with checkout. This is required for delivery services.
+              </p>
+              <Link
+                href="/customer/profile"
+                className="inline-flex items-center gap-2 text-sm bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-2 rounded-lg font-medium transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Update Address in Profile
+              </Link>
+            </div>
+          )}
+
           {/* Cart Items */}
           <div className="space-y-4">
             {checkoutItems.map((item) => (
@@ -527,10 +592,10 @@ export default function CheckoutPage() {
             </Link>
             <button
               onClick={handleProceedToSchedule}
-              disabled={stockValidationIssues.length > 0 || isValidatingStock}
+              disabled={stockValidationIssues.length > 0 || isValidatingStock || !addressComplete}
               className="btn-primary"
             >
-              {isValidatingStock ? 'Validating...' : 'Proceed to Schedule →'}
+              {isValidatingStock ? 'Validating...' : !addressComplete ? 'Complete Address to Continue' : 'Proceed to Schedule →'}
             </button>
           </div>
         </div>

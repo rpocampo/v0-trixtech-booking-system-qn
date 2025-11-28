@@ -72,7 +72,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         'border border-[var(--danger)]',
       ],
       ghost: [
-        'bg-transparent text-[var(--primary)]',
+        'bg-transparent text-[var(--primary)] border border-[var(--border)]',
         'hover:bg-[var(--primary-50)] hover:text-[var(--primary-dark)]',
         'focus:ring-[var(--primary)]',
       ],

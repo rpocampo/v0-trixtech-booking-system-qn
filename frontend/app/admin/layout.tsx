@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useSocket } from '../../components/SocketProvider';
@@ -12,6 +12,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { socket } = useSocket();
   const { logout } = useUser();
   const [isLoading, setIsLoading] = useState(true);
@@ -109,7 +110,7 @@ export default function AdminLayout({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="p-2 rounded-md hover:bg-[var(--primary)] transition-colors"
+            className="p-2 rounded-md border border-[var(--border)] hover:bg-[var(--primary)] transition-colors"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
@@ -124,42 +125,42 @@ export default function AdminLayout({
           <nav className="px-4 py-2 space-y-2">
             <Link
               href="/admin/dashboard"
-              className="block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
+              className={`block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors ${pathname === '/admin/dashboard' ? 'bg-[var(--primary)] text-white' : ''}`}
               onClick={() => setIsMenuOpen(false)}
             >
               Dashboard
             </Link>
             <Link
               href="/admin/bookings"
-              className="block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
+              className={`block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors ${pathname === '/admin/bookings' ? 'bg-[var(--primary)] text-white' : ''}`}
               onClick={() => setIsMenuOpen(false)}
             >
               Bookings
             </Link>
             <Link
               href="/admin/inventory"
-              className="block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
+              className={`block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors ${pathname === '/admin/inventory' ? 'bg-[var(--primary)] text-white' : ''}`}
               onClick={() => setIsMenuOpen(false)}
             >
               Inventory
             </Link>
             <Link
               href="/admin/services"
-              className="block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
+              className={`block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors ${pathname === '/admin/services' ? 'bg-[var(--primary)] text-white' : ''}`}
               onClick={() => setIsMenuOpen(false)}
             >
               Services
             </Link>
             <Link
               href="/admin/customers"
-              className="block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
+              className={`block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors ${pathname === '/admin/customers' ? 'bg-[var(--primary)] text-white' : ''}`}
               onClick={() => setIsMenuOpen(false)}
             >
               Customers
             </Link>
             <Link
               href="/admin/notifications"
-              className="relative block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
+              className={`relative block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors ${pathname === '/admin/notifications' ? 'bg-[var(--primary)] text-white' : ''}`}
               onClick={() => setIsMenuOpen(false)}
             >
               Notifications
@@ -171,7 +172,7 @@ export default function AdminLayout({
             </Link>
             <Link
               href="/admin/reports"
-              className="block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors"
+              className={`block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors ${pathname === '/admin/reports' ? 'bg-[var(--primary)] text-white' : ''}`}
               onClick={() => setIsMenuOpen(false)}
             >
               Reports
@@ -182,7 +183,7 @@ export default function AdminLayout({
                 router.push('/');
                 setIsMenuOpen(false);
               }}
-              className="w-full text-left px-3 py-2 rounded hover:bg-red-600 transition-colors"
+              className="w-full text-left px-3 py-2 rounded border border-[var(--border)] hover:bg-red-600 transition-colors"
             >
               Logout
             </button>
@@ -202,7 +203,7 @@ export default function AdminLayout({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                className="p-2 rounded hover:bg-[var(--primary)] transition-colors"
+                className="p-2 rounded border border-[var(--border)] hover:bg-[var(--primary)] transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isSidebarCollapsed ? "M13 5l7 7-7 7M5 5l7 7-7 7" : "M11 19l-7-7 7-7m8 14l-7-7 7-7"} />
@@ -212,22 +213,22 @@ export default function AdminLayout({
           </div>
 
           <nav className="space-y-4">
-            <Link href="/admin/dashboard" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+            <Link href="/admin/dashboard" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''} ${pathname === '/admin/dashboard' ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
               {isSidebarCollapsed ? '🏠' : 'Dashboard'}
             </Link>
-            <Link href="/admin/bookings" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+            <Link href="/admin/bookings" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''} ${pathname === '/admin/bookings' ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
               {isSidebarCollapsed ? '📅' : 'Bookings'}
             </Link>
-            <Link href="/admin/inventory" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+            <Link href="/admin/inventory" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''} ${pathname === '/admin/inventory' ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
               {isSidebarCollapsed ? '📦' : 'Inventory'}
             </Link>
-            <Link href="/admin/services" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+            <Link href="/admin/services" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''} ${pathname === '/admin/services' ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
               {isSidebarCollapsed ? '⚙️' : 'Services'}
             </Link>
-            <Link href="/admin/customers" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+            <Link href="/admin/customers" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''} ${pathname === '/admin/customers' ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
               {isSidebarCollapsed ? '👥' : 'Customers'}
             </Link>
-            <Link href="/admin/notifications" className={`relative block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+            <Link href="/admin/notifications" className={`relative block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''} ${pathname === '/admin/notifications' ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
               {isSidebarCollapsed ? '🔔' : 'Notifications'}
               {unreadNotifications > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1 animate-pulse shadow-lg">
@@ -235,7 +236,7 @@ export default function AdminLayout({
                 </span>
               )}
             </Link>
-            <Link href="/admin/reports" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}>
+            <Link href="/admin/reports" className={`block px-4 py-3 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-2 text-center' : ''} ${pathname === '/admin/reports' ? 'bg-blue-600 text-white shadow-lg' : ''}`}>
               {isSidebarCollapsed ? '📊' : 'Reports'}
             </Link>
             <button
@@ -243,7 +244,7 @@ export default function AdminLayout({
                 logout();
                 router.push('/');
               }}
-              className={`w-full text-left px-4 py-2 rounded hover:bg-red-600 transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}
+              className={`w-full text-left px-4 py-2 rounded border border-[var(--border)] hover:bg-red-600 transition-colors ${isSidebarCollapsed ? 'px-2 text-center' : ''}`}
             >
               {isSidebarCollapsed ? '🚪' : 'Logout'}
             </button>

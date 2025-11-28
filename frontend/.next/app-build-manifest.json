@@ -1,9 +1,9 @@
 {
   "pages": {
-    "/customer/cart/page": [
+    "/customer/services/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/customer/cart/page.js"
+      "static/chunks/app/customer/services/page.js"
     ],
     "/customer/layout": [
       "static/chunks/webpack.js",
@@ -16,50 +16,50 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/customer/services/page": [
+    "/customer/cart/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/customer/services/page.js"
+      "static/chunks/app/customer/cart/page.js"
     ],
     "/customer/checkout/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/customer/checkout/page.js"
     ],
-    "/admin/dashboard/page": [
+    "/customer/profile/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/admin/dashboard/page.js"
+      "static/chunks/app/customer/profile/page.js"
+    ],
+    "/customer/dashboard/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/customer/dashboard/page.js"
+    ],
+    "/admin/bookings/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/admin/bookings/page.js"
     ],
     "/admin/layout": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/admin/layout.js"
     ],
-    "/admin/notifications/page": [
+    "/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/admin/notifications/page.js"
+      "static/chunks/app/page.js"
     ],
-    "/admin/customers/page": [
+    "/login/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/admin/customers/page.js"
+      "static/chunks/app/login/page.js"
     ],
-    "/admin/services/page": [
+    "/admin/dashboard/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/admin/services/page.js"
-    ],
-    "/admin/inventory/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/admin/inventory/page.js"
-    ],
-    "/admin/bookings/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/admin/bookings/page.js"
+      "static/chunks/app/admin/dashboard/page.js"
     ]
   }
 }

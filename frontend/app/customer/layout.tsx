@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useSocket } from '../../components/SocketProvider';
@@ -13,6 +13,7 @@ export default function CustomerLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { socket } = useSocket();
   const { user, setUser, isLoading: userLoading, logout } = useUser();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -128,31 +129,31 @@ export default function CustomerLayout({
             <div className="hidden md:flex items-center gap-1">
             <Link
               href="/customer/dashboard"
-              className="px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium"
+              className={`px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium ${pathname === '/customer/dashboard' ? 'bg-blue-600 text-white shadow-md' : ''}`}
             >
               Dashboard
             </Link>
             <Link
               href="/customer/services"
-              className="px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium"
+              className={`px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium ${pathname === '/customer/services' ? 'bg-blue-600 text-white shadow-md' : ''}`}
             >
               Services
             </Link>
             <Link
               href="/customer/bookings"
-              className="px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium"
+              className={`px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium ${pathname === '/customer/bookings' ? 'bg-blue-600 text-white shadow-md' : ''}`}
             >
               Bookings
             </Link>
             <Link
               href="/customer/suggestions"
-              className="px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium"
+              className={`px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium ${pathname === '/customer/suggestions' ? 'bg-blue-600 text-white shadow-md' : ''}`}
             >
               Suggestions
             </Link>
             <Link
               href="/customer/notifications"
-              className="relative px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium"
+              className={`relative px-4 py-2 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-md transition-all duration-200 font-medium ${pathname === '/customer/notifications' ? 'bg-blue-600 text-white shadow-md' : ''}`}
             >
               Notifications
               {unreadNotifications > 0 && (
@@ -168,7 +169,7 @@ export default function CustomerLayout({
             <div className="relative ml-2">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--border)] text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200"
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-sm font-semibold">
                   {user?.name?.charAt(0)?.toUpperCase() || 'U'}
@@ -179,15 +180,15 @@ export default function CustomerLayout({
               </button>
 
               {isUserMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-[var(--border)] z-50 animate-slide-in">
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-[var(--border)] z-50 animate-slide-in">
                   <div className="p-4 border-b border-[var(--border)]">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-semibold">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-semibold flex-shrink-0">
                         {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                       </div>
-                      <div>
-                        <p className="font-semibold text-[var(--foreground)]">{user?.name}</p>
-                        <p className="text-sm text-[var(--muted)]">{user?.email}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-[var(--foreground)] truncate">{user?.name}</p>
+                        <p className="text-sm text-[var(--muted)] truncate">{user?.email}</p>
                       </div>
                     </div>
                   </div>
@@ -197,8 +198,8 @@ export default function CustomerLayout({
                       className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] hover:text-[var(--primary)] transition-colors"
                       onClick={() => setIsUserMenuOpen(false)}
                     >
-                      <span>👤</span>
-                      Profile Settings
+                      <span className="flex-shrink-0">👤</span>
+                      <span className="truncate">Profile Settings</span>
                     </Link>
                     <button
                       onClick={() => {
@@ -208,8 +209,8 @@ export default function CustomerLayout({
                       }}
                       className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[var(--danger)] hover:bg-red-50 hover:text-red-700 transition-colors"
                     >
-                      <span>🚪</span>
-                      Logout
+                      <span className="flex-shrink-0">🚪</span>
+                      <span className="truncate">Logout</span>
                     </button>
                   </div>
                 </div>
@@ -222,7 +223,7 @@ export default function CustomerLayout({
             <CartIcon />
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-lg text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200"
+              className="p-2 rounded-lg border border-[var(--border)] text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200"
               aria-label="Toggle menu"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -252,7 +253,7 @@ export default function CustomerLayout({
               {/* Navigation Links */}
               <Link
                 href="/customer/dashboard"
-                className="flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200"
+                className={`flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200 ${pathname === '/customer/dashboard' ? 'bg-[var(--primary)] text-white' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <span className="text-lg">🏠</span>
@@ -260,7 +261,7 @@ export default function CustomerLayout({
               </Link>
               <Link
                 href="/customer/services"
-                className="flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200"
+                className={`flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200 ${pathname === '/customer/services' ? 'bg-[var(--primary)] text-white' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <span className="text-lg">🎪</span>
@@ -268,7 +269,7 @@ export default function CustomerLayout({
               </Link>
               <Link
                 href="/customer/bookings"
-                className="flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200"
+                className={`flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200 ${pathname === '/customer/bookings' ? 'bg-[var(--primary)] text-white' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <span className="text-lg">📅</span>
@@ -276,14 +277,14 @@ export default function CustomerLayout({
               </Link>
               <Link
                 href="/customer/suggestions"
-                className="flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200"
+                className={`flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200 ${pathname === '/customer/suggestions' ? 'bg-[var(--primary)] text-white' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 Suggestions
               </Link>
               <Link
                 href="/customer/notifications"
-                className="relative flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200"
+                className={`relative flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200 ${pathname === '/customer/notifications' ? 'bg-[var(--primary)] text-white' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <span className="text-lg">🔔</span>
@@ -311,7 +312,7 @@ export default function CustomerLayout({
                   router.push('/');
                   setIsMenuOpen(false);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-3 text-[var(--danger)] hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
+                className="w-full flex items-center gap-3 px-3 py-3 border border-[var(--border)] text-[var(--danger)] hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
               >
                 <span className="text-lg">🚪</span>
                 Logout
