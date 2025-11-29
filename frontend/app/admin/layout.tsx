@@ -171,6 +171,13 @@ export default function AdminLayout({
               )}
             </Link>
             <Link
+              href="/admin/payments"
+              className={`block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors ${pathname === '/admin/payments' ? 'bg-[var(--primary)] text-white' : ''}`}
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Payments
+            </Link>
+            <Link
               href="/admin/reports"
               className={`block px-3 py-2 rounded hover:bg-[var(--primary)] transition-colors ${pathname === '/admin/reports' ? 'bg-[var(--primary)] text-white' : ''}`}
               onClick={() => setIsMenuOpen(false)}
@@ -241,6 +248,10 @@ export default function AdminLayout({
                   {unreadNotifications > 99 ? '99+' : unreadNotifications}
                 </span>
               )}
+            </Link>
+            <Link href="/admin/payments" className={`flex items-center gap-3 px-4 py-4 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-3 py-3 justify-center' : ''} ${pathname === '/admin/payments' ? 'bg-blue-600 text-white shadow-lg border-l-4 border-blue-300' : 'hover:bg-blue-50'}`}>
+              <span className="text-2xl">💳</span>
+              {!isSidebarCollapsed && <span className="font-medium">Payments</span>}
             </Link>
             <Link href="/admin/reports" className={`flex items-center gap-3 px-4 py-4 rounded-xl hover:bg-blue-600 hover:shadow-lg transition-all duration-200 ${isSidebarCollapsed ? 'px-3 py-3 justify-center' : ''} ${pathname === '/admin/reports' ? 'bg-blue-600 text-white shadow-lg border-l-4 border-blue-300' : 'hover:bg-blue-50'}`}>
               <span className="text-2xl">📊</span>

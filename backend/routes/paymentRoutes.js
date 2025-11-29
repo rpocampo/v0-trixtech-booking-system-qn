@@ -6,8 +6,51 @@ const {
   getPaymentStatus,
   cancelPayment,
 } = require('../utils/paymentService');
+const { verifyReceipt, cleanupFile, validateImageFile } = require('../utils/receiptVerificationService');
+const multer = require('multer');
+const path = require('path');
 
 const router = express.Router();
+
+// Configure multer for receipt uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    try {
+      const uploadDir = path.join(__dirname, '../uploads/receipts');
+      // Create directory if it doesn't exist
+      require('fs').mkdirSync(uploadDir, { recursive: true });
+      cb(null, uploadDir);
+    } catch (error) {
+      cb(error, null);
+    }
+  },
+  filename: (req, file, cb) => {
+    try {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, 'receipt-' + uniqueSuffix + ext);
+    } catch (error) {
+      cb(error, null);
+    }
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+    files: 1, // Only one file
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow only image files
+    const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp'];
+    if (allowedMimes.includes(file.mimetype.toLowerCase())) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Invalid file type. Only ${allowedMimes.join(', ')} are allowed.`), false);
+    }
+  }
+});
 
 // Create QR code payment for booking
 router.post('/create-qr', authMiddleware, async (req, res) => {
@@ -166,6 +209,359 @@ router.post('/test-qr', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to generate QR code'
+    });
+  }
+});
+
+// Verify receipt via OCR
+router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next) => {
+  // Handle multer errors
+  upload.single('receipt')(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      // A Multer error occurred when uploading
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({
+          success: false,
+          message: 'File too large. Maximum size is 5MB.'
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        message: 'File upload error: ' + err.message
+      });
+    } else if (err) {
+      // An unknown error occurred
+      return res.status(400).json({
+        success: false,
+        message: err.message || 'Invalid file upload'
+      });
+    }
+    // Everything went fine, proceed to the next middleware
+    next();
+  });
+}, async (req, res) => {
+  try {
+    const { referenceNumber } = req.params;
+    const { expectedAmount } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Receipt image is required'
+      });
+    }
+
+    if (!expectedAmount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Expected amount is required'
+      });
+    }
+
+    // Find the payment by reference number
+    const Payment = require('../models/Payment');
+    const payment = await Payment.findOne({ referenceNumber })
+      .populate('bookingId')
+      .populate('userId', 'name email');
+
+    if (!payment) {
+      cleanupFile(req.file.path);
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found'
+      });
+    }
+
+    // Verify the payment belongs to the authenticated user
+    if (payment.userId._id.toString() !== req.user.id) {
+      cleanupFile(req.file.path);
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied'
+      });
+    }
+
+    // Check if payment is already completed
+    if (payment.status === 'completed') {
+      cleanupFile(req.file.path);
+      return res.json({
+        success: true,
+        message: 'Payment already verified',
+        payment: {
+          id: payment._id,
+          status: payment.status,
+          amount: payment.amount
+        }
+      });
+    }
+
+    // Check if payment is already being reviewed
+    if (payment.status === 'pending_review') {
+      cleanupFile(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: 'Payment is already under review. Please wait for admin approval.',
+        flaggedForReview: true
+      });
+    }
+
+    // Log receipt verification attempt
+    console.log(`Receipt verification attempt for payment ${payment._id}, reference: ${referenceNumber}, user: ${req.user.id}`);
+
+    // Perform OCR verification
+    const verificationResult = await verifyReceipt(
+      req.file.path,
+      parseFloat(expectedAmount),
+      referenceNumber
+    );
+
+    console.log(`OCR verification result for payment ${payment._id}: ${verificationResult.success ? 'Success' : 'Failed'}`);
+
+    // Clean up the uploaded file
+    cleanupFile(req.file.path);
+
+    if (!verificationResult.success) {
+      // Flag for manual review
+      payment.status = 'pending_review';
+      payment.paymentData.receiptVerification = {
+        attemptedAt: new Date(),
+        error: verificationResult.error,
+        flaggedForReview: true
+      };
+      await payment.save();
+
+      return res.status(400).json({
+        success: false,
+        message: 'Receipt verification failed. Your payment has been flagged for manual review.',
+        error: verificationResult.error,
+        flaggedForReview: true
+      });
+    }
+
+    const { validation } = verificationResult;
+
+    if (validation.isValid) {
+      // Verification successful - complete the payment
+      const verifyResult = await verifyQRPayment(referenceNumber, {
+        receiptVerified: true,
+        extractedAmount: validation.extractedAmount,
+        extractedReference: validation.extractedReference
+      });
+
+      if (verifyResult.success) {
+        return res.json({
+          success: true,
+          message: 'Receipt verified successfully! Payment completed.',
+          payment: verifyResult.payment,
+          booking: verifyResult.booking,
+          verification: {
+            extractedAmount: validation.extractedAmount,
+            extractedReference: validation.extractedReference,
+            confidence: verificationResult.extractedData.confidence
+          }
+        });
+      } else {
+        // Flag for manual review
+        payment.status = 'pending_review';
+        payment.paymentData.receiptVerification = {
+          attemptedAt: new Date(),
+          validation,
+          flaggedForReview: true,
+          reason: 'Validation passed but payment completion failed'
+        };
+        await payment.save();
+
+        return res.status(400).json({
+          success: false,
+          message: 'Receipt appears valid but payment processing failed. Flagged for manual review.',
+          validation,
+          flaggedForReview: true
+        });
+      }
+    } else {
+      // Validation failed - flag for manual review
+      payment.status = 'pending_review';
+      payment.paymentData.receiptVerification = {
+        attemptedAt: new Date(),
+        validation,
+        extractedData: verificationResult.extractedData,
+        flaggedForReview: true
+      };
+      await payment.save();
+
+      return res.status(400).json({
+        success: false,
+        message: 'Receipt validation failed. Your payment has been flagged for manual review.',
+        validation,
+        issues: validation.issues,
+        extractedData: {
+          amount: validation.extractedAmount,
+          reference: validation.extractedReference,
+          confidence: verificationResult.extractedData.confidence
+        },
+        flaggedForReview: true
+      });
+    }
+
+  } catch (error) {
+    console.error('Error verifying receipt:', error);
+
+    // Clean up file if it exists
+    if (req.file && req.file.path) {
+      cleanupFile(req.file.path);
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error during receipt verification'
+    });
+  }
+});
+
+// Get payments flagged for manual review (admin only)
+router.get('/flagged', authMiddleware, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const Payment = require('../models/Payment');
+    const flaggedPayments = await Payment.find({
+      status: 'pending_review',
+      'paymentData.receiptVerification.flaggedForReview': true
+    })
+    .populate('bookingId')
+    .populate('userId', 'name email')
+    .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      payments: flaggedPayments
+    });
+  } catch (error) {
+    console.error('Error fetching flagged payments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+// Approve or reject flagged payment (admin only)
+router.post('/:paymentId/review', authMiddleware, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const { paymentId } = req.params;
+    const { action, notes } = req.body; // action: 'approve' or 'reject'
+
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid action. Must be "approve" or "reject".'
+      });
+    }
+
+    const Payment = require('../models/Payment');
+    const payment = await Payment.findById(paymentId)
+      .populate('bookingId')
+      .populate('userId', 'name email');
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found'
+      });
+    }
+
+    if (payment.status !== 'pending_review') {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment is not flagged for review'
+      });
+    }
+
+    if (action === 'approve') {
+      // Approve the payment - complete it
+      const verifyResult = await require('../utils/paymentService').verifyQRPayment(payment.referenceNumber, {
+        manualApproval: true,
+        adminNotes: notes
+      });
+
+      if (verifyResult.success) {
+        // Update payment with admin review info
+        payment.paymentData.receiptVerification.manualReview = {
+          reviewedBy: req.user.id,
+          reviewedAt: new Date(),
+          action: 'approved',
+          notes: notes
+        };
+        await payment.save();
+
+        res.json({
+          success: true,
+          message: 'Payment approved and completed',
+          payment: verifyResult.payment,
+          booking: verifyResult.booking
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          message: 'Failed to complete approved payment'
+        });
+      }
+    } else {
+      // Reject the payment
+      payment.status = 'rejected';
+      payment.failureReason = 'Rejected by admin during manual review';
+      payment.paymentData.receiptVerification.manualReview = {
+        reviewedBy: req.user.id,
+        reviewedAt: new Date(),
+        action: 'rejected',
+        notes: notes
+      };
+      await payment.save();
+
+      // Send notification to user
+      try {
+        await require('../utils/notificationService').sendTemplateNotification(
+          payment.userId._id,
+          'PAYMENT_FAILED',
+          {
+            message: `Your payment has been reviewed and unfortunately could not be approved. ${notes || 'Please contact support for assistance.'}`,
+            metadata: {
+              bookingId: payment.bookingId?._id,
+              amount: payment.amount,
+              reason: 'Rejected during manual review',
+              adminNotes: notes
+            }
+          }
+        );
+      } catch (notificationError) {
+        console.error('Error sending rejection notification:', notificationError);
+      }
+
+      res.json({
+        success: true,
+        message: 'Payment rejected',
+        payment
+      });
+    }
+  } catch (error) {
+    console.error('Error reviewing payment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
     });
   }
 });

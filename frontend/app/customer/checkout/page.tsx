@@ -63,8 +63,10 @@ export default function CheckoutPage() {
   const [paymentError, setPaymentError] = useState('');
   const [durationError, setDurationError] = useState('');
   const [user, setUser] = useState<User | null>(null);
-  const [userLoading, setUserLoading] = useState(true);
-  const [addressComplete, setAddressComplete] = useState(false);
+   const [userLoading, setUserLoading] = useState(true);
+   const [addressComplete, setAddressComplete] = useState(false);
+   const [receiptUploading, setReceiptUploading] = useState(false);
+   const [receiptError, setReceiptError] = useState('');
 
   // Initialize checkout items from cart and load scheduled data
   useEffect(() => {
@@ -107,16 +109,7 @@ export default function CheckoutPage() {
     }
   }, [checkoutItems]);
 
-  // Auto-start payment polling when payment step is reached with QR code
-  useEffect(() => {
-    if (currentStep === 'payment' && paymentBooking && qrPayment && !creatingPayment) {
-      // Start polling for payment status
-      const token = localStorage.getItem('token');
-      if (token) {
-        startPaymentPolling(qrPayment.referenceNumber, token);
-      }
-    }
-  }, [currentStep, paymentBooking, qrPayment]); // Include qrPayment
+  // No longer auto-polling for payment status since we use receipt upload
 
   // Fetch user data for address validation
   useEffect(() => {
@@ -426,6 +419,72 @@ export default function CheckoutPage() {
       alert(error instanceof Error ? error.message : 'Checkout failed. Please try again.');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleReceiptUpload = async (file: File) => {
+    if (!qrPayment) {
+      alert('Payment setup not available. Please go back and try again.');
+      return;
+    }
+
+    setReceiptUploading(true);
+    setReceiptError('');
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please log in to continue');
+        return;
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/bmp'];
+      if (!allowedTypes.includes(file.type.toLowerCase())) {
+        setReceiptError('Please upload a valid image file (JPG, PNG, GIF, BMP)');
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        setReceiptError('File size must be less than 5MB');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('receipt', file);
+      formData.append('expectedAmount', checkoutTotal.toString());
+
+      const response = await fetch(`http://localhost:5000/api/payments/verify-receipt/${qrPayment.referenceNumber}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setPaymentStatus('paid');
+        // Clear cart and redirect to success page
+        setTimeout(() => {
+          clearCart();
+          router.push('/customer/bookings?payment=success');
+        }, 2000);
+      } else {
+        if (data.flaggedForReview) {
+          setReceiptError('Receipt verification failed. Your payment has been flagged for manual review. You will be notified once reviewed.');
+          setPaymentStatus('processing');
+        } else {
+          setReceiptError(data.message || 'Receipt verification failed. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Receipt upload failed:', error);
+      setReceiptError('Failed to upload receipt. Please try again.');
+    } finally {
+      setReceiptUploading(false);
     }
   };
 
@@ -1665,98 +1724,174 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* QR Code Display */}
+          {/* Receipt Upload Form */}
           {!qrPayment && !creatingPayment && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
               <div className="mb-4">
                 <svg className="w-16 h-16 mx-auto text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 21h.01M12 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <h3 className="text-xl font-bold text-blue-800 mb-2">QR Code Not Available</h3>
+                <h3 className="text-xl font-bold text-blue-800 mb-2">Payment Setup Not Available</h3>
                 <p className="text-blue-700 mb-4">Please go back and complete the booking process</p>
               </div>
             </div>
           )}
 
           {qrPayment && (
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="text-center mb-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-2">Scan QR Code to Pay</h3>
-                <p className="text-gray-600 mb-2">Scan on the GCash app</p>
+            <div className="space-y-6">
+              {/* QR Code Section */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">Scan QR Code to Pay</h3>
+                  <p className="text-gray-600 mb-2">Scan on the GCash app to complete your payment</p>
+                </div>
+
+                <div className="flex justify-center mb-6">
+                  <div className="bg-white p-4 rounded-lg border-2 border-gray-200 relative">
+                    {qrPayment.qrCode ? (
+                      <img
+                        src={qrPayment.qrCode}
+                        alt="GCash QR Code"
+                        className="w-64 h-64"
+                        onError={(e) => {
+                          console.error('QR code failed to load, src:', qrPayment.qrCode);
+                          e.currentTarget.style.display = 'none';
+                          // Show error message instead
+                          const errorDiv = document.createElement('div');
+                          errorDiv.className = 'w-64 h-64 flex items-center justify-center bg-red-50 border-2 border-red-200 rounded-lg';
+                          errorDiv.innerHTML = `
+                            <div class="text-center text-red-600">
+                              <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                              </svg>
+                              <p class="text-sm font-medium">QR Code Failed to Load</p>
+                              <button onclick="window.location.reload()" class="mt-2 text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">
+                                Retry
+                              </button>
+                            </div>
+                          `;
+                          e.currentTarget.parentNode?.replaceChild(errorDiv, e.currentTarget);
+                        }}
+                      />
+                    ) : (
+                      <div className="w-64 h-64 flex items-center justify-center bg-gray-100 border-2 border-gray-300 rounded-lg">
+                        <div className="text-center text-gray-500">
+                          <svg className="w-12 h-12 mx-auto mb-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          <p className="text-sm">Loading QR Code...</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <h4 className="font-semibold text-blue-800 mb-2">Payment Instructions:</h4>
+                  <ol className="text-sm text-blue-700 space-y-1">
+                    {qrPayment.instructions.instructions.map((instruction: string, index: number) => (
+                      <li key={index} className="flex items-start">
+                        <span className="font-medium mr-2">{index + 1}.</span>
+                        {instruction.replace('₱' + qrPayment.instructions.amount, '₱' + checkoutTotal.toFixed(2))}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-600">Reference:</span>
+                      <div className="font-mono text-gray-800">{qrPayment.referenceNumber}</div>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-600">Amount:</span>
+                      <div className="font-bold text-green-600">₱{checkoutTotal.toFixed(2)}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex justify-center mb-6">
-                <div className="bg-white p-4 rounded-lg border-2 border-gray-200 relative">
-                  {qrPayment.qrCode ? (
-                    <img
-                      src={qrPayment.qrCode}
-                      alt="GCash QR Code"
-                      className="w-64 h-64"
-                      onError={(e) => {
-                        console.error('QR code failed to load, src:', qrPayment.qrCode);
-                        e.currentTarget.style.display = 'none';
-                        // Show error message instead
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'w-64 h-64 flex items-center justify-center bg-red-50 border-2 border-red-200 rounded-lg';
-                        errorDiv.innerHTML = `
-                          <div class="text-center text-red-600">
-                            <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <p class="text-sm font-medium">QR Code Failed to Load</p>
-                            <button onclick="window.location.reload()" class="mt-2 text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">
-                              Retry
-                            </button>
-                          </div>
-                        `;
-                        e.currentTarget.parentNode?.replaceChild(errorDiv, e.currentTarget);
+              {/* Receipt Verification Section */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">Receipt Verification</h3>
+                  <p className="text-gray-600 mb-2">After completing payment, upload your GCash receipt screenshot for verification</p>
+                </div>
+
+                {/* Receipt Upload Form */}
+                <div className="mb-6">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors">
+                    <input
+                      type="file"
+                      id="receipt-upload"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          handleReceiptUpload(file);
+                        }
                       }}
                     />
-                  ) : (
-                    <div className="w-64 h-64 flex items-center justify-center bg-gray-100 border-2 border-gray-300 rounded-lg">
-                      <div className="text-center text-gray-500">
-                        <svg className="w-12 h-12 mx-auto mb-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        <p className="text-sm">Loading QR Code...</p>
-                      </div>
-                    </div>
-                  )}
+                    <label htmlFor="receipt-upload" className="cursor-pointer">
+                      <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      <p className="text-lg font-medium text-gray-700 mb-2">Click to upload receipt</p>
+                      <p className="text-sm text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                    </label>
+                  </div>
                 </div>
-              </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <h4 className="font-semibold text-blue-800 mb-2">Payment Instructions:</h4>
-                <ol className="text-sm text-blue-700 space-y-1">
-                  {qrPayment.instructions.instructions.map((instruction: string, index: number) => (
-                    <li key={index} className="flex items-start">
-                      <span className="font-medium mr-2">{index + 1}.</span>
-                      {instruction.replace('₱' + qrPayment.instructions.amount, '₱' + checkoutTotal.toFixed(2))}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h4 className="font-semibold text-green-800 mb-2">Receipt Verification Instructions:</h4>
+                  <ol className="text-sm text-green-700 space-y-1">
+                    <li className="flex items-start">
+                      <span className="font-medium mr-2">1.</span>
+                      Complete your GCash payment using the QR code above
                     </li>
-                  ))}
-                </ol>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-600">Reference:</span>
-                    <div className="font-mono text-gray-800">{qrPayment.referenceNumber}</div>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-600">Amount:</span>
-                    <div className="font-bold text-green-600">₱{checkoutTotal.toFixed(2)}</div>
-                  </div>
+                    <li className="flex items-start">
+                      <span className="font-medium mr-2">2.</span>
+                      Take a screenshot or download the payment confirmation/receipt
+                    </li>
+                    <li className="flex items-start">
+                      <span className="font-medium mr-2">3.</span>
+                      Upload the screenshot above for automatic verification
+                    </li>
+                    <li className="flex items-start">
+                      <span className="font-medium mr-2">4.</span>
+                      Our system will verify the amount and reference number
+                    </li>
+                  </ol>
                 </div>
               </div>
 
-              {/* Payment Status */}
+              {/* Receipt Upload Status */}
               <div className="mt-4 text-center">
-                {paymentStatus === 'processing' && (
+                {receiptUploading && (
                   <div className="space-y-3">
                     <div className="inline-flex items-center text-blue-600">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                      Processing payment...
+                      Verifying receipt...
+                    </div>
+                  </div>
+                )}
+                {receiptError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                    <div className="flex items-center justify-center text-red-800">
+                      <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>{receiptError}</span>
+                    </div>
+                  </div>
+                )}
+                {paymentStatus === 'processing' && !receiptUploading && (
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center text-blue-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                      Payment under review...
                     </div>
                   </div>
                 )}
@@ -1776,58 +1911,14 @@ export default function CheckoutPage() {
                     Payment failed. Please try again.
                   </div>
                 )}
-                {paymentStatus === 'unpaid' && (
+                {paymentStatus === 'unpaid' && !receiptUploading && (
                   <div className="space-y-3">
                     <div className="inline-flex items-center text-yellow-600">
                       <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
-                      Payment pending...
+                      Waiting for receipt upload...
                     </div>
-
-                    {/* Manual Payment Confirmation Button */}
-                    <button
-                      onClick={async () => {
-                        try {
-                          const token = localStorage.getItem('token');
-                          if (!token) {
-                            alert('Please log in to continue');
-                            return;
-                          }
-
-                          const response = await fetch(`http://localhost:5000/api/payments/verify-qr/${qrPayment.referenceNumber}`, {
-                            method: 'POST',
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'Authorization': `Bearer ${token}`,
-                            },
-                            body: JSON.stringify({
-                              test: true,
-                              amount: checkoutTotal,
-                              referenceNumber: qrPayment.referenceNumber
-                            }),
-                          });
-
-                          if (response.ok) {
-                            setPaymentStatus('paid');
-                            // Clear cart and redirect to success page after a short delay
-                            // The payment verification already created the booking and sent notifications
-                            setTimeout(() => {
-                              clearCart();
-                              router.push('/customer/bookings?payment=success');
-                            }, 2000);
-                          } else {
-                            setPaymentStatus('failed');
-                          }
-                        } catch (error) {
-                          console.error('Manual payment confirmation failed:', error);
-                          setPaymentStatus('failed');
-                        }
-                      }}
-                      className="text-sm bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium"
-                    >
-                      Confirm Payment
-                    </button>
                   </div>
                 )}
               </div>

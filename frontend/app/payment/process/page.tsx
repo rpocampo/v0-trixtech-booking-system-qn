@@ -48,6 +48,10 @@ function PaymentProcessContent() {
   const [paymentStatus, setPaymentStatus] = useState<'pending' | 'completed' | 'failed'>('pending');
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const [paymentType, setPaymentType] = useState<string>('full');
+  const [showReceiptUpload, setShowReceiptUpload] = useState(false);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  const [receiptError, setReceiptError] = useState('');
 
   useEffect(() => {
     if (bookingId && amountParam && paymentTypeParam) {
@@ -222,10 +226,7 @@ function PaymentProcessContent() {
         });
         setCreatingPayment(false);
         setLoading(false); // Set loading to false when QR payment is ready
-
-        // Start polling for payment status
-        console.log('Starting payment polling for reference:', data.referenceNumber);
-        startPaymentPolling(data.referenceNumber, token);
+        setShowReceiptUpload(true); // Show receipt upload form instead of polling
       } else {
         throw new Error('Invalid QR payment response');
       }
@@ -247,45 +248,6 @@ function PaymentProcessContent() {
   };
 
 
-  const startPaymentPolling = (referenceNumber: string, token: string) => {
-    const pollInterval = setInterval(async () => {
-      try {
-        const response = await fetch(`http://localhost:5000/api/payments/status/${referenceNumber}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success && data.payment) {
-            if (data.payment.status === 'completed') {
-              setPaymentStatus('completed');
-              clearInterval(pollInterval);
-              // Clean up pending payment data
-              localStorage.removeItem('pendingPayment');
-              // Clear the cart after successful payment
-              clearCart();
-              // Redirect to success page after a short delay
-              setTimeout(() => {
-                router.push('/customer/bookings?payment=success');
-              }, 2000);
-            } else if (data.payment.status === 'failed') {
-              setPaymentStatus('failed');
-              clearInterval(pollInterval);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error polling payment status:', error);
-      }
-    }, 3000); // Poll every 3 seconds
-
-    // Stop polling after 5 minutes
-    setTimeout(() => {
-      clearInterval(pollInterval);
-    }, 5 * 60 * 1000);
-  };
 
   const generateQRCodeFromData = async (qrData: string) => {
     try {
@@ -508,52 +470,128 @@ function PaymentProcessContent() {
               </div>
             </div>
 
-            {/* Payment Status */}
-            <div className="mt-4 text-center">
-              {paymentStatus === 'pending' && (
-                <div className="space-y-3">
-                  <div className="inline-flex items-center text-blue-600">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                    Waiting for payment...
+            {/* Receipt Upload Section */}
+            {showReceiptUpload && (
+              <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="text-lg font-semibold text-blue-800 mb-3">Upload Payment Receipt</h3>
+                <p className="text-sm text-blue-700 mb-4">
+                  After completing your GCash payment, take a screenshot of the receipt and upload it here for verification.
+                </p>
+
+                {receiptError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span className="text-red-800 text-sm">{receiptError}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Receipt Image
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                            setReceiptError('File size must be less than 5MB');
+                            setReceiptFile(null);
+                          } else {
+                            setReceiptError('');
+                            setReceiptFile(file);
+                          }
+                        }
+                      }}
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Maximum file size: 5MB. Supported formats: JPG, PNG, etc.</p>
                   </div>
 
-                  {/* Proceed button for test payment */}
                   <button
                     onClick={async () => {
+                      if (!receiptFile) {
+                        setReceiptError('Please select a receipt image');
+                        return;
+                      }
+
+                      setUploadingReceipt(true);
+                      setReceiptError('');
+
                       try {
                         const token = localStorage.getItem('token');
-                        const response = await fetch(`http://localhost:5000/api/payments/verify-qr/${qrPayment.referenceNumber}`, {
+                        const formData = new FormData();
+                        formData.append('receipt', receiptFile);
+                        formData.append('expectedAmount', paymentAmount.toString());
+
+                        const response = await fetch(`http://localhost:5000/api/payments/verify-receipt/${qrPayment.referenceNumber}`, {
                           method: 'POST',
                           headers: {
-                            'Content-Type': 'application/json',
                             'Authorization': `Bearer ${token}`,
                           },
-                          body: JSON.stringify({
-                            test: true,
-                            amount: qrPayment.instructions.amount,
-                            referenceNumber: qrPayment.referenceNumber
-                          }),
+                          body: formData,
                         });
 
-                        if (response.ok) {
+                        const data = await response.json();
+
+                        if (response.ok && data.success) {
                           setPaymentStatus('completed');
-                          // Clear the cart after successful test payment
                           clearCart();
                           setTimeout(() => {
                             router.push('/customer/bookings?payment=success');
                           }, 2000);
                         } else {
-                          setPaymentStatus('failed');
+                          if (data.flaggedForReview) {
+                            setReceiptError('Receipt verification failed. Your payment has been flagged for manual review by our team. You will be notified once verified.');
+                          } else {
+                            setReceiptError(data.message || 'Receipt verification failed');
+                          }
                         }
                       } catch (error) {
-                        console.error('Test verification failed:', error);
-                        setPaymentStatus('failed');
+                        console.error('Receipt upload failed:', error);
+                        setReceiptError('Failed to upload receipt. Please try again.');
+                      } finally {
+                        setUploadingReceipt(false);
                       }
                     }}
-                    className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium"
+                    disabled={uploadingReceipt || !receiptFile}
+                    className="w-full bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center"
                   >
-                    Proceed
+                    {uploadingReceipt ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Verifying Receipt...
+                      </>
+                    ) : (
+                      'Verify Receipt'
+                    )}
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* Payment Status */}
+            <div className="mt-4 text-center">
+              {paymentStatus === 'pending' && !showReceiptUpload && (
+                <div className="space-y-3">
+                  <div className="inline-flex items-center text-blue-600">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                    Preparing payment...
+                  </div>
+                </div>
+              )}
+              {paymentStatus === 'pending' && showReceiptUpload && (
+                <div className="inline-flex items-center text-blue-600">
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Waiting for receipt upload and verification...
                 </div>
               )}
               {paymentStatus === 'completed' && (
@@ -582,14 +620,22 @@ function PaymentProcessContent() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
               <p className="text-gray-600">Generating QR code...</p>
             </div>
-          ) : qrPayment ? (
-            // QR Payment active - show status and actions
+          ) : qrPayment && !showReceiptUpload ? (
+            // QR Payment generated but not yet showing receipt upload
             <div className="space-y-3">
+              <button
+                onClick={() => setShowReceiptUpload(true)}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
+              >
+                I've Completed the Payment - Upload Receipt
+              </button>
+
               {paymentStatus === 'failed' && (
                 <button
                   onClick={() => {
                     setQrPayment(null);
                     setPaymentStatus('pending');
+                    setShowReceiptUpload(false);
                     createPaymentIntent();
                   }}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200"
@@ -602,6 +648,25 @@ function PaymentProcessContent() {
                 onClick={() => router.back()}
                 className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200"
                 disabled={paymentStatus === 'completed'}
+              >
+                {paymentStatus === 'completed' ? 'Redirecting...' : 'Cancel'}
+              </button>
+            </div>
+          ) : qrPayment && showReceiptUpload ? (
+            // Receipt upload is active
+            <div className="space-y-3">
+              <button
+                onClick={() => setShowReceiptUpload(false)}
+                className="w-full bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200"
+                disabled={uploadingReceipt}
+              >
+                Back to QR Code
+              </button>
+
+              <button
+                onClick={() => router.back()}
+                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200"
+                disabled={paymentStatus === 'completed' || uploadingReceipt}
               >
                 {paymentStatus === 'completed' ? 'Redirecting...' : 'Cancel'}
               </button>
