@@ -17,6 +17,9 @@ interface Booking {
   createdAt?: string;
   updatedAt?: string;
   itemQuantities?: { [itemName: string]: number };
+  deliveryStartTime?: string;
+  deliveryEndTime?: string;
+  requiresDelivery?: boolean;
 }
 
 export default function AdminBookings() {
@@ -389,16 +392,10 @@ export default function AdminBookings() {
                         </div>
                       </div>
                     </div>
-                    <div className="mt-3 flex justify-between items-center">
+                    <div className="mt-3">
                       <div className="text-sm text-gray-600">
                         Inventory consumed: {booking.serviceId?.name || 'Unknown'} x{booking.quantity}
                       </div>
-                      <button
-                        onClick={() => viewBooking(booking)}
-                        className="text-indigo-600 hover:underline text-sm"
-                      >
-                        View Details
-                      </button>
                     </div>
                   </div>
                 ))}
@@ -684,10 +681,23 @@ export default function AdminBookings() {
                           <div>
                             <span className="text-sm text-gray-600">Service:</span>
                             <p className="font-medium">{selectedBooking.serviceId?.name || 'Unknown Service'}</p>
+                            {selectedBooking.serviceId?.includedItems && selectedBooking.serviceId.includedItems.length > 0 && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Includes: {selectedBooking.serviceId.includedItems.join(', ')}
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-600">Category:</span>
+                            <p className="font-medium capitalize">{selectedBooking.serviceId?.category || 'N/A'}</p>
                           </div>
                           <div>
                             <span className="text-sm text-gray-600">Unit Price:</span>
                             <p className="font-medium">₱{selectedBooking.serviceId?.price || 0}</p>
+                          </div>
+                          <div>
+                            <span className="text-sm text-gray-600">Quantity:</span>
+                            <p className="font-medium">{selectedBooking.quantity}</p>
                           </div>
                         </div>
                       </div>
@@ -696,7 +706,7 @@ export default function AdminBookings() {
                     {/* Booking Details */}
                     <div className="card p-4">
                       <h4 className="font-semibold mb-3">Booking Details</h4>
-                      <div className="grid md:grid-cols-3 gap-4">
+                      <div className="grid md:grid-cols-4 gap-4">
                         <div>
                           <span className="text-sm text-gray-600">Booking Date:</span>
                           <p className="font-medium">{new Date(selectedBooking.bookingDate).toLocaleDateString()}</p>
@@ -710,13 +720,51 @@ export default function AdminBookings() {
                           <span className="text-sm text-gray-600">Created:</span>
                           <p className="font-medium">{new Date(selectedBooking.createdAt || '').toLocaleDateString()}</p>
                         </div>
+                        <div>
+                          <span className="text-sm text-gray-600">Pick-up Date:</span>
+                          <p className="font-medium">
+                            {selectedBooking.requiresDelivery && selectedBooking.deliveryStartTime
+                              ? new Date(selectedBooking.deliveryStartTime).toLocaleDateString()
+                              : selectedBooking.serviceId?.category === 'equipment' ||
+                                selectedBooking.serviceId?.category === 'furniture' ||
+                                selectedBooking.serviceId?.category === 'lighting' ||
+                                selectedBooking.serviceId?.category === 'sound-system' ||
+                                selectedBooking.serviceId?.category === 'tents-canopies' ||
+                                selectedBooking.serviceId?.category === 'linens-tableware' ||
+                                selectedBooking.serviceId?.serviceType === 'equipment' ||
+                                selectedBooking.serviceId?.serviceType === 'supply'
+                              ? (() => {
+                                  const pickupDate = new Date(selectedBooking.bookingDate);
+                                  pickupDate.setDate(pickupDate.getDate() + 1);
+                                  return pickupDate.toLocaleDateString();
+                                })()
+                              : 'N/A'
+                            }
+                          </p>
+                          {(selectedBooking.requiresDelivery && selectedBooking.deliveryStartTime) ||
+                           (selectedBooking.serviceId?.category === 'equipment' ||
+                            selectedBooking.serviceId?.category === 'furniture' ||
+                            selectedBooking.serviceId?.category === 'lighting' ||
+                            selectedBooking.serviceId?.category === 'sound-system' ||
+                            selectedBooking.serviceId?.category === 'tents-canopies' ||
+                            selectedBooking.serviceId?.category === 'linens-tableware' ||
+                            selectedBooking.serviceId?.serviceType === 'equipment' ||
+                            selectedBooking.serviceId?.serviceType === 'supply') && (
+                            <p className="text-sm text-gray-500">
+                              {selectedBooking.deliveryStartTime
+                                ? new Date(selectedBooking.deliveryStartTime).toLocaleTimeString()
+                                : new Date(selectedBooking.bookingDate).toLocaleTimeString()
+                              }
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
 
                     {/* Status Information */}
                     <div className="card p-4">
                       <h4 className="font-semibold mb-3">Status Information</h4>
-                      <div className="grid md:grid-cols-2 gap-4">
+                      <div className="grid md:grid-cols-3 gap-4">
                         <div>
                           <span className="text-sm text-gray-600">Booking Status:</span>
                           <div className="mt-1">
@@ -751,6 +799,17 @@ export default function AdminBookings() {
                               <option value="paid">Paid</option>
                               <option value="failed">Failed</option>
                             </select>
+                          </div>
+                        </div>
+                        <div>
+                          <span className="text-sm text-gray-600">Payment Type:</span>
+                          <div className="mt-1">
+                            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded text-sm font-semibold">
+                              {selectedBooking.paymentType === 'full' ? 'Full Payment' :
+                               selectedBooking.paymentType === 'test_payment' ? 'Test Payment' :
+                               selectedBooking.paymentType === 'partial' ? 'Partial Payment' :
+                               'Full Payment'}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -888,6 +947,44 @@ export default function AdminBookings() {
                             No specific items listed for this service
                           </div>
                         )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional Information */}
+                  <div className="card p-4">
+                    <h4 className="font-semibold mb-3">Additional Information</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium text-gray-600">Last Updated:</span>
+                        <span className="text-sm text-gray-700">
+                          {selectedBooking.updatedAt ? new Date(selectedBooking.updatedAt).toLocaleString() : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm font-medium text-gray-600">Amount Paid:</span>
+                        <span className="text-sm text-gray-700">
+                          ₱{selectedBooking.amountPaid || 0}
+                        </span>
+                      </div>
+                      {selectedBooking.remainingBalance && selectedBooking.remainingBalance > 0 && (
+                        <div className="flex justify-between">
+                          <span className="text-sm font-medium text-gray-600">Remaining Balance:</span>
+                          <span className="text-sm text-red-600 font-medium">
+                            ₱{selectedBooking.remainingBalance}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm text-gray-600">
+                        Need help managing this booking? Contact the customer support team for assistance.
+                      </div>
+                      <div className="text-sm text-[var(--primary)] font-medium">
+                        📞 Support: (02) 123-4567 | ✉️ support@trixtech.com
                       </div>
                     </div>
                   </div>

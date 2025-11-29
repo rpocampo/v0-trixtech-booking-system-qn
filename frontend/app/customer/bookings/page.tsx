@@ -6,13 +6,18 @@ import { useSocket } from '../../../components/SocketProvider';
 
 interface Booking {
   _id: string;
-  serviceId: { name: string; basePrice: number; category: string };
+  serviceId: { name: string; basePrice: number; category: string; description?: string; serviceType?: string };
   quantity: number;
   bookingDate: string;
   status: string;
   totalPrice: number;
   paymentStatus: string;
   paymentType?: string;
+  deliveryStartTime?: string;
+  deliveryEndTime?: string;
+  requiresDelivery?: boolean;
+  createdAt?: string;
+  notes?: string;
 }
 
 export default function Bookings() {
@@ -198,18 +203,44 @@ export default function Bookings() {
           {bookings.map((booking) => (
             <div key={booking._id} className="card p-6">
               <div className="flex justify-between items-start mb-4">
-                <div>
+                <div className="flex-1">
                   <h3 className="text-lg font-semibold">{booking.serviceId?.name || 'Unknown Service'}</h3>
-                  <p className="text-[var(--muted)] text-sm">
-                    {new Date(booking.bookingDate).toLocaleString()}
-                  </p>
-                  {booking.serviceId?.category === 'equipment' && (
-                    <p className="text-[var(--muted)] text-sm">
-                      Quantity: {booking.quantity}
-                    </p>
+                  {booking.serviceId?.description && (
+                    <p className="text-[var(--muted)] text-sm mt-1">{booking.serviceId.description}</p>
                   )}
+                  <div className="flex flex-wrap gap-4 mt-2">
+                    <p className="text-[var(--muted)] text-sm">
+                      📅 {new Date(booking.bookingDate).toLocaleString()}
+                    </p>
+                    {(booking.requiresDelivery && booking.deliveryStartTime) ||
+                     (booking.serviceId?.category === 'equipment' ||
+                      booking.serviceId?.category === 'furniture' ||
+                      booking.serviceId?.category === 'lighting' ||
+                      booking.serviceId?.category === 'sound-system' ||
+                      booking.serviceId?.category === 'tents-canopies' ||
+                      booking.serviceId?.category === 'linens-tableware' ||
+                      booking.serviceId?.serviceType === 'equipment' ||
+                      booking.serviceId?.serviceType === 'supply') ? (
+                      <p className="text-[var(--muted)] text-sm">
+                        🚚 Pick-up: {booking.deliveryStartTime
+                          ? new Date(booking.deliveryStartTime).toLocaleString()
+                          : (() => {
+                              const pickupDate = new Date(booking.bookingDate);
+                              pickupDate.setDate(pickupDate.getDate() + 1);
+                              return pickupDate.toLocaleString();
+                            })()
+                        }
+                      </p>
+                    ) : null}
+                    <p className="text-[var(--muted)] text-sm">
+                      📦 Quantity: {booking.quantity}
+                    </p>
+                    <p className="text-[var(--muted)] text-sm">
+                      🏷️ {booking.serviceId?.category || 'Service'}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right ml-4">
                   <p className="text-2xl font-bold text-[var(--primary)]">₱{booking.totalPrice}</p>
                   <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mt-2 ${getStatusColor(booking.status)}`}>
                     {booking.status}
@@ -217,19 +248,52 @@ export default function Bookings() {
                 </div>
               </div>
 
-              <div className="flex gap-4 pt-4 border-t border-[var(--border)]">
-                <div className="flex flex-col gap-2">
-                  <div className="flex gap-2">
+              <div className="grid md:grid-cols-2 gap-4 pt-4 border-t border-[var(--border)]">
+                <div className="space-y-3">
+                  <div className="flex justify-between">
                     <span className="text-sm font-medium text-gray-600">Payment Type:</span>
                     <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm font-semibold">
                       {booking.paymentType === 'full' ? 'Full Payment' : booking.paymentType === 'test_payment' ? 'Test Payment' : 'Full Payment'}
                     </span>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex justify-between">
                     <span className="text-sm font-medium text-gray-600">Payment Status:</span>
                     <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(booking.paymentStatus)}`}>
                       {booking.paymentStatus}
                     </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-600">Created:</span>
+                    <span className="text-sm text-gray-700">
+                      {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : 'N/A'}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-600">Booking ID:</span>
+                    <span className="text-sm text-gray-700 font-mono">{booking._id.slice(-8)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-600">Unit Price:</span>
+                    <span className="text-sm text-gray-700">₱{booking.serviceId?.basePrice || 0}</span>
+                  </div>
+                  {booking.notes && (
+                    <div className="col-span-2">
+                      <span className="text-sm font-medium text-gray-600">Notes:</span>
+                      <p className="text-sm text-gray-700 mt-1 bg-gray-50 p-2 rounded">{booking.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                <div className="flex justify-between items-center">
+                  <div className="text-sm text-gray-600">
+                    Need help? Contact our support team for any questions about your booking.
+                  </div>
+                  <div className="text-sm text-[var(--primary)] font-medium">
+                    📞 Support: (02) 123-4567 | ✉️ support@trixtech.com
                   </div>
                 </div>
               </div>

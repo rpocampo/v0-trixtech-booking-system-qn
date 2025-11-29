@@ -22,10 +22,31 @@ interface Booking {
   totalPrice: number;
 }
 
+interface DeliverySchedule {
+  id: string;
+  serviceName: string;
+  serviceCategory: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  status: string;
+  quantity: number;
+  totalPrice: number;
+  notes?: string;
+}
+
 export default function CustomerDashboard() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
+  const [deliverySchedules, setDeliverySchedules] = useState<DeliverySchedule[]>([]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+  });
   const [stats, setStats] = useState({
     totalBookings: 0,
     upcomingBookings: 0,
@@ -96,6 +117,28 @@ export default function CustomerDashboard() {
 
     fetchData();
   }, [router]);
+
+  const fetchDeliverySchedules = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`http://localhost:5000/api/bookings/delivery-schedules?date=${selectedDate}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setDeliverySchedules(data.schedules);
+      }
+    } catch (error) {
+      console.error('Failed to fetch delivery schedules:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDeliverySchedules();
+  }, [selectedDate]);
 
   if (loading) {
     return (
@@ -173,9 +216,6 @@ export default function CustomerDashboard() {
       {/* Quick Actions - Browse Services First */}
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 animate-fade-in" style={{ animationDelay: '400ms' }}>
         <Link href="/customer/services" className="card-interactive group p-8 border-l-4 border-l-[var(--primary)] min-h-[160px] flex flex-col justify-between relative bg-gradient-to-br from-[var(--primary-50)] to-white shadow-lg ring-2 ring-[var(--primary)]/20">
-          <div className="absolute top-4 right-4 bg-[var(--primary)] text-white px-3 py-1 rounded-full text-xs font-bold animate-pulse">
-            PRIMARY ACTION
-          </div>
           <div className="flex items-center gap-4 mb-6">
             <div className="text-5xl group-hover:scale-110 transition-transform duration-300">🎪</div>
             <div>
@@ -291,8 +331,76 @@ export default function CustomerDashboard() {
         )}
       </div>
 
+      {/* Delivery Schedules */}
+      <div className="card p-6 mt-8 animate-fade-in" style={{ animationDelay: '700ms' }}>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="section-title">📅 Delivery Schedules</h2>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium">Date:</label>
+            <input
+              className="input-field"
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            />
+          </div>
+        </div>
+        {deliverySchedules.length > 0 ? (
+          <div className="space-y-4">
+            {deliverySchedules.map((schedule, index) => (
+              <div
+                key={schedule.id}
+                className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all duration-300 bg-white"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-lg font-bold">
+                    🚚
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-800 text-base">{schedule.serviceName}</p>
+                    <p className="text-sm text-gray-600">
+                      {new Date(schedule.startTime).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      })} - {new Date(schedule.endTime).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      })} ({schedule.duration} min)
+                    </p>
+                    <p className="text-xs text-gray-500">Quantity: {schedule.quantity}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    schedule.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                    schedule.status === 'completed' ? 'bg-blue-100 text-blue-700' :
+                    'bg-yellow-100 text-yellow-700'
+                  }`}>
+                    {schedule.status}
+                  </span>
+                  <div className="text-right flex flex-col items-end gap-2">
+                    <p className="font-semibold text-blue-600">₱{schedule.totalPrice}</p>
+                    <button
+                      onClick={() => router.push(`/customer/booking/${schedule.id}`)}
+                      className="text-indigo-600 hover:underline text-sm"
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-[var(--muted)] text-center py-8">No delivery schedules for selected date</p>
+        )}
+      </div>
+
       {/* Personalized Recommendations */}
-      <div className="card-elevated p-6 animate-fade-in" style={{ animationDelay: '800ms' }}>
+      <div className="card-elevated p-6 animate-fade-in" style={{ animationDelay: '900ms' }}>
         <PersonalizedRecommendations limit={6} />
       </div>
     </div>

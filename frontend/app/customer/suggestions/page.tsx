@@ -24,48 +24,6 @@ interface Service {
   tags?: string[];
 }
 
-interface Recommendation {
-  service?: Service;
-  package?: PackageSuggestion;
-  reason: string;
-  score: number;
-  isAvailable: boolean;
-  availableQuantity?: number;
-  type: 'service' | 'package';
-}
-
-interface PackageSuggestion {
-  _id: string;
-  name: string;
-  description: string;
-  shortDescription?: string;
-  category: string;
-  basePrice: number;
-  totalPrice: number;
-  inclusions: Array<{
-    name: string;
-    quantity: number;
-    category: string;
-    description?: string;
-    price: number;
-  }>;
-  addOns?: Array<{
-    name: string;
-    quantity: number;
-    category: string;
-    description?: string;
-    price: number;
-    isPopular?: boolean;
-  }>;
-  deliveryIncluded: boolean;
-  deliveryFee?: number;
-  minGuests?: number;
-  maxGuests?: number;
-  duration?: number;
-  isPopular?: boolean;
-  relevanceScore?: number;
-}
-
 interface PredictiveSuggestion {
   service: Service;
   confidence: number;
@@ -76,90 +34,18 @@ interface PredictiveSuggestion {
 
 export default function SuggestionsPage() {
   const router = useRouter();
-  const [services, setServices] = useState<Service[]>([]);
-  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [packages, setPackages] = useState<PackageSuggestion[]>([]);
   const [predictiveSuggestions, setPredictiveSuggestions] = useState<PredictiveSuggestion[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingPackages, setLoadingPackages] = useState(true);
   const [loadingPredictive, setLoadingPredictive] = useState(true);
-  const [filters, setFilters] = useState({
+  const [predictiveFilters, setPredictiveFilters] = useState({
     category: '',
     priceRange: '',
-    availability: '',
-  });
-  const [userPreferences, setUserPreferences] = useState({
-    eventType: '',
-    budget: '',
-    guestCount: '',
+    minConfidence: '',
   });
 
   useEffect(() => {
-    fetchRecommendations();
-    fetchPackages();
     fetchPredictiveSuggestions();
   }, []);
 
-  // Regenerate recommendations when both services and packages are loaded
-  useEffect(() => {
-    if (!loading && !loadingPackages && services.length > 0) {
-      const recommendations = generateRecommendations(services);
-      setRecommendations(recommendations);
-    }
-  }, [loading, loadingPackages, services, packages]);
-
-  const fetchRecommendations = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
-      // First get all services
-      const servicesResponse = await fetch('http://localhost:5000/api/services', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!servicesResponse.ok) {
-        throw new Error('Failed to fetch services');
-      }
-
-      const servicesData = await servicesResponse.json();
-      const services = servicesData.services || [];
-
-      setServices(services);
-    } catch (error) {
-      console.error('Error fetching recommendations:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchPackages = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
-      const response = await fetch('http://localhost:5000/api/packages?limit=10', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setPackages(data.packages || []);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching packages:', error);
-    } finally {
-      setLoadingPackages(false);
-    }
-  };
 
   const fetchPredictiveSuggestions = async () => {
     try {
@@ -186,141 +72,21 @@ export default function SuggestionsPage() {
     }
   };
 
-  const generateRecommendations = (services: Service[]): Recommendation[] => {
-    const recommendations: Recommendation[] = [];
 
-    // Essential items that should always be included
-    const essentialItems = ['chair', 'table', 'tent', 'sound system', 'lighting', 'catering'];
+  const filteredPredictiveSuggestions = predictiveSuggestions.filter(suggestion => {
+    const service = suggestion.service;
+    const price = service.basePrice;
 
-    services.forEach(service => {
-      let score = 0;
-      let reasons: string[] = [];
-
-      // Base scoring
-      if (service.isAvailable) {
-        score += 20;
-        reasons.push('Available for booking');
-      }
-
-      // Essential items get higher priority
-      const serviceName = service.name.toLowerCase();
-      const isEssential = essentialItems.some(item => serviceName.includes(item));
-      if (isEssential) {
-        score += 25;
-        reasons.push('Essential event item');
-      }
-
-      // Category preferences
-      if (service.category === 'party' || service.category === 'wedding') {
-        score += 15;
-        reasons.push('Popular for events');
-      }
-
-      // Equipment category gets priority
-      if (service.category === 'equipment') {
-        score += 10;
-        reasons.push('Equipment rental');
-      }
-
-      // Price scoring
-      if (service.basePrice <= 1000) {
-        score += 10;
-        reasons.push('Budget-friendly option');
-      } else if (service.basePrice <= 5000) {
-        score += 15;
-        reasons.push('Good value for money');
-      }
-
-      // Quantity availability
-      if (service.quantity && service.quantity > 10) {
-        score += 10;
-        reasons.push('High stock availability');
-      }
-
-      // Features scoring
-      if (service.features && service.features.length > 0) {
-        score += 5;
-        reasons.push('Includes additional features');
-      }
-
-      // Delivery scoring
-      if (!service.deliveryRequired) {
-        score += 8;
-        reasons.push('No delivery required');
-      }
-
-      // Lead time scoring
-      if (!service.leadTime || service.leadTime <= 24) {
-        score += 10;
-        reasons.push('Quick setup available');
-      }
-
-      // Lower threshold for essential items
-      const threshold = isEssential ? 20 : 30;
-
-      if (score > threshold) { // Include services with decent scores
-        recommendations.push({
-          service,
-          reason: reasons.join(', '),
-          score,
-          isAvailable: service.isAvailable,
-          availableQuantity: service.quantity,
-          type: 'service',
-        });
-      }
-    });
-
-    // Add package recommendations
-    packages.forEach(pkg => {
-      let score = 50; // Packages get higher base score
-      let reasons: string[] = ['Complete event package'];
-
-      if (pkg.isPopular) {
-        score += 20;
-        reasons.push('Popular choice');
-      }
-
-      if (pkg.deliveryIncluded) {
-        score += 10;
-        reasons.push('Includes delivery');
-      }
-
-      // Check if package includes essential items
-      const hasEssentialItems = pkg.inclusions?.some(inc =>
-        essentialItems.some(item => inc.name.toLowerCase().includes(item))
-      );
-
-      if (hasEssentialItems) {
-        score += 15;
-        reasons.push('Includes essential items');
-      }
-
-      recommendations.push({
-        package: pkg,
-        reason: reasons.join(', '),
-        score,
-        isAvailable: true, // Assume packages are available
-        availableQuantity: undefined,
-        type: 'package',
-      });
-    });
-
-    // Sort by score (highest first)
-    return recommendations.sort((a, b) => b.score - a.score);
-  };
-
-  const filteredRecommendations = recommendations.filter(rec => {
-    const category = rec.type === 'service' ? rec.service?.category : rec.package?.category;
-    const price = rec.type === 'service' ? rec.service?.basePrice : rec.package?.totalPrice;
-
-    if (filters.category && category !== filters.category) return false;
-    if (filters.priceRange && price) {
-      if (filters.priceRange === 'low' && price > 1000) return false;
-      if (filters.priceRange === 'medium' && (price <= 1000 || price > 5000)) return false;
-      if (filters.priceRange === 'high' && price <= 5000) return false;
+    if (predictiveFilters.category && service.category !== predictiveFilters.category) return false;
+    if (predictiveFilters.priceRange && price) {
+      if (predictiveFilters.priceRange === 'low' && price > 1000) return false;
+      if (predictiveFilters.priceRange === 'medium' && (price <= 1000 || price > 5000)) return false;
+      if (predictiveFilters.priceRange === 'high' && price <= 5000) return false;
     }
-    if (filters.availability === 'available' && !rec.isAvailable) return false;
-    if (filters.availability === 'high-stock' && rec.type === 'service' && (!rec.availableQuantity || rec.availableQuantity <= 5)) return false;
+    if (predictiveFilters.minConfidence) {
+      const minConf = parseFloat(predictiveFilters.minConfidence);
+      if (suggestion.confidence < minConf) return false;
+    }
     return true;
   });
 
@@ -332,7 +98,6 @@ export default function SuggestionsPage() {
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'party': return '🎉';
       case 'wedding': return '💒';
       case 'corporate': return '🏢';
       case 'equipment': return '🎪';
@@ -342,12 +107,12 @@ export default function SuggestionsPage() {
     }
   };
 
-  if (loading || loadingPackages) {
+  if (loadingPredictive) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Finding perfect recommendations for you...</p>
+          <p className="text-gray-600">Finding modified bookings from other customers...</p>
         </div>
       </div>
     );
@@ -357,277 +122,10 @@ export default function SuggestionsPage() {
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">🎯 Suggestions</h1>
-        <p className="text-gray-600 text-lg">Discover services perfectly matched to your needs</p>
+        <h1 className="text-4xl font-bold text-gray-800 mb-2">📊 Modified Bookings</h1>
+        <p className="text-gray-600 text-lg">See what other customers added to their bookings</p>
       </div>
 
-      {/* Filters */}
-      <div className="card p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-4">Preferences</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Event Type</label>
-            <select
-              value={filters.category}
-              onChange={(e) => setFilters({ ...filters, category: e.target.value })}
-              className="input-field"
-            >
-              <option value="">All Categories</option>
-              <option value="party">Party</option>
-              <option value="wedding">Wedding</option>
-              <option value="corporate">Corporate</option>
-              <option value="equipment">Equipment</option>
-              <option value="birthday">Birthday</option>
-              <option value="funeral">Funeral</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Price Range</label>
-            <select
-              value={filters.priceRange}
-              onChange={(e) => setFilters({ ...filters, priceRange: e.target.value })}
-              className="input-field"
-            >
-              <option value="">All Prices</option>
-              <option value="low">₱0 – ₱1,000</option>
-              <option value="medium">₱1,001 – ₱5,000</option>
-              <option value="high">₱5,001+</option>
-            </select>
-          </div>
-        </div>
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={() => setFilters({ category: '', priceRange: '', availability: '' })}
-            className="btn-secondary"
-          >
-            Clear Filters
-          </button>
-          <span className="text-sm text-gray-600 self-center">
-            Showing {filteredRecommendations.length} of {recommendations.length} recommendations
-          </span>
-        </div>
-      </div>
-
-      {/* Recommendations Grid */}
-      {filteredRecommendations.length === 0 ? (
-        <div className="card p-12 text-center">
-          <div className="text-6xl mb-4">🔍</div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">No recommendations found</h3>
-          <p className="text-gray-600 mb-4">Try adjusting your filters to see more options.</p>
-          <button
-            onClick={() => setFilters({ category: '', priceRange: '', availability: '' })}
-            className="btn-primary"
-          >
-            Show All Recommendations
-          </button>
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredRecommendations.map((rec, index) => {
-            if (rec.type === 'service' && rec.service) {
-              const service = rec.service;
-              return (
-                <div key={service._id} className="card p-6 hover:shadow-lg transition-shadow">
-                  {/* Recommendation Badge */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">{getCategoryIcon(service.category)}</span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        rec.score >= 70 ? 'bg-green-100 text-green-800' :
-                        rec.score >= 50 ? 'bg-blue-100 text-blue-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {rec.score >= 70 ? 'Highly Recommended' :
-                         rec.score >= 50 ? 'Recommended' : 'Good Match'}
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-500">#{index + 1}</span>
-                  </div>
-
-                  {/* Service Image */}
-                  <div className="w-full h-48 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg mb-4 flex items-center justify-center text-4xl">
-                    {service.image ? (
-                      <img
-                        src={`http://localhost:5000${service.image}`}
-                        alt={service.name}
-                        className="w-full h-full object-cover rounded-lg"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.parentElement!.innerHTML = getCategoryIcon(service.category);
-                        }}
-                      />
-                    ) : (
-                      getCategoryIcon(service.category)
-                    )}
-                  </div>
-
-                  {/* Service Details */}
-                  <div className="space-y-3">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800">{service.name}</h3>
-                      <p className="text-sm text-gray-600 capitalize">{service.category.replace('-', ' ')}</p>
-                    </div>
-
-                    <p className="text-sm text-gray-700 line-clamp-2">{service.description}</p>
-
-                    {/* Price and Availability */}
-                    <div className="flex items-center justify-between">
-                      <div className="text-xl font-bold text-indigo-600">₱{service.basePrice.toFixed(2)}</div>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        rec.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {rec.isAvailable ? 'Available' : 'Unavailable'}
-                      </span>
-                    </div>
-
-                    {/* Recommendation Reason */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <div className="flex items-start gap-2">
-                        <span className="text-blue-600 mt-0.5">💡</span>
-                        <div>
-                          <p className="text-sm font-medium text-blue-800 mb-1">Why we recommend this:</p>
-                          <p className="text-xs text-blue-700">{rec.reason}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Service Features */}
-                    {service.features && service.features.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-gray-700">Features:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {service.features.slice(0, 3).map((feature, idx) => (
-                            <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                              {feature}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 pt-2">
-                      <Link
-                        href={`/customer/services/${service._id}`}
-                        className="flex-1 btn-secondary text-center"
-                      >
-                        View Details
-                      </Link>
-                      {rec.isAvailable && (
-                        <button
-                          onClick={() => {
-                            // Add to cart logic would go here
-                            alert(`Added ${service.name} to cart!`);
-                          }}
-                          className="flex-1 btn-primary"
-                        >
-                          Add to Cart
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            } else if (rec.type === 'package' && rec.package) {
-              const pkg = rec.package;
-              return (
-                <div key={pkg._id} className="card p-6 hover:shadow-lg transition-shadow">
-                  {/* Recommendation Badge */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-2xl">{getCategoryIcon(pkg.category)}</span>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        rec.score >= 70 ? 'bg-green-100 text-green-800' :
-                        rec.score >= 50 ? 'bg-blue-100 text-blue-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {rec.score >= 70 ? 'Highly Recommended' :
-                         rec.score >= 50 ? 'Recommended' : 'Good Match'}
-                      </span>
-                      <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs font-medium">
-                        Bundle
-                      </span>
-                    </div>
-                    <span className="text-sm text-gray-500">#{index + 1}</span>
-                  </div>
-
-                  {/* Package Image */}
-                  <div className="w-full h-48 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg mb-4 flex items-center justify-center text-4xl">
-                    {getCategoryIcon(pkg.category)}
-                  </div>
-
-                  {/* Package Details */}
-                  <div className="space-y-3">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800">{pkg.name}</h3>
-                      <p className="text-sm text-gray-600 capitalize">{pkg.category.replace('-', ' ')}</p>
-                    </div>
-
-                    <p className="text-sm text-gray-700 line-clamp-2">{pkg.description}</p>
-
-                    {/* Price and Availability */}
-                    <div className="flex items-center justify-between">
-                      <div className="text-xl font-bold text-indigo-600">₱{pkg.totalPrice.toFixed(2)}</div>
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        rec.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {rec.isAvailable ? 'Available' : 'Unavailable'}
-                      </span>
-                    </div>
-
-                    {/* Recommendation Reason */}
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <div className="flex items-start gap-2">
-                        <span className="text-blue-600 mt-0.5">💡</span>
-                        <div>
-                          <p className="text-sm font-medium text-blue-800 mb-1">Why we recommend this:</p>
-                          <p className="text-xs text-blue-700">{rec.reason}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Package Inclusions */}
-                    {pkg.inclusions && pkg.inclusions.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-gray-700">Includes:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {pkg.inclusions.slice(0, 3).map((inclusion, idx) => (
-                            <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                              {inclusion.name}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 pt-2">
-                      <Link
-                        href={`/customer/packages/${pkg._id}`}
-                        className="flex-1 btn-secondary text-center"
-                      >
-                        View Details
-                      </Link>
-                      {rec.isAvailable && (
-                        <button
-                          onClick={() => {
-                            // Add to cart logic would go here
-                            alert(`Added ${pkg.name} bundle to cart!`);
-                          }}
-                          className="flex-1 btn-primary"
-                        >
-                          Add to Cart
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-            return null;
-          })}
-        </div>
-      )}
 
       {/* Predictive Analytics Suggestions */}
       {predictiveSuggestions.length > 0 && (
@@ -636,14 +134,73 @@ export default function SuggestionsPage() {
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
             </svg>
-            <h2 className="text-2xl font-bold">🎯 Smart Suggestions</h2>
+            <h2 className="text-2xl font-bold">📊 Modified Bookings from Other Customers</h2>
           </div>
           <p className="text-gray-600 mb-6">
-            Based on what other customers frequently add to their bookings
+            Services that other customers frequently added to their bookings
           </p>
 
+          {/* Filters for Predictive Suggestions */}
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
+            <h3 className="text-lg font-semibold text-purple-800 mb-4">Filter Suggestions</h3>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Category</label>
+                <select
+                  value={predictiveFilters.category}
+                  onChange={(e) => setPredictiveFilters({ ...predictiveFilters, category: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">All Categories</option>
+                  <option value="wedding">Wedding</option>
+                  <option value="corporate">Corporate</option>
+                  <option value="equipment">Equipment</option>
+                  <option value="birthday">Birthday</option>
+                  <option value="funeral">Funeral</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Price Range</label>
+                <select
+                  value={predictiveFilters.priceRange}
+                  onChange={(e) => setPredictiveFilters({ ...predictiveFilters, priceRange: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">All Prices</option>
+                  <option value="low">₱0 – ₱1,000</option>
+                  <option value="medium">₱1,001 – ₱5,000</option>
+                  <option value="high">₱5,001+</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Min Confidence</label>
+                <select
+                  value={predictiveFilters.minConfidence}
+                  onChange={(e) => setPredictiveFilters({ ...predictiveFilters, minConfidence: e.target.value })}
+                  className="input-field"
+                >
+                  <option value="">Any Confidence</option>
+                  <option value="0.8">High (80%+)</option>
+                  <option value="0.6">Medium (60%+)</option>
+                  <option value="0.4">Low (40%+)</option>
+                </select>
+              </div>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => setPredictiveFilters({ category: '', priceRange: '', minConfidence: '' })}
+                className="btn-secondary"
+              >
+                Clear Filters
+              </button>
+              <span className="text-sm text-gray-600 self-center">
+                Showing {filteredPredictiveSuggestions.length} of {predictiveSuggestions.length} suggestions
+              </span>
+            </div>
+          </div>
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {predictiveSuggestions.map((suggestion, index) => (
+            {filteredPredictiveSuggestions.map((suggestion, index) => (
               <div key={suggestion.service._id} className="border border-purple-200 rounded-lg p-4 bg-purple-50 hover:bg-purple-100 transition-colors">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
@@ -660,9 +217,14 @@ export default function SuggestionsPage() {
                   <span className="text-xs text-gray-500">#{index + 1}</span>
                 </div>
 
-                <div className="space-y-2">
-                  <h4 className="font-semibold text-gray-800 text-sm">{suggestion.service.name}</h4>
-                  <p className="text-xs text-gray-600 capitalize">{suggestion.service.category.replace('-', ' ')}</p>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold text-gray-800 text-sm">{suggestion.service.name}</h4>
+                    <p className="text-xs text-gray-600 capitalize">{suggestion.service.category.replace('-', ' ')}</p>
+                  </div>
+
+                  <p className="text-xs text-gray-700 line-clamp-2">{suggestion.service.description}</p>
+
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-purple-600">₱{suggestion.service.basePrice.toFixed(2)}</span>
                     <span className={`px-2 py-1 rounded text-xs ${
@@ -672,6 +234,42 @@ export default function SuggestionsPage() {
                     </span>
                   </div>
 
+                  {/* Service Details */}
+                  <div className="bg-gray-50 border border-gray-200 rounded p-2 space-y-1">
+                    {suggestion.service.quantity && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600">Stock:</span>
+                        <span className="font-medium">{suggestion.service.quantity} available</span>
+                      </div>
+                    )}
+                    {suggestion.service.leadTime && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600">Lead Time:</span>
+                        <span className="font-medium">{suggestion.service.leadTime} hours</span>
+                      </div>
+                    )}
+                    {suggestion.service.minOrder && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-gray-600">Min Order:</span>
+                        <span className="font-medium">{suggestion.service.minOrder}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Features */}
+                  {suggestion.service.features && suggestion.service.features.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-gray-700">Features:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {suggestion.service.features.slice(0, 2).map((feature, idx) => (
+                          <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="bg-white border border-purple-200 rounded p-2">
                     <div className="flex items-start gap-2">
                       <span className="text-purple-600 mt-0.5">📊</span>
@@ -679,6 +277,9 @@ export default function SuggestionsPage() {
                         <p className="text-xs font-medium text-purple-800">Why suggested:</p>
                         <p className="text-xs text-purple-700">
                           Added by {suggestion.frequency} customer{suggestion.frequency > 1 ? 's' : ''} to similar bookings
+                        </p>
+                        <p className="text-xs text-purple-600 mt-1">
+                          Avg. quantity: {suggestion.averageQuantity.toFixed(1)}
                         </p>
                         {suggestion.reasons && suggestion.reasons.length > 0 && (
                           <p className="text-xs text-purple-600 mt-1">
@@ -715,67 +316,6 @@ export default function SuggestionsPage() {
         </div>
       )}
 
-      {/* User Preferences Section */}
-      <div className="card p-6 mt-8">
-        <h2 className="text-xl font-semibold mb-4">🎛️ Customize Your Recommendations</h2>
-        <p className="text-gray-600 mb-4">
-          Help us provide better recommendations by sharing your preferences.
-        </p>
-        <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Event Type</label>
-            <select
-              value={userPreferences.eventType}
-              onChange={(e) => setUserPreferences({ ...userPreferences, eventType: e.target.value })}
-              className="input-field"
-            >
-              <option value="">Any Event</option>
-              <option value="birthday">Birthday Party</option>
-              <option value="wedding">Wedding</option>
-              <option value="corporate">Corporate Event</option>
-              <option value="graduation">Graduation</option>
-              <option value="anniversary">Anniversary</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Budget Range</label>
-            <select
-              value={userPreferences.budget}
-              onChange={(e) => setUserPreferences({ ...userPreferences, budget: e.target.value })}
-              className="input-field"
-            >
-              <option value="">Any Budget</option>
-              <option value="low">₱0-500</option>
-              <option value="medium">₱501-2000</option>
-              <option value="high">₱2001+</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Guest Count</label>
-            <select
-              value={userPreferences.guestCount}
-              onChange={(e) => setUserPreferences({ ...userPreferences, guestCount: e.target.value })}
-              className="input-field"
-            >
-              <option value="">Any Size</option>
-              <option value="small">1-50 guests</option>
-              <option value="medium">51-200 guests</option>
-              <option value="large">201+ guests</option>
-            </select>
-          </div>
-        </div>
-        <div className="mt-4">
-          <button
-            onClick={() => {
-              // In a real implementation, this would update user preferences
-              alert('Preferences saved! Recommendations will be updated.');
-            }}
-            className="btn-primary"
-          >
-            Save Preferences
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

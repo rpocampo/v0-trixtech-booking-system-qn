@@ -134,16 +134,16 @@ export default function CustomerLayout({
               🏠 Dashboard
             </Link>
             <Link
-              href="/customer/services"
-              className={`px-6 py-3 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 font-semibold text-base ${pathname === '/customer/services' ? 'bg-blue-600 text-white shadow-lg border-b-2 border-blue-300' : ''}`}
-            >
-              🎪 Services
-            </Link>
-            <Link
               href="/customer/bookings"
               className={`px-6 py-3 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 font-semibold text-base ${pathname === '/customer/bookings' ? 'bg-blue-600 text-white shadow-lg border-b-2 border-blue-300' : ''}`}
             >
               📅 Bookings
+            </Link>
+            <Link
+              href="/customer/services"
+              className={`px-6 py-3 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 font-semibold text-base ${pathname === '/customer/services' ? 'bg-blue-600 text-white shadow-lg border-b-2 border-blue-300' : ''}`}
+            >
+              🎪 Services
             </Link>
             <Link
               href="/customer/suggestions"
@@ -260,20 +260,20 @@ export default function CustomerLayout({
                 Dashboard
               </Link>
               <Link
-                href="/customer/services"
-                className={`flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200 ${pathname === '/customer/services' ? 'bg-[var(--primary)] text-white' : ''}`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <span className="text-lg">🎪</span>
-                Services
-              </Link>
-              <Link
                 href="/customer/bookings"
                 className={`flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200 ${pathname === '/customer/bookings' ? 'bg-[var(--primary)] text-white' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <span className="text-lg">📅</span>
                 Bookings
+              </Link>
+              <Link
+                href="/customer/services"
+                className={`flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200 ${pathname === '/customer/services' ? 'bg-[var(--primary)] text-white' : ''}`}
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <span className="text-lg">🎪</span>
+                Services
               </Link>
               <Link
                 href="/customer/suggestions"

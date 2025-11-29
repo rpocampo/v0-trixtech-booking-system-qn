@@ -275,7 +275,6 @@ export default function Services() {
                 >
                   <option value="">All Categories</option>
                   <option value="equipment">Equipment</option>
-                  <option value="party">Party</option>
                   <option value="corporate">Corporate</option>
                   <option value="wedding">Wedding</option>
                   <option value="birthday">Birthday</option>
@@ -358,7 +357,7 @@ export default function Services() {
         <>
           {/* Category Filter */}
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 px-4">
-            {['all', 'party', 'equipment', 'corporate', 'wedding', 'birthday', 'funeral'].map((category) => (
+            {['all', 'equipment', 'corporate', 'wedding', 'birthday', 'funeral'].map((category) => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}

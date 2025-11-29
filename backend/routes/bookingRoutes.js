@@ -338,11 +338,19 @@ router.post('/', authMiddleware, async (req, res, next) => {
         };
 
         // Add delivery time fields if service requires delivery
-        if (serviceRequiresDelivery && deliveryTime) {
-          const deliveryStartTime = new Date(`${bookingDate}T${deliveryTime}`);
+        if (serviceRequiresDelivery) {
+          let deliveryStartTime;
+          if (deliveryTime) {
+            // Use provided delivery time
+            deliveryStartTime = new Date(`${bookingDate}T${deliveryTime}`);
+          } else {
+            // Auto-set delivery time to booking date/time if not provided
+            deliveryStartTime = new Date(bookingDate);
+          }
           bookingData.deliveryStartTime = deliveryStartTime;
           bookingData.deliveryEndTime = new Date(deliveryStartTime.getTime() + 60 * 60 * 1000); // 1 hour duration
           bookingData.deliveryDuration = 60; // 1 hour
+          bookingData.requiresDelivery = true; // Ensure requiresDelivery is set
         }
 
         // Create booking (without transaction for standalone MongoDB)
@@ -565,6 +573,31 @@ router.post('/', authMiddleware, async (req, res, next) => {
 });
 
 
+
+// Get delivery schedules for customer (shows customer's own delivery bookings)
+router.get('/delivery-schedules', authMiddleware, async (req, res, next) => {
+  try {
+    const { date } = req.query;
+    const { getDeliverySchedules } = require('../utils/deliveryService');
+
+    // Get all delivery schedules for the date
+    const allSchedules = await getDeliverySchedules(date ? new Date(date) : null);
+
+    // Filter to only show customer's own bookings
+    const customerSchedules = allSchedules.filter(schedule =>
+      schedule.customerEmail === req.user.email
+    );
+
+    res.json({
+      success: true,
+      schedules: customerSchedules,
+      total: customerSchedules.length
+    });
+
+  } catch (error) {
+    next(error);
+  }
+});
 
 // Get single booking by ID
 router.get('/:id', authMiddleware, async (req, res, next) => {
@@ -993,7 +1026,7 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     }
 
     // Create the actual booking now that payment is confirmed
-    const booking = new Booking({
+    const bookingData = {
       customerId: req.user.id,
       serviceId: bookingIntent.serviceId,
       quantity: bookingIntent.quantity,
@@ -1005,7 +1038,23 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       notes: bookingIntent.notes,
       duration: bookingIntent.duration,
       dailyRate: bookingIntent.dailyRate,
-    });
+    };
+
+    // Check if service requires delivery and set delivery fields
+    const bookingService = await Service.findById(bookingIntent.serviceId);
+    if (bookingService) {
+      const serviceRequiresDelivery = requiresDeliveryTruck(bookingService);
+      if (serviceRequiresDelivery) {
+        // Auto-set delivery time to booking date/time
+        const deliveryStartTime = new Date(bookingIntent.bookingDate);
+        bookingData.deliveryStartTime = deliveryStartTime;
+        bookingData.deliveryEndTime = new Date(deliveryStartTime.getTime() + 60 * 60 * 1000); // 1 hour duration
+        bookingData.deliveryDuration = 60; // 1 hour
+        bookingData.requiresDelivery = true;
+      }
+    }
+
+    const booking = new Booking(bookingData);
 
     await booking.save();
     await booking.populate('serviceId');
@@ -1235,20 +1284,96 @@ async function recordBookingAnalytics(customerId, currentServiceId, quantity) {
     console.error('Error in recordBookingAnalytics:', error);
   }
 }
-
 // Get delivery schedules for admin (shows all delivery bookings)
 router.get('/admin/delivery-schedules', adminMiddleware, async (req, res, next) => {
   try {
     const { date } = req.query;
     const { getDeliverySchedules } = require('../utils/deliveryService');
 
-    const schedules = await getDeliverySchedules(date ? new Date(date) : null);
+    // Get schedules from explicit delivery bookings
+    const explicitSchedules = await getDeliverySchedules(date ? new Date(date) : null);
+
+    // Always check for bookings that might require delivery based on service type
+    const queryDate = date ? new Date(date) : new Date();
+    const startOfDay = new Date(queryDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(queryDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Find all confirmed/paid bookings for the date
+    const allBookings = await Booking.find({
+      status: 'confirmed',
+      paymentStatus: { $in: ['partial', 'paid'] },
+      bookingDate: {
+        $gte: startOfDay,
+        $lt: endOfDay
+      }
+    }).populate('serviceId', 'name category serviceType').populate('customerId', 'name email phone');
+
+    // Filter for services that require delivery
+    const deliveryBookings = allBookings.filter(booking => {
+      const service = booking.serviceId;
+      if (!service) return false;
+
+      const deliveryCategories = ['equipment', 'furniture', 'lighting', 'sound-system', 'tents-canopies', 'linens-tableware'];
+      const deliveryServiceTypes = ['equipment', 'supply'];
+
+      return deliveryCategories.includes(service.category) ||
+             deliveryServiceTypes.includes(service.serviceType) ||
+             service.requiresDelivery === true;
+    });
+
+    // Convert delivery bookings to schedule format
+    const implicitSchedules = deliveryBookings.map(booking => {
+      // Use explicit delivery time if available, otherwise calculate (booking date + 1 day)
+      let deliveryDate;
+      if (booking.deliveryStartTime) {
+        deliveryDate = new Date(booking.deliveryStartTime);
+      } else {
+        deliveryDate = new Date(booking.bookingDate);
+        deliveryDate.setDate(deliveryDate.getDate() + 1);
+      }
+
+      const endTime = booking.deliveryEndTime
+        ? new Date(booking.deliveryEndTime)
+        : new Date(deliveryDate.getTime() + 60 * 60 * 1000); // 1 hour duration
+
+      return {
+        id: booking._id,
+        serviceName: booking.serviceId?.name || 'Unknown Service',
+        serviceCategory: booking.serviceId?.category || 'Unknown',
+        customerName: booking.customerId?.name || 'Unknown Customer',
+        customerEmail: booking.customerId?.email || '',
+        customerPhone: booking.customerId?.phone || '',
+        startTime: deliveryDate,
+        endTime: endTime,
+        duration: booking.deliveryDuration || 60,
+        status: booking.status,
+        quantity: booking.quantity,
+        totalPrice: booking.totalPrice,
+        notes: booking.notes
+      };
+    });
+
+    // Combine explicit and implicit schedules, removing duplicates
+    const allSchedules = [...explicitSchedules];
+    const existingIds = new Set(explicitSchedules.map(s => s.id));
+
+    implicitSchedules.forEach(schedule => {
+      if (!existingIds.has(schedule.id)) {
+        allSchedules.push(schedule);
+      }
+    });
+
+    // Sort by start time
+    allSchedules.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
     res.json({
       success: true,
-      schedules,
-      total: schedules.length
+      schedules: allSchedules,
+      total: allSchedules.length
     });
+
   } catch (error) {
     next(error);
   }

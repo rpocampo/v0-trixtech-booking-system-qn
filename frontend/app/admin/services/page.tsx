@@ -517,7 +517,6 @@ export default function AdminServices() {
                   className="input-field"
                 >
                   <option value="equipment">Equipment</option>
-                  <option value="party">Party</option>
                   <option value="corporate">Corporate</option>
                   <option value="wedding">Wedding</option>
                   <option value="birthday">Birthday</option>
