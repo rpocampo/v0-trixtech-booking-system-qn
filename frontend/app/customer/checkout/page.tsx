@@ -46,7 +46,7 @@ export default function CheckoutPage() {
   const [stockValidationIssues, setStockValidationIssues] = useState<string[]>([]);
   const [isValidatingStock, setIsValidatingStock] = useState(false);
   const [currentStep, setCurrentStep] = useState<'review' | 'schedule' | 'confirm' | 'payment-type' | 'payment'>('review');
-  const [scheduledItems, setScheduledItems] = useState<{ [key: string]: { date: string; notes: string; sameDateTime: boolean; pickupDate?: string; pickupNotes?: string } }>({});
+  const [scheduledItems, setScheduledItems] = useState<{ [key: string]: { date: string; notes: string; sameDateTime: boolean; pickupDate?: string; pickupNotes?: string; extendDuration?: boolean; extendedDays?: number; extendedHours?: number } }>({});
   const [pickupDate, setPickupDate] = useState<string>('');
   const [numberOfDays, setNumberOfDays] = useState<number>(0);
   const [paymentBooking, setPaymentBooking] = useState<any>(null);
@@ -148,6 +148,11 @@ export default function CheckoutPage() {
 
     fetchUser();
   }, []);
+
+  // Save scheduled items to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('cartScheduledItems', JSON.stringify(scheduledItems));
+  }, [scheduledItems]);
 
   const validateStock = async () => {
     setIsValidatingStock(true);
@@ -603,9 +608,47 @@ export default function CheckoutPage() {
 
       {currentStep === 'schedule' && (
         <div className="space-y-6">
-          <div className="text-center mb-8">
+          <div className="text-center mb-8 relative">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Delivery date and time</h1>
             <p className="text-gray-600">Select delivery and pick-up dates for your services.</p>
+
+            {/* Common Delivery Date/Time Checkbox - Only show for 2+ items */}
+            {checkoutItems.length >= 2 && (
+              <div className="absolute top-0 right-0">
+                <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <input
+                    type="checkbox"
+                    id="common-delivery-time"
+                    checked={checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime)}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      if (isChecked) {
+                        // Group all items with common delivery time
+                        const firstItemId = checkoutItems[0].id;
+                        const commonDateTime = scheduledItems[firstItemId]?.date || new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
+
+                        checkoutItems.forEach(item => {
+                          handleSameDateTimeChange(item.id, true);
+                          handleScheduleUpdate(item.id, commonDateTime, scheduledItems[item.id]?.notes || 'Common delivery time');
+                        });
+                      } else {
+                        // Ungroup all items
+                        checkoutItems.forEach(item => {
+                          handleSameDateTimeChange(item.id, false);
+                        });
+                      }
+                    }}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label
+                    htmlFor="common-delivery-time"
+                    className="text-sm text-blue-800 font-medium cursor-pointer"
+                  >
+                    Use common delivery date/time for all items
+                  </label>
+                </div>
+              </div>
+            )}
           </div>
 
 
@@ -665,6 +708,80 @@ export default function CheckoutPage() {
                             ₱{((item.dailyRate || item.price) * (item.duration || 1) * item.quantity).toFixed(2)} • Auto-calculated
                           </span>
                         </div>
+
+                        {/* Extend Rental Duration Checkbox for Synchronized Items */}
+                        <div className="mt-2 flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id={`extend-duration-sync-${item.id}`}
+                            checked={scheduledItems[item.id]?.extendDuration || false}
+                            onChange={(e) => {
+                              const isChecked = e.target.checked;
+                              // Apply to all synchronized items
+                              const synchronizedItems = checkoutItems.filter(i => scheduledItems[i.id]?.sameDateTime);
+                              synchronizedItems.forEach(syncItem => {
+                                setScheduledItems(prev => ({
+                                  ...prev,
+                                  [syncItem.id]: {
+                                    ...prev[syncItem.id],
+                                    extendDuration: isChecked,
+                                    extendedDays: isChecked ? (prev[syncItem.id]?.extendedDays || 1) : 0,
+                                  }
+                                }));
+
+                                if (isChecked) {
+                                  handleDurationChange(syncItem.id, (syncItem.duration || 1) + 1);
+                                } else {
+                                  handleDurationChange(syncItem.id, 1);
+                                }
+                              });
+                            }}
+                            className="w-3 h-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <label
+                            htmlFor={`extend-duration-sync-${item.id}`}
+                            className="text-xs text-blue-700 font-medium cursor-pointer"
+                          >
+                            Extend all rentals
+                          </label>
+                        </div>
+
+                        {/* Extended Duration Controls for Synchronized Items */}
+                        {scheduledItems[item.id]?.extendDuration && (
+                          <div className="mt-2 p-2 bg-white border border-blue-300 rounded">
+                            <div>
+                              <label className="block text-xs font-medium text-blue-800 mb-1">
+                                Additional Days
+                              </label>
+                              <select
+                                value={scheduledItems[item.id]?.extendedDays || 1}
+                                onChange={(e) => {
+                                  const additionalDays = parseInt(e.target.value);
+                                  // Apply to all synchronized items
+                                  const synchronizedItems = checkoutItems.filter(i => scheduledItems[i.id]?.sameDateTime);
+                                  synchronizedItems.forEach(syncItem => {
+                                    setScheduledItems(prev => ({
+                                      ...prev,
+                                      [syncItem.id]: {
+                                        ...prev[syncItem.id],
+                                        extendedDays: additionalDays,
+                                      }
+                                    }));
+                                    handleDurationChange(syncItem.id, 1 + additionalDays);
+                                  });
+                                }}
+                                className="input-field text-xs"
+                              >
+                                {Array.from({ length: 30 }, (_, i) => i + 1).map(days => (
+                                  <option key={days} value={days}>{days} day{days !== 1 ? 's' : ''}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <p className="text-xs text-blue-600 mt-1">
+                              Extension applies to all synchronized items
+                            </p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -861,6 +978,84 @@ export default function CheckoutPage() {
                             ₱{(item.dailyRate || item.price).toFixed(2)}/day
                           </span>
                         </div>
+
+                        {/* Extend Rental Duration Checkbox */}
+                        <div className="mt-3 flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            id={`extend-duration-${item.id}`}
+                            checked={scheduledItems[item.id]?.extendDuration || false}
+                            onChange={(e) => {
+                              const isChecked = e.target.checked;
+                              setScheduledItems(prev => ({
+                                ...prev,
+                                [item.id]: {
+                                  ...prev[item.id],
+                                  extendDuration: isChecked,
+                                  extendedDays: isChecked ? (prev[item.id]?.extendedDays || 1) : 0,
+                                  pickupDate: isChecked ? prev[item.id]?.pickupDate : undefined,
+                                  pickupNotes: isChecked ? prev[item.id]?.pickupNotes : undefined,
+                                }
+                              }));
+
+                              if (isChecked) {
+                                // Auto-extend by 1 day when checked
+                                handleDurationChange(item.id, (item.duration || 1) + 1);
+                              } else {
+                                // Reset to original duration when unchecked
+                                handleDurationChange(item.id, 1);
+                              }
+                            }}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <label
+                            htmlFor={`extend-duration-${item.id}`}
+                            className="text-sm text-blue-700 font-medium cursor-pointer"
+                          >
+                            Extend rental duration beyond 1 day
+                          </label>
+                        </div>
+
+                        {/* Educational Note */}
+                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                          <p className="text-xs text-blue-700">
+                            <span className="font-medium">Note:</span> Each rental lasts 1 day and the duration starts after the service or equipment is delivered.
+                          </p>
+                        </div>
+
+                        {/* Extended Duration Controls */}
+                        {scheduledItems[item.id]?.extendDuration && (
+                          <div className="mt-3 p-3 bg-white border border-blue-300 rounded-lg">
+                            <div>
+                              <label className="block text-xs font-medium text-blue-800 mb-1">
+                                Additional Days
+                              </label>
+                              <select
+                                value={scheduledItems[item.id]?.extendedDays || 1}
+                                onChange={(e) => {
+                                  const additionalDays = parseInt(e.target.value);
+                                  setScheduledItems(prev => ({
+                                    ...prev,
+                                    [item.id]: {
+                                      ...prev[item.id],
+                                      extendedDays: additionalDays,
+                                    }
+                                  }));
+                                  handleDurationChange(item.id, 1 + additionalDays);
+                                }}
+                                className="input-field text-sm"
+                              >
+                                {Array.from({ length: 30 }, (_, i) => i + 1).map(days => (
+                                  <option key={days} value={days}>{days} day{days !== 1 ? 's' : ''}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <p className="text-xs text-blue-600 mt-2">
+                              Extension uses the original booking time • Total duration: {(item.duration || 1)} days
+                            </p>
+                          </div>
+                        )}
+
                         <div className="mt-2 flex justify-between items-center">
                           <p className="text-xs text-blue-600">
                             Minimum 1 day required • Auto-calculated from dates
@@ -906,6 +1101,37 @@ export default function CheckoutPage() {
                             <p className="text-xs text-red-600 mt-1">Please select a delivery date and time</p>
                           )}
                         </div>
+
+                        {/* Automatic Pick-up Date Display */}
+                        {scheduledItems[item.id]?.date && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Pick-up Date & Time <span className="text-xs text-gray-500">(Auto-calculated)</span>
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="datetime-local"
+                                className="input-field bg-gray-50 border-gray-300 cursor-not-allowed text-gray-700"
+                                value={(() => {
+                                  const deliveryDate = new Date(scheduledItems[item.id].date);
+                                  // Add 24 hours for standard 1-day rental
+                                  const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
+                                  return pickupDate.toISOString().slice(0, 16);
+                                })()}
+                                readOnly
+                                disabled
+                              />
+                              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                  Auto-set
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Standard 1-day rental: 24 hours after delivery
+                            </p>
+                          </div>
+                        )}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Notes (Optional)</label>
                           <textarea
@@ -916,78 +1142,102 @@ export default function CheckoutPage() {
                             onChange={(e) => handleScheduleUpdate(item.id, scheduledItems[item.id]?.date || '', e.target.value)}
                           />
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Pick-up Date & Time {!scheduledItems[item.id]?.pickupDate && <span className="text-red-500">*</span>}
-                          </label>
-                          <input
-                            type="datetime-local"
-                            className={`input-field ${
-                              !scheduledItems[item.id]?.pickupDate
-                                ? 'border-red-300 focus:border-red-500'
-                                : 'border-green-300 focus:border-green-500'
-                            }`}
-                            min={(() => {
-                              const deliveryDate = scheduledItems[item.id]?.date;
-                              return deliveryDate ? new Date(new Date(deliveryDate).getTime() + 60 * 60 * 1000).toISOString().slice(0, 16) : new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
-                            })()}
-                            value={scheduledItems[item.id]?.pickupDate || ''}
-                            onChange={(e) => {
-                              const pickupDate = e.target.value;
-                              const deliveryDate = scheduledItems[item.id]?.date;
-                              setScheduledItems(prev => ({
-                                ...prev,
-                                [item.id]: {
-                                  ...prev[item.id],
-                                  pickupDate,
-                                  pickupNotes: prev[item.id]?.pickupNotes || ''
-                                }
-                              }));
-                              // Auto-calculate duration for this item
-                              calculateItemDuration(item.id, deliveryDate, pickupDate);
-                              calculateNumberOfDays();
-                            }}
-                            required
-                          />
-                          {!scheduledItems[item.id]?.pickupDate && (
-                            <p className="text-xs text-red-600 mt-1">Please select a pick-up date and time</p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Pick-up Notes (Optional)</label>
-                          <textarea
-                            className="input-field resize-none"
-                            rows={3}
-                            placeholder="Any special pick-up instructions..."
-                            value={scheduledItems[item.id]?.pickupNotes || ''}
-                            onChange={(e) => {
-                              setScheduledItems(prev => ({
-                                ...prev,
-                                [item.id]: {
-                                  ...prev[item.id],
-                                  pickupNotes: e.target.value
-                                }
-                              }));
-                            }}
-                          />
-                        </div>
+
+                        {/* Pick-up fields only show when extending rental duration */}
+                        {scheduledItems[item.id]?.extendDuration && (
+                          <>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Pick-up Date & Time {!scheduledItems[item.id]?.pickupDate && <span className="text-red-500">*</span>}
+                              </label>
+                              <input
+                                type="datetime-local"
+                                className={`input-field ${
+                                  !scheduledItems[item.id]?.pickupDate
+                                    ? 'border-red-300 focus:border-red-500'
+                                    : 'border-green-300 focus:border-green-500'
+                                }`}
+                                min={(() => {
+                                  const deliveryDate = scheduledItems[item.id]?.date;
+                                  return deliveryDate ? new Date(new Date(deliveryDate).getTime() + 60 * 60 * 1000).toISOString().slice(0, 16) : new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
+                                })()}
+                                value={scheduledItems[item.id]?.pickupDate || ''}
+                                onChange={(e) => {
+                                  const pickupDate = e.target.value;
+                                  const deliveryDate = scheduledItems[item.id]?.date;
+                                  setScheduledItems(prev => ({
+                                    ...prev,
+                                    [item.id]: {
+                                      ...prev[item.id],
+                                      pickupDate,
+                                      pickupNotes: prev[item.id]?.pickupNotes || ''
+                                    }
+                                  }));
+                                  // Auto-calculate duration for this item
+                                  calculateItemDuration(item.id, deliveryDate, pickupDate);
+                                  calculateNumberOfDays();
+                                }}
+                                required
+                              />
+                              {!scheduledItems[item.id]?.pickupDate && (
+                                <p className="text-xs text-red-600 mt-1">Please select a pick-up date and time</p>
+                              )}
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">Pick-up Notes (Optional)</label>
+                              <textarea
+                                className="input-field resize-none"
+                                rows={3}
+                                placeholder="Any special pick-up instructions..."
+                                value={scheduledItems[item.id]?.pickupNotes || ''}
+                                onChange={(e) => {
+                                  setScheduledItems(prev => ({
+                                    ...prev,
+                                    [item.id]: {
+                                      ...prev[item.id],
+                                      pickupNotes: e.target.value
+                                    }
+                                  }));
+                                }}
+                              />
+                            </div>
+                          </>
+                        )}
                       </div>
 
                       {scheduledItems[item.id]?.date && (
-                        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center gap-2 text-green-800">
-                            <span className="text-lg">✅</span>
-                            <div>
-                              <span className="text-sm font-medium">Delivery scheduled for: {new Date(scheduledItems[item.id].date).toLocaleString()}</span>
-                              {scheduledItems[item.id]?.notes && (
-                                <p className="text-xs text-green-700 mt-1">Notes: {scheduledItems[item.id].notes}</p>
-                              )}
+                        <div className="mt-4 space-y-2">
+                          <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center gap-2 text-green-800">
+                              <span className="text-lg">✅</span>
+                              <div>
+                                <span className="text-sm font-medium">Delivery scheduled for: {new Date(scheduledItems[item.id].date).toLocaleString()}</span>
+                                {scheduledItems[item.id]?.notes && (
+                                  <p className="text-xs text-green-700 mt-1">Notes: {scheduledItems[item.id].notes}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center gap-2 text-blue-800">
+                              <span className="text-sm">📅</span>
+                              <div>
+                                <span className="text-sm font-medium">
+                                  Pick-up scheduled for: {(() => {
+                                    const deliveryDate = new Date(scheduledItems[item.id].date);
+                                    const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
+                                    return pickupDate.toLocaleString();
+                                  })()}
+                                </span>
+                                <p className="text-xs text-blue-700 mt-1">Auto-calculated: 24 hours after delivery</p>
+                              </div>
                             </div>
                           </div>
                         </div>
                       )}
 
-                      {scheduledItems[item.id]?.pickupDate && (
+                      {/* Only show pick-up confirmation if extending rental duration */}
+                      {scheduledItems[item.id]?.extendDuration && scheduledItems[item.id]?.pickupDate && (
                         <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                           <div className="flex items-center gap-2 text-blue-800">
                             <span className="text-sm">📅</span>
@@ -1021,10 +1271,14 @@ export default function CheckoutPage() {
           {/* Missing Dates Warning */}
           {(() => {
             const missingDelivery = checkoutItems.filter(item => !scheduledItems[item.id]?.date);
+            // Only require pick-up dates for items that are extending rental duration
             const missingIndividualPickup = checkoutItems.filter(item =>
-              !scheduledItems[item.id]?.sameDateTime && !scheduledItems[item.id]?.pickupDate
+              !scheduledItems[item.id]?.sameDateTime &&
+              scheduledItems[item.id]?.extendDuration &&
+              !scheduledItems[item.id]?.pickupDate
             );
             const missingSynchronizedPickup = checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) &&
+              scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.extendDuration &&
               !scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate;
 
             return (missingDelivery.length > 0 || missingIndividualPickup.length > 0 || missingSynchronizedPickup) ? (
@@ -1046,13 +1300,13 @@ export default function CheckoutPage() {
                   {missingIndividualPickup.map(item => (
                     <li key={item.id} className="flex items-center gap-2">
                       <span>•</span>
-                      <span>{item.name} - Pick-up date required</span>
+                      <span>{item.name} - Pick-up date required (extension selected)</span>
                     </li>
                   ))}
                   {missingSynchronizedPickup && (
                     <li className="flex items-center gap-2">
                       <span>•</span>
-                      <span>Synchronized bookings - Pick-up date required</span>
+                      <span>Synchronized bookings - Pick-up date required (extension selected)</span>
                     </li>
                   )}
                 </ul>
@@ -1072,8 +1326,12 @@ export default function CheckoutPage() {
               onClick={() => setCurrentStep('confirm')}
               disabled={(() => {
                 const hasAllDeliveryDates = checkoutItems.every(item => scheduledItems[item.id]?.date);
-                const hasAllIndividualPickups = checkoutItems.filter(item => !scheduledItems[item.id]?.sameDateTime).every(item => scheduledItems[item.id]?.pickupDate);
+                // Only require pick-up dates for items that are extending rental duration
+                const hasAllIndividualPickups = checkoutItems.filter(item =>
+                  !scheduledItems[item.id]?.sameDateTime && scheduledItems[item.id]?.extendDuration
+                ).every(item => scheduledItems[item.id]?.pickupDate);
                 const hasSynchronizedPickup = !checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) ||
+                  !scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.extendDuration ||
                   scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate;
                 const hasValidDuration = !durationError;
                 return !(hasAllDeliveryDates && hasAllIndividualPickups && hasSynchronizedPickup && hasValidDuration);
@@ -1081,13 +1339,17 @@ export default function CheckoutPage() {
               className="btn-primary"
               title={(() => {
                 const hasAllDeliveryDates = checkoutItems.every(item => scheduledItems[item.id]?.date);
-                const hasAllIndividualPickups = checkoutItems.filter(item => !scheduledItems[item.id]?.sameDateTime).every(item => scheduledItems[item.id]?.pickupDate);
+                // Only require pick-up dates for items that are extending rental duration
+                const hasAllIndividualPickups = checkoutItems.filter(item =>
+                  !scheduledItems[item.id]?.sameDateTime && scheduledItems[item.id]?.extendDuration
+                ).every(item => scheduledItems[item.id]?.pickupDate);
                 const hasSynchronizedPickup = !checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) ||
+                  !scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.extendDuration ||
                   scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate;
                 const hasValidDuration = !durationError;
 
                 if (!hasValidDuration) return 'Minimum booking duration is 1 day. Please adjust your pick-up date.';
-                if (!(hasAllDeliveryDates && hasAllIndividualPickups && hasSynchronizedPickup)) return 'Please complete all date selections to continue';
+                if (!(hasAllDeliveryDates && hasAllIndividualPickups && hasSynchronizedPickup)) return 'Please complete all required date selections to continue';
                 return '';
               })()}
             >
@@ -1214,11 +1476,13 @@ export default function CheckoutPage() {
                           <div>
                             <span className="text-gray-600">Pick-up:</span>
                             <p className="font-medium text-gray-900">
-                              {schedule?.pickupDate ? new Date(schedule.pickupDate).toLocaleString() : 'Not scheduled'}
+                              {schedule?.date ? (() => {
+                                const deliveryDate = new Date(schedule.date);
+                                const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
+                                return pickupDate.toLocaleString();
+                              })() : 'Not scheduled'}
                             </p>
-                            {schedule?.pickupNotes && (
-                              <p className="text-xs text-gray-500 mt-1">Notes: {schedule.pickupNotes}</p>
-                            )}
+                            <p className="text-xs text-gray-500 mt-1">Auto-calculated: 24 hours after delivery</p>
                           </div>
                         </div>
                       </div>

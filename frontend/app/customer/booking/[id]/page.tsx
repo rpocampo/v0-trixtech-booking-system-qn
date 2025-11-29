@@ -48,6 +48,9 @@ export default function BookingPage() {
     bookingDate: '',
     deliveryTime: '',
     notes: '',
+    extendRental: false,
+    extendedDays: 0,
+    extendedHours: 0,
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -470,8 +473,10 @@ export default function BookingPage() {
         return;
       }
 
-      // Calculate final price for summary
-      const calculatedPrice = (pricingInfo?.calculatedPrice || service.basePrice) * booking.quantity;
+      // Calculate final price for summary (accounting for extended rental duration)
+      const basePrice = pricingInfo?.calculatedPrice || service.basePrice;
+      const totalDays = booking.extendRental ? (1 + (booking.extendedDays || 0)) : 1;
+      const calculatedPrice = basePrice * totalDays * booking.quantity;
 
       // Prepare booking summary data
       const summaryData = {
@@ -485,13 +490,17 @@ export default function BookingPage() {
           quantity: booking.quantity,
           bookingDate: booking.bookingDate,
           deliveryTime: booking.deliveryTime,
-          notes: booking.notes
+          notes: booking.notes,
+          extendRental: booking.extendRental,
+          extendedDays: booking.extendedDays,
+          extendedHours: booking.extendedHours
         },
         pricing: {
           unitPrice: pricingInfo?.calculatedPrice || service.basePrice,
           totalPrice: calculatedPrice,
           discount: pricingInfo?.discount || 0,
-          daysBeforeEvent: selectedDate ? Math.max(0, Math.ceil((selectedDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : 0
+          daysBeforeEvent: selectedDate ? Math.max(0, Math.ceil((selectedDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : 0,
+          totalDays: booking.extendRental ? (1 + (booking.extendedDays || 0)) : 1
         },
         availability: availabilityStatus
       };
@@ -532,6 +541,9 @@ export default function BookingPage() {
           bookingDate: booking.bookingDate,
           deliveryTime: booking.deliveryTime,
           notes: booking.notes,
+          extendRental: booking.extendRental,
+          extendedDays: booking.extendedDays,
+          extendedHours: booking.extendedHours,
         }),
       });
 
@@ -667,29 +679,92 @@ export default function BookingPage() {
               )}
             </div>
 
-            {/* Delivery Time Selection - Only show for services that require delivery */}
+            {/* Rental Duration Extension - Only show for equipment/services that require delivery */}
             {availabilityStatus?.requiresDelivery && (
               <div>
-                <label className="block text-sm font-medium mb-2">Delivery Time</label>
-                <select
-                  value={booking.deliveryTime}
-                  onChange={(e) => setBooking({ ...booking, deliveryTime: e.target.value })}
-                  className="input-field"
-                  required
-                >
-                  <option value="">Select delivery time</option>
-                  {Array.from({ length: 10 }, (_, i) => {
-                    const hour = 8 + i; // 8 AM to 6 PM
-                    const timeString = `${hour.toString().padStart(2, '0')}:00`;
-                    const displayTime = hour <= 12 ? `${hour}:00 AM` : `${hour - 12}:00 PM`;
-                    return (
-                      <option key={timeString} value={timeString}>
-                        {displayTime}
-                      </option>
-                    );
-                  })}
-                </select>
-                <p className="text-sm text-[var(--muted)] mt-1">
+                <label className="block text-sm font-medium mb-2">Rental Duration</label>
+
+                {/* Extension Checkbox */}
+                <div className="flex items-center gap-2 mb-3">
+                  <input
+                    type="checkbox"
+                    id="extend-rental"
+                    checked={booking.extendRental || false}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      setBooking({
+                        ...booking,
+                        extendRental: isChecked,
+                        extendedDays: isChecked ? (booking.extendedDays || 1) : 0,
+                        extendedHours: isChecked ? (booking.extendedHours || 0) : 0
+                      });
+                    }}
+                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label
+                    htmlFor="extend-rental"
+                    className="text-sm text-gray-700 font-medium cursor-pointer"
+                  >
+                    Extend rental duration beyond 1 day
+                  </label>
+                </div>
+
+                {/* Extension Controls */}
+                {booking.extendRental && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-blue-800 mb-1">
+                          Additional Days
+                        </label>
+                        <select
+                          value={booking.extendedDays || 1}
+                          onChange={(e) => setBooking({
+                            ...booking,
+                            extendedDays: parseInt(e.target.value)
+                          })}
+                          className="input-field text-sm"
+                        >
+                          {Array.from({ length: 30 }, (_, i) => i + 1).map(days => (
+                            <option key={days} value={days}>{days} day{days !== 1 ? 's' : ''}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-blue-800 mb-1">
+                          Additional Hours
+                        </label>
+                        <select
+                          value={booking.extendedHours || 0}
+                          onChange={(e) => setBooking({
+                            ...booking,
+                            extendedHours: parseInt(e.target.value)
+                          })}
+                          className="input-field text-sm"
+                        >
+                          <option value={0}>0 hours</option>
+                          {Array.from({ length: 23 }, (_, i) => i + 1).map(hours => (
+                            <option key={hours} value={hours}>{hours} hour{hours !== 1 ? 's' : ''}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-2">
+                      Each rental lasts 1 day and the duration starts after the service or equipment is delivered.
+                    </p>
+                  </div>
+                )}
+
+                {/* Default 1-day rental note */}
+                {!booking.extendRental && (
+                  <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium">Standard Rental:</span> Each rental lasts 1 day and the duration starts after the service or equipment is delivered.
+                    </p>
+                  </div>
+                )}
+
+                <p className="text-sm text-[var(--muted)] mt-2">
                   Delivery truck availability will be checked automatically
                 </p>
               </div>
@@ -725,6 +800,16 @@ export default function BookingPage() {
                     <span className="font-medium text-gray-800">{Math.max(0, Math.ceil((selectedDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)))} days</span>
                   </div>
                 )}
+                {/* Rental Duration Display */}
+                {availabilityStatus?.requiresDelivery && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Rental Duration:</span>
+                    <span className="font-medium text-gray-800">
+                      {booking.extendRental ? `${1 + (booking.extendedDays || 0)} days` : '1 day'}
+                      {booking.extendRental && booking.extendedHours ? ` + ${booking.extendedHours} hours` : ''}
+                    </span>
+                  </div>
+                )}
                 {pricingInfo && pricingInfo.discount > 0 && (
                   <div className="flex justify-between items-center text-green-600">
                     <span>Discount applied:</span>
@@ -736,11 +821,17 @@ export default function BookingPage() {
                     <span className="text-gray-800">Total Price:</span>
                     <div className="text-right">
                       <div className="text-[var(--primary)] text-xl">
-                        ₱{(calculatedPrice || service.basePrice) * booking.quantity}
+                        ₱{calculatedPrice}
                       </div>
                       {pricingInfo && pricingInfo.discount > 0 && (
                         <div className="text-xs text-gray-500 mt-1">
-                          was ₱{service.basePrice * booking.quantity}
+                          was ₱{service.basePrice * (booking.extendRental ? (1 + (booking.extendedDays || 0)) : 1) * booking.quantity}
+                        </div>
+                      )}
+                      {availabilityStatus?.requiresDelivery && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          ₱{pricingInfo?.calculatedPrice || service.basePrice}/day × {booking.extendRental ? (1 + (booking.extendedDays || 0)) : 1} day{booking.extendRental && (booking.extendedDays || 0) !== 0 ? 's' : ''}
+                          {booking.quantity > 1 ? ` × ${booking.quantity} items` : ''}
                         </div>
                       )}
                     </div>
@@ -961,6 +1052,15 @@ export default function BookingPage() {
                       <div className="flex justify-between">
                         <span className="text-gray-600">Delivery Time:</span>
                         <span className="font-medium text-gray-900">{bookingSummaryData.booking.deliveryTime}</span>
+                      </div>
+                    )}
+                    {bookingSummaryData.booking.extendRental && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Extended Rental:</span>
+                        <span className="font-medium text-gray-900">
+                          {1 + (bookingSummaryData.booking.extendedDays || 0)} days
+                          {bookingSummaryData.booking.extendedHours ? ` + ${bookingSummaryData.booking.extendedHours} hours` : ''}
+                        </span>
                       </div>
                     )}
                     {bookingSummaryData.booking.notes && (

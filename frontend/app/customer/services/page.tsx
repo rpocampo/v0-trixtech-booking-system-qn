@@ -447,13 +447,13 @@ export default function Services() {
 
                   {/* Service Details */}
                   <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
-                    {service.serviceType === 'service' && service.duration && (
+                    {service.serviceType === 'service' && (
                       <div className="flex items-center justify-between text-xs sm:text-sm">
                         <span className="text-[var(--muted)] flex items-center gap-1 flex-1 min-w-0">
                           <span>⏱️</span>
                           <span className="truncate">Duration</span>
                         </span>
-                        <span className="font-semibold text-[var(--foreground)] flex-shrink-0 ml-2">{service.duration} min</span>
+                        <span className="font-semibold text-[var(--foreground)] flex-shrink-0 ml-2">1 day</span>
                       </div>
                     )}
 
@@ -626,10 +626,10 @@ export default function Services() {
                           <span className="font-medium capitalize">{selectedService.location}</span>
                         </div>
                       )}
-                      {selectedService.duration && (
+                      {selectedService.serviceType === 'service' && (
                         <div className="flex justify-between">
                           <span className="text-[var(--muted)]">Duration:</span>
-                          <span className="font-medium">{selectedService.duration} minutes</span>
+                          <span className="font-medium">1 day</span>
                         </div>
                       )}
                       {(selectedService.serviceType === 'equipment' || selectedService.serviceType === 'supply') && selectedService.quantity && (

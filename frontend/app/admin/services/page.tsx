@@ -62,7 +62,7 @@ export default function AdminServices() {
     category: 'equipment',
     serviceType: 'service', // Allow selection between service, equipment, supply
     price: 0,
-    duration: 1,
+    duration: 1, // Default to 1 day as per system update
     includedItems: [] as string[],
     includedEquipment: [] as Array<{equipmentId: string, quantity: number, name: string}>,
     image: null as File | null,
@@ -273,7 +273,7 @@ export default function AdminServices() {
           category: 'equipment',
           serviceType: 'service',
           price: 0,
-          duration: 1,
+          duration: 1, // Reset to 1 day default
           includedItems: [],
           includedEquipment: [],
           image: null,
@@ -349,7 +349,7 @@ export default function AdminServices() {
       category: 'equipment',
       serviceType: 'service',
       price: 0,
-      duration: 1,
+      duration: 1, // Reset to 1 day default
       includedItems: [],
       includedEquipment: [],
       image: null,
