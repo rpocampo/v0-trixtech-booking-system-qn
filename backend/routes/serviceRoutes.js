@@ -269,9 +269,11 @@ router.post('/', adminMiddleware, upload.fields([
     // Handle quantity for equipment/supplies
     if ((serviceType === 'equipment' || serviceType === 'supply') && quantity) {
       serviceData.quantity = parseInt(quantity);
-      if (maxOrder) {
-        serviceData.maxOrder = parseInt(maxOrder);
-      }
+    }
+
+    // Handle maxOrder for all service types
+    if (maxOrder) {
+      serviceData.maxOrder = parseInt(maxOrder);
     }
 
     // Handle image uploads
@@ -413,10 +415,12 @@ router.put('/:id', adminMiddleware, upload.fields([
       // Check if this is an equipment/supply item from the database
       if (oldService.serviceType === 'equipment' || oldService.serviceType === 'supply') {
         updateData.quantity = parseInt(quantity);
-        if (maxOrder !== undefined) {
-          updateData.maxOrder = parseInt(maxOrder);
-        }
       }
+    }
+
+    // Handle maxOrder for all service types
+    if (maxOrder !== undefined) {
+      updateData.maxOrder = parseInt(maxOrder);
     }
 
     // Handle image uploads

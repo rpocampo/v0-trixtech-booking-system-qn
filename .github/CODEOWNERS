@@ -1,0 +1,56 @@
+# TRIXTECH Booking System - Code Ownership Rules
+# This file defines who owns which parts of the codebase for automatic PR review requests
+
+# Global owners (must review all changes)
+* @trixtech-team/leads
+
+# Backend ownership
+/backend/ @trixtech-team/backend
+/backend/**/* @trixtech-team/backend
+
+# Frontend ownership
+/frontend/ @trixtech-team/frontend
+/frontend/**/* @trixtech-team/frontend
+
+# DevOps/Infrastructure ownership
+/.github/ @trixtech-team/devops
+/.github/**/* @trixtech-team/devops
+docker-compose*.yml @trixtech-team/devops
+Dockerfile* @trixtech-team/devops
+nginx/ @trixtech-team/devops
+monitoring/ @trixtech-team/devops
+
+# Database and scripts
+backend/scripts/ @trixtech-team/backend @trixtech-team/devops
+backend/config/ @trixtech-team/backend @trixtech-team/devops
+
+# Testing
+backend/__tests__/ @trixtech-team/backend
+backend/tests/ @trixtech-team/backend
+test_*.js @trixtech-team/backend @trixtech-team/devops
+
+# Documentation
+*.md @trixtech-team/docs
+README.md @trixtech-team/docs
+DEPLOYMENT_GUIDE.md @trixtech-team/devops @trixtech-team/docs
+SYSTEM_EXPLANATION.md @trixtech-team/docs
+MAINTENANCE_GUIDE.md @trixtech-team/devops @trixtech-team/docs
+
+# Configuration files
+.env* @trixtech-team/devops
+package.json @trixtech-team/backend @trixtech-team/frontend
+tsconfig.json @trixtech-team/frontend
+jest.config.js @trixtech-team/backend
+
+# Security-sensitive files
+backend/routes/authRoutes.js @trixtech-team/backend @trixtech-team/security
+backend/middleware/auth.js @trixtech-team/backend @trixtech-team/security
+backend/utils/paymentService.js @trixtech-team/backend @trixtech-team/security
+
+# Admin features
+frontend/app/admin/ @trixtech-team/backend @trixtech-team/frontend
+backend/routes/ @trixtech-team/backend
+
+# Emergency contacts (for critical changes)
+# Uncomment and add actual usernames when needed
+# * @emergency-contact-1 @emergency-contact-2

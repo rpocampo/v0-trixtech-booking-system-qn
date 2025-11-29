@@ -1,0 +1,340 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "TRIXTECH Backup Monitoring",
+    "tags": ["trixtech", "backup", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Backup Status Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "backup_status{status=\"success\"}",
+            "legendFormat": "Successful Backups"
+          },
+          {
+            "expr": "backup_status{status=\"failed\"}",
+            "legendFormat": "Failed Backups"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Backup Verification Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "backup_verification_status",
+            "legendFormat": "Verification Status"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "FAILED",
+                    "color": "red"
+                  },
+                  "1": {
+                    "text": "PASSED",
+                    "color": "green"
+                  }
+                },
+                "type": "value"
+              }
+            ]
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Backup Size Trend",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "backup_size_bytes",
+            "legendFormat": "Backup Size (bytes)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "Backup Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "backup_duration_seconds",
+            "legendFormat": "Duration (seconds)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      },
+      {
+        "id": 5,
+        "title": "Backup Storage Usage",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "(node_filesystem_size_bytes{mountpoint=\"/backups\"} - node_filesystem_avail_bytes{mountpoint=\"/backups\"}) / node_filesystem_size_bytes{mountpoint=\"/backups\"} * 100",
+            "legendFormat": "Storage Usage %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 70
+                },
+                {
+                  "color": "red",
+                  "value": 85
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 6,
+        "title": "Backup Age (Hours)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "(time() - backup_last_success_timestamp) / 3600",
+            "legendFormat": "Hours since last successful backup"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "h",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 24
+                },
+                {
+                  "color": "red",
+                  "value": 48
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 8,
+          "y": 16
+        }
+      },
+      {
+        "id": 7,
+        "title": "Backup Types Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "backup_status",
+            "legendFormat": "{{type}} - {{status}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "displayMode": "color-background"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "status"
+              },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "options": {
+                        "failed": {
+                          "color": "red",
+                          "text": "FAILED"
+                        },
+                        "success": {
+                          "color": "green",
+                          "text": "SUCCESS"
+                        }
+                      },
+                      "type": "value"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 16,
+          "y": 16
+        }
+      },
+      {
+        "id": 8,
+        "title": "Backup Success Rate (24h)",
+        "type": "bargauge",
+        "targets": [
+          {
+            "expr": "rate(backup_status{status=\"success\"}[24h]) / (rate(backup_status{status=\"success\"}[24h]) + rate(backup_status{status=\"failed\"}[24h])) * 100",
+            "legendFormat": "Success Rate %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 80
+                },
+                {
+                  "color": "green",
+                  "value": 95
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 24
+        }
+      },
+      {
+        "id": 9,
+        "title": "Recent Backup Events",
+        "type": "logs",
+        "targets": [
+          {
+            "expr": "{job=\"backup-monitor\"}",
+            "legendFormat": ""
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 24
+        }
+      }
+    ],
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Backup Failures",
+          "datasource": "Prometheus",
+          "expr": "backup_status{status=\"failed\"}",
+          "iconColor": "red",
+          "textFormat": "Backup failed"
+        }
+      ]
+    },
+    "refresh": "5m",
+    "schemaVersion": 27,
+    "version": 0,
+    "links": []
+  }
+}

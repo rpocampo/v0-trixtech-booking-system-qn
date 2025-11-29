@@ -1,13 +1,11 @@
 {
-  "/admin/reports/page": "app/admin/reports/page.js",
-  "/customer/bookings/page": "app/customer/bookings/page.js",
-  "/customer/dashboard/page": "app/customer/dashboard/page.js",
-  "/customer/services/page": "app/customer/services/page.js",
   "/admin/bookings/page": "app/admin/bookings/page.js",
-  "/admin/dashboard/page": "app/admin/dashboard/page.js",
+  "/customer/checkout/page": "app/customer/checkout/page.js",
+  "/customer/bookings/page": "app/customer/bookings/page.js",
+  "/admin/reports/page": "app/admin/reports/page.js",
   "/admin/customers/page": "app/admin/customers/page.js",
   "/admin/services/page": "app/admin/services/page.js",
   "/admin/inventory/page": "app/admin/inventory/page.js",
-  "/customer/suggestions/page": "app/customer/suggestions/page.js",
-  "/customer/notifications/page": "app/customer/notifications/page.js"
+  "/admin/notifications/page": "app/admin/notifications/page.js",
+  "/admin/dashboard/page": "app/admin/dashboard/page.js"
 }

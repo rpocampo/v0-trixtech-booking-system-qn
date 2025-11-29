@@ -1,0 +1,134 @@
+name: Rollback Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      target_commit:
+        description: 'Target commit SHA to rollback to (leave empty for previous deployment)'
+        required: false
+        type: string
+
+env:
+  STAGING_HOST: ${{ secrets.STAGING_HOST }}
+  STAGING_USER: ${{ secrets.STAGING_USER }}
+  STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+  PROD_HOST: ${{ secrets.PROD_HOST }}
+  PROD_USER: ${{ secrets.PROD_USER }}
+  PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ${{ github.repository }}/backend
+  FRONTEND_IMAGE: ${{ github.repository }}/frontend
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.target_commit || 'HEAD~1' }}
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        if [ "${{ github.event.inputs.environment }}" = "production" ]; then
+          echo "$PROD_SSH_KEY" > ~/.ssh/id_rsa
+          HOST=$PROD_HOST
+          USER=$PROD_USER
+        else
+          echo "$STAGING_SSH_KEY" > ~/.ssh/id_rsa
+          HOST=$STAGING_HOST
+          USER=$STAGING_USER
+        fi
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H $HOST >> ~/.ssh/known_hosts
+        echo "HOST=$HOST" >> $GITHUB_ENV
+        echo "USER=$USER" >> $GITHUB_ENV
+
+    - name: Determine rollback target
+      run: |
+        if [ -n "${{ github.event.inputs.target_commit }}" ]; then
+          TARGET_COMMIT=${{ github.event.inputs.target_commit }}
+        else
+          TARGET_COMMIT=$(git rev-parse HEAD~1)
+        fi
+        echo "TARGET_COMMIT=$TARGET_COMMIT" >> $GITHUB_ENV
+        echo "Rolling back to commit: $TARGET_COMMIT"
+
+    - name: Execute rollback
+      run: |
+        ssh $USER@$HOST << EOF
+          echo "Starting rollback to commit $TARGET_COMMIT..."
+          cd /opt/trixtech
+
+          # Checkout target commit
+          git checkout $TARGET_COMMIT
+
+          # Pull specific images for the commit
+          BACKEND_TAG=${TARGET_COMMIT:0:7}
+          FRONTEND_TAG=${TARGET_COMMIT:0:7}
+
+          echo "Pulling images for commit $TARGET_COMMIT..."
+          docker pull $REGISTRY/$BACKEND_IMAGE:$BACKEND_TAG || docker pull $REGISTRY/$BACKEND_IMAGE:latest
+          docker pull $REGISTRY/$FRONTEND_IMAGE:$FRONTEND_TAG || docker pull $REGISTRY/$FRONTEND_IMAGE:latest
+
+          # Stop current services
+          echo "Stopping current services..."
+          docker-compose -f docker-compose.prod.yml down
+
+          # Restore from backup if available
+          if [ -f docker-compose.prod.yml.backup ]; then
+            echo "Restoring docker-compose from backup..."
+            cp docker-compose.prod.yml.backup docker-compose.prod.yml
+          fi
+
+          # Start services with rollback images
+          echo "Starting services with rollback images..."
+          BACKEND_IMAGE_TAG=\${BACKEND_TAG:-latest}
+          FRONTEND_IMAGE_TAG=\${FRONTEND_TAG:-latest}
+          sed -i "s|image:.*backend|image: $REGISTRY/$BACKEND_IMAGE:\$BACKEND_IMAGE_TAG|" docker-compose.prod.yml
+          sed -i "s|image:.*frontend|image: $REGISTRY/$FRONTEND_IMAGE:\$FRONTEND_IMAGE_TAG|" docker-compose.prod.yml
+
+          docker-compose -f docker-compose.prod.yml up -d
+
+          # Wait and health check
+          echo "Waiting for services to restart..."
+          sleep 60
+
+          # Health checks
+          if curl -f --max-time 30 http://localhost:5000/api/health; then
+            echo "✅ Backend rollback successful"
+          else
+            echo "❌ Backend health check failed after rollback"
+            exit 1
+          fi
+
+          if curl -f --max-time 30 http://localhost:3000; then
+            echo "✅ Frontend rollback successful"
+          else
+            echo "❌ Frontend health check failed after rollback"
+            exit 1
+          fi
+
+          echo "Rollback completed successfully!"
+        EOF
+
+    - name: Slack Notification
+      uses: 8398a7/action-slack@v3
+      if: always()
+      with:
+        status: ${{ job.status }}
+        text: "Rollback completed for ${{ github.event.inputs.environment }} environment - rolled back to ${{ env.TARGET_COMMIT }}"
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

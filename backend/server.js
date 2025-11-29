@@ -18,11 +18,12 @@ const eventTypeRoutes = require('./routes/eventTypeRoutes');
 const otpRoutes = require('./routes/otpRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const recommendationsRoutes = require('./routes/recommendationsRoutes');
+const healthRoutes = require('./routes/healthRoutes');
 const { initializeEmailService } = require('./utils/emailService');
 const { processReservationQueue, cleanupExpiredReservations } = require('./utils/recommendationService');
 const { cleanupExpiredOTPs } = require('./utils/otpService');
 const { errorHandler, requestLogger } = require('./middleware/errorHandler');
-const { monitoringMiddleware, healthCheckHandler } = require('./utils/monitoring');
+const { monitoringMiddleware } = require('./utils/monitoring');
 
 dotenv.config();
 
@@ -67,8 +68,8 @@ app.use('/api/otp', otpRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
 
-// Enhanced health check with monitoring
-app.get('/api/health', healthCheckHandler);
+// Enhanced health check routes
+app.use('/api/health', healthRoutes);
 
 // Handle root path requests
 app.all('/', (req, res) => {

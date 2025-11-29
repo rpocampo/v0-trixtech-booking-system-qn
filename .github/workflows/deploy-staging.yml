@@ -1,0 +1,84 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ develop ]
+  workflow_dispatch:
+
+env:
+  STAGING_HOST: ${{ secrets.STAGING_HOST }}
+  STAGING_USER: ${{ secrets.STAGING_USER }}
+  STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ${{ github.repository }}/backend
+  FRONTEND_IMAGE: ${{ github.repository }}/frontend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "$STAGING_SSH_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H $STAGING_HOST >> ~/.ssh/known_hosts
+
+    - name: Deploy to staging
+      run: |
+        ssh $STAGING_USER@$STAGING_HOST << EOF
+          cd /opt/trixtech
+          git pull origin develop
+          echo "Pulling latest images..."
+          docker pull $REGISTRY/$BACKEND_IMAGE:latest
+          docker pull $REGISTRY/$FRONTEND_IMAGE:latest
+          docker pull mongo:7.0
+          docker pull redis:7.2-alpine
+          docker pull nginx:alpine
+          echo "Stopping existing containers..."
+          docker-compose -f docker-compose.prod.yml down
+          echo "Starting services..."
+          docker-compose -f docker-compose.prod.yml up -d
+          echo "Waiting for services to be healthy..."
+          sleep 30
+          echo "Checking backend health..."
+          curl -f http://localhost:5000/api/health || exit 1
+          echo "Checking frontend..."
+          curl -f http://localhost:3000 || exit 1
+          echo "Deployment successful!"
+        EOF
+
+    - name: Health check
+      run: |
+        ssh $STAGING_USER@$STAGING_HOST << EOF
+          echo "Performing final health checks..."
+          # Backend health
+          if curl -f --max-time 10 http://localhost:5000/api/health; then
+            echo "✅ Backend is healthy"
+          else
+            echo "❌ Backend health check failed"
+            exit 1
+          fi
+          # Frontend health
+          if curl -f --max-time 10 http://localhost:3000; then
+            echo "✅ Frontend is healthy"
+          else
+            echo "❌ Frontend health check failed"
+            exit 1
+          fi
+        EOF
+
+    - name: Slack Notification
+      uses: 8398a7/action-slack@v3
+      if: always()
+      with:
+        status: ${{ job.status }}
+        text: "Staging deployment completed for ${{ github.repository }} - ${{ github.sha }}"
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

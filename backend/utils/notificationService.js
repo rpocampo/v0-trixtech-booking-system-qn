@@ -159,6 +159,14 @@ const NOTIFICATION_TEMPLATES = {
     channels: ['in-app', 'email', 'sms'],
   },
 
+  BOOKING_CANCELLED_ADMIN: {
+    title: 'Booking Cancelled',
+    message: 'A customer booking has been cancelled.',
+    type: 'admin',
+    priority: 'medium',
+    channels: ['in-app', 'email'],
+  },
+
   BOOKING_COMPLETED: {
     title: 'Booking Completed',
     message: 'Your booking has been completed successfully.',
@@ -231,6 +239,14 @@ const NOTIFICATION_TEMPLATES = {
     channels: ['in-app', 'email'],
   },
 
+  PAYMENT_FAILED: {
+    title: 'Payment Failed',
+    message: 'Your payment could not be processed.',
+    type: 'payment',
+    priority: 'high',
+    channels: ['in-app', 'email'],
+  },
+
   SYSTEM_MAINTENANCE: {
     title: 'System Maintenance',
     message: 'Scheduled maintenance will occur soon.',
@@ -255,6 +271,266 @@ const sendTemplateNotification = async (userId, templateKey, customData = {}) =>
   return await createNotification(userId, notificationData);
 };
 
+// Alert notification system for monitoring
+class AlertNotificationService {
+  constructor() {
+    this.alertCache = new Map(); // For deduplication
+    this.escalationTimers = new Map(); // For escalation tracking
+  }
+
+  // Send Slack notification
+  async sendSlackAlert(alertData) {
+    const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+    if (!slackWebhookUrl) {
+      console.warn('Slack webhook URL not configured');
+      return;
+    }
+
+    const payload = {
+      text: `🚨 *${alertData.severity.toUpperCase()} ALERT*`,
+      attachments: [{
+        color: this.getSeverityColor(alertData.severity),
+        fields: [
+          {
+            title: 'Alert',
+            value: alertData.title,
+            short: true
+          },
+          {
+            title: 'Service',
+            value: alertData.service || 'system',
+            short: true
+          },
+          {
+            title: 'Description',
+            value: alertData.description,
+            short: false
+          },
+          {
+            title: 'Time',
+            value: new Date().toISOString(),
+            short: true
+          }
+        ],
+        footer: 'TRIXTECH Monitoring System'
+      }]
+    };
+
+    try {
+      const response = await fetch(slackWebhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        console.error('Failed to send Slack alert:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error sending Slack alert:', error);
+    }
+  }
+
+  // Send email alert via SendGrid
+  async sendEmailAlert(alertData) {
+    const sendgridApiKey = process.env.SENDGRID_API_KEY;
+    const alertEmail = process.env.ALERT_EMAIL_RECIPIENTS;
+
+    if (!sendgridApiKey || !alertEmail) {
+      console.warn('SendGrid API key or alert email recipients not configured');
+      return;
+    }
+
+    const sgMail = require('@sendgrid/mail');
+    sgMail.setApiKey(sendgridApiKey);
+
+    const msg = {
+      to: alertEmail.split(',').map(email => email.trim()),
+      from: process.env.SENDGRID_FROM_EMAIL || 'alerts@trixtech.com',
+      subject: `[${alertData.severity.toUpperCase()}] ${alertData.title}`,
+      html: this.generateAlertEmailHTML(alertData),
+    };
+
+    try {
+      await sgMail.send(msg);
+      console.log('Alert email sent successfully');
+    } catch (error) {
+      console.error('Error sending alert email:', error);
+    }
+  }
+
+  // Generate HTML for alert emails
+  generateAlertEmailHTML(alertData) {
+    const severityColors = {
+      critical: '#dc3545',
+      warning: '#ffc107',
+      info: '#17a2b8'
+    };
+
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background-color: ${severityColors[alertData.severity] || '#6c757d'}; color: white; padding: 20px; text-align: center;">
+          <h1 style="margin: 0;">${alertData.severity.toUpperCase()} ALERT</h1>
+          <h2 style="margin: 10px 0;">${alertData.title}</h2>
+        </div>
+        <div style="padding: 20px; border: 1px solid #ddd; border-top: none;">
+          <p><strong>Service:</strong> ${alertData.service || 'system'}</p>
+          <p><strong>Description:</strong> ${alertData.description}</p>
+          <p><strong>Time:</strong> ${new Date().toISOString()}</p>
+          ${alertData.value ? `<p><strong>Value:</strong> ${alertData.value}</p>` : ''}
+          ${alertData.labels ? `<p><strong>Labels:</strong> ${JSON.stringify(alertData.labels)}</p>` : ''}
+        </div>
+        <div style="background-color: #f8f9fa; padding: 10px; text-align: center; font-size: 12px; color: #6c757d;">
+          TRIXTECH Monitoring System - ${new Date().toLocaleString()}
+        </div>
+      </div>
+    `;
+  }
+
+  // Get severity color for Slack
+  getSeverityColor(severity) {
+    const colors = {
+      critical: 'danger',
+      warning: 'warning',
+      info: 'good'
+    };
+    return colors[severity] || 'good';
+  }
+
+  // Check for alert deduplication
+  isDuplicateAlert(alertKey, timeWindow = 300000) { // 5 minutes default
+    const now = Date.now();
+    const lastAlert = this.alertCache.get(alertKey);
+
+    if (lastAlert && (now - lastAlert) < timeWindow) {
+      return true;
+    }
+
+    this.alertCache.set(alertKey, now);
+    return false;
+  }
+
+  // Handle alert escalation
+  async handleAlertEscalation(alertData) {
+    const alertKey = `${alertData.title}-${alertData.service}`;
+    const escalationLevels = [
+      { delay: 0, channels: ['slack'] }, // Immediate
+      { delay: 5 * 60 * 1000, channels: ['slack', 'email'] }, // 5 minutes
+      { delay: 15 * 60 * 1000, channels: ['slack', 'email'] } // 15 minutes
+    ];
+
+    for (const level of escalationLevels) {
+      const timerKey = `${alertKey}-level-${escalationLevels.indexOf(level)}`;
+
+      if (this.escalationTimers.has(timerKey)) {
+        clearTimeout(this.escalationTimers.get(timerKey));
+      }
+
+      const timer = setTimeout(async () => {
+        // Check if alert is still active (this would need integration with Prometheus)
+        // For now, we'll send the escalation
+        await this.sendAlert(alertData, level.channels);
+        this.escalationTimers.delete(timerKey);
+      }, level.delay);
+
+      this.escalationTimers.set(timerKey, timer);
+    }
+  }
+
+  // Send alert through multiple channels
+  async sendAlert(alertData, channels = ['slack']) {
+    const promises = [];
+
+    if (channels.includes('slack')) {
+      promises.push(this.sendSlackAlert(alertData));
+    }
+
+    if (channels.includes('email')) {
+      promises.push(this.sendEmailAlert(alertData));
+    }
+
+    await Promise.allSettled(promises);
+  }
+
+  // Process incoming alert from Prometheus Alertmanager
+  async processAlert(alert) {
+    const alertKey = `${alert.labels.alertname}-${alert.labels.instance || 'system'}`;
+
+    // Check for deduplication
+    if (this.isDuplicateAlert(alertKey)) {
+      console.log(`Alert ${alertKey} deduplicated`);
+      return;
+    }
+
+    const alertData = {
+      title: alert.annotations.summary || alert.labels.alertname,
+      description: alert.annotations.description || '',
+      severity: alert.labels.severity || 'warning',
+      service: alert.labels.service || 'system',
+      value: alert.value,
+      labels: alert.labels
+    };
+
+    // Handle escalation for critical alerts
+    if (alertData.severity === 'critical') {
+      await this.handleAlertEscalation(alertData);
+    } else {
+      // Send immediate notification for non-critical alerts
+      await this.sendAlert(alertData);
+    }
+
+    // Also create in-app notification for admin users
+    try {
+      const adminUsers = await User.find({ role: 'admin' });
+      for (const admin of adminUsers) {
+        await createNotification(admin._id, {
+          title: alertData.title,
+          message: alertData.description,
+          type: 'system_alert',
+          priority: alertData.severity === 'critical' ? 'high' : 'medium',
+          channels: ['in-app'],
+          metadata: {
+            alertData,
+            source: 'monitoring'
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error creating in-app alert notification:', error);
+    }
+  }
+
+  // Clear escalation timers (call when alert is resolved)
+  clearEscalation(alertKey) {
+    for (const [key, timer] of this.escalationTimers.entries()) {
+      if (key.startsWith(alertKey)) {
+        clearTimeout(timer);
+        this.escalationTimers.delete(key);
+      }
+    }
+  }
+
+  // Cleanup old cached alerts
+  cleanupCache(maxAge = 3600000) { // 1 hour default
+    const now = Date.now();
+    for (const [key, timestamp] of this.alertCache.entries()) {
+      if (now - timestamp > maxAge) {
+        this.alertCache.delete(key);
+      }
+    }
+  }
+}
+
+// Global alert service instance
+const alertService = new AlertNotificationService();
+
+// Periodic cleanup
+setInterval(() => {
+  alertService.cleanupCache();
+}, 60000); // Clean every minute
+
 module.exports = {
   createNotification,
   getUserNotifications,
@@ -264,4 +540,6 @@ module.exports = {
   cleanupOldNotifications,
   sendTemplateNotification,
   NOTIFICATION_TEMPLATES,
+  AlertNotificationService,
+  alertService,
 };

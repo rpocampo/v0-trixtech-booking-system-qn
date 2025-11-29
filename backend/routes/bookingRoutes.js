@@ -5,6 +5,7 @@ const Service = require('../models/Service');
 const User = require('../models/User');
 const ReservationQueue = require('../models/ReservationQueue');
 const BookingAnalytics = require('../models/BookingAnalytics');
+const InventoryTransaction = require('../models/InventoryTransaction');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 const { sendBookingConfirmation, sendAdminBookingNotification, sendLowStockAlert } = require('../utils/emailService');
 const { sendTemplateNotification } = require('../utils/notificationService');
@@ -361,8 +362,26 @@ router.post('/', authMiddleware, async (req, res, next) => {
 
           // Decrease inventory if it's equipment or supply
           if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+            const previousStock = service.quantity;
             // Use batch tracking for inventory reduction (FIFO)
             await service.reduceBatchQuantity(requestedQuantity);
+            const newStock = service.quantity;
+
+            // Log inventory transaction
+            await InventoryTransaction.logTransaction({
+              serviceId,
+              bookingId: booking._id,
+              transactionType: 'booking_deduction',
+              quantity: -requestedQuantity, // Negative for deduction
+              previousStock,
+              newStock,
+              reason: `Booking deduction for service: ${service.name}`,
+              metadata: {
+                customerId: req.user.id,
+                bookingDate: bookingDateTime,
+                serviceName: service.name
+              }
+            });
 
             // Trigger low stock alert check
             try {
@@ -379,9 +398,28 @@ router.post('/', authMiddleware, async (req, res, next) => {
               try {
                 const equipmentService = await Service.findById(equipmentItem.equipmentId);
                 if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
+                  const previousStock = equipmentService.quantity;
                   // Use batch tracking for inventory reduction (FIFO)
                   await equipmentService.reduceBatchQuantity(equipmentItem.quantity);
-
+                  const newStock = equipmentService.quantity;
+     
+                  // Log inventory transaction for included equipment
+                  await InventoryTransaction.logTransaction({
+                    serviceId: equipmentItem.equipmentId,
+                    bookingId: booking._id,
+                    transactionType: 'booking_deduction',
+                    quantity: -equipmentItem.quantity, // Negative for deduction
+                    previousStock,
+                    newStock,
+                    reason: `Booking confirmation deduction for included equipment: ${equipmentService.name} (from service: ${service.name})`,
+                    metadata: {
+                      customerId: req.user.id,
+                      bookingDate: new Date(bookingIntent.bookingDate),
+                      mainServiceName: service.name,
+                      equipmentName: equipmentService.name
+                    }
+                  });
+     
                   // Trigger low stock alert check for equipment
                   try {
                     await triggerLowStockCheck(equipmentItem.equipmentId);
@@ -645,10 +683,10 @@ router.get('/', authMiddleware, async (req, res, next) => {
   }
 });
 
-// Get all bookings (admin only) - only show paid/partial bookings for transactions
+// Get all bookings (admin only) - show all bookings including pending for management
 router.get('/admin/all', adminMiddleware, async (req, res, next) => {
   try {
-    const { limit, includeUnpaid } = req.query;
+    const { limit, status, paymentStatus } = req.query;
     const limitNum = limit ? parseInt(limit) : undefined;
 
     let query = Booking.find()
@@ -656,9 +694,14 @@ router.get('/admin/all', adminMiddleware, async (req, res, next) => {
       .populate('customerId', 'name email phone')
       .sort({ createdAt: -1 });
 
-    // Only show paid or partially paid bookings unless explicitly requested
-    if (!includeUnpaid) {
-      query = query.where('paymentStatus').in(['partial', 'paid']);
+    // Apply status filter if provided
+    if (status) {
+      query = query.where('status').equals(status);
+    }
+
+    // Apply payment status filter if provided
+    if (paymentStatus) {
+      query = query.where('paymentStatus').equals(paymentStatus);
     }
 
     // Get total count before applying limit
@@ -743,7 +786,7 @@ router.put('/:id', adminMiddleware, async (req, res, next) => {
 // Cancel booking
 router.put('/:id/cancel', authMiddleware, async (req, res, next) => {
   try {
-    const booking = await Booking.findById(req.params.id);
+    const booking = await Booking.findById(req.params.id).populate('serviceId');
 
     if (!booking) {
       return res.status(404).json({ success: false, message: 'Booking not found' });
@@ -753,8 +796,105 @@ router.put('/:id/cancel', authMiddleware, async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
+    // If booking is pending/unpaid, restore inventory
+    if (booking.status === 'pending' && booking.paymentStatus === 'unpaid') {
+      const service = booking.serviceId;
+      if (service) {
+        // Restore inventory for equipment/supply items
+        if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+          const previousStock = service.quantity;
+          // Use batch tracking for inventory restoration (reverse of reduceBatchQuantity)
+          await service.restoreBatchQuantity(booking.quantity);
+          const newStock = service.quantity;
+
+          // Log inventory transaction for restoration
+          await InventoryTransaction.logTransaction({
+            serviceId: service._id,
+            bookingId: booking._id,
+            transactionType: 'booking_cancellation',
+            quantity: booking.quantity, // Positive for restoration
+            previousStock,
+            newStock,
+            reason: `Booking cancellation inventory restoration for service: ${service.name}`,
+            metadata: {
+              customerId: booking.customerId,
+              bookingDate: booking.bookingDate,
+              serviceName: service.name
+            }
+          });
+
+          console.log('Inventory restored after booking cancellation for service:', service.name);
+        }
+
+        // Restore inventory for included equipment in professional services
+        if (service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0) {
+          for (const equipmentItem of service.includedEquipment) {
+            try {
+              const equipmentService = await Service.findById(equipmentItem.equipmentId);
+              if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
+                const previousStock = equipmentService.quantity;
+                await equipmentService.restoreBatchQuantity(equipmentItem.quantity);
+                const newStock = equipmentService.quantity;
+
+                // Log inventory transaction for equipment restoration
+                await InventoryTransaction.logTransaction({
+                  serviceId: equipmentItem.equipmentId,
+                  bookingId: booking._id,
+                  transactionType: 'booking_cancellation',
+                  quantity: equipmentItem.quantity, // Positive for restoration
+                  previousStock,
+                  newStock,
+                  reason: `Booking cancellation inventory restoration for included equipment: ${equipmentService.name} (from service: ${service.name})`,
+                  metadata: {
+                    customerId: booking.customerId,
+                    bookingDate: booking.bookingDate,
+                    mainServiceName: service.name,
+                    equipmentName: equipmentService.name
+                  }
+                });
+
+                console.log('Inventory restored for included equipment:', equipmentService.name);
+              }
+            } catch (equipmentError) {
+              console.error('Error restoring equipment inventory:', equipmentError);
+            }
+          }
+        }
+      }
+    }
+
     booking.status = 'cancelled';
     await booking.save();
+
+    // Send cancellation notifications
+    try {
+      // Customer notification
+      await sendTemplateNotification(booking.customerId, 'BOOKING_CANCELLED', {
+        message: `Your booking for ${booking.serviceId?.name || 'Unknown Service'} has been cancelled.`,
+        metadata: {
+          bookingId: booking._id,
+          serviceId: booking.serviceId?._id,
+          amount: booking.totalPrice,
+        },
+      });
+
+      // Admin notification
+      const User = require('../models/User');
+      const adminUsers = await User.find({ role: 'admin' });
+      for (const admin of adminUsers) {
+        await sendTemplateNotification(admin._id, 'BOOKING_CANCELLED_ADMIN', {
+          message: `A booking for ${booking.serviceId?.name || 'Unknown Service'} has been cancelled.`,
+          metadata: {
+            bookingId: booking._id,
+            serviceId: booking.serviceId?._id,
+            amount: booking.totalPrice,
+            customerId: booking.customerId,
+          },
+        });
+      }
+    } catch (notificationError) {
+      console.error('Error sending cancellation notifications:', notificationError);
+    }
 
     res.json({ success: true, booking });
   } catch (error) {
@@ -1066,8 +1206,26 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
 
     // Decrease inventory for equipment/supply items using batch tracking
     if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+      const previousStock = service.quantity;
       // Use batch tracking for inventory reduction (FIFO)
       await service.reduceBatchQuantity(bookingIntent.quantity);
+      const newStock = service.quantity;
+
+      // Log inventory transaction
+      await InventoryTransaction.logTransaction({
+        serviceId: bookingIntent.serviceId,
+        bookingId: booking._id,
+        transactionType: 'booking_deduction',
+        quantity: -bookingIntent.quantity, // Negative for deduction
+        previousStock,
+        newStock,
+        reason: `Booking confirmation deduction for service: ${service.name}`,
+        metadata: {
+          customerId: req.user.id,
+          bookingDate: new Date(bookingIntent.bookingDate),
+          serviceName: service.name
+        }
+      });
 
       console.log('Inventory update completed using batch tracking for booking confirmation');
 
@@ -1086,8 +1244,27 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
         try {
           const equipmentService = await Service.findById(equipmentItem.equipmentId);
           if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
+            const previousStock = equipmentService.quantity;
             // Use batch tracking for inventory reduction (FIFO)
             await equipmentService.reduceBatchQuantity(equipmentItem.quantity);
+            const newStock = equipmentService.quantity;
+
+            // Log inventory transaction for included equipment
+            await InventoryTransaction.logTransaction({
+              serviceId: equipmentItem.equipmentId,
+              bookingId: booking._id,
+              transactionType: 'booking_deduction',
+              quantity: -equipmentItem.quantity, // Negative for deduction
+              previousStock,
+              newStock,
+              reason: `Booking deduction for included equipment: ${equipmentService.name} (from service: ${service.name})`,
+              metadata: {
+                customerId: req.user.id,
+                bookingDate: bookingDateTime,
+                mainServiceName: service.name,
+                equipmentName: equipmentService.name
+              }
+            });
 
             // Trigger low stock alert check for equipment
             try {

@@ -182,6 +182,36 @@ const cancelPayment = async (paymentId, reason = 'User cancelled') => {
     payment.failureReason = reason;
     await payment.save();
 
+    // Rollback inventory if this was a create-intent payment with a booking
+    if (payment.bookingId === null && payment.paymentData && payment.paymentData.bookingIntent) {
+      const bookingIntent = payment.paymentData.bookingIntent;
+      const Service = require('../models/Service');
+
+      // Restore inventory for equipment/supply items
+      const service = await Service.findById(bookingIntent.serviceId);
+      if (service && (service.serviceType === 'equipment' || service.serviceType === 'supply')) {
+        service.quantity = Math.min(service.quantity + bookingIntent.quantity, service.quantity); // Restore quantity
+        await service.save();
+        console.log('Inventory restored after payment cancellation for service:', service.name);
+      }
+
+      // Restore inventory for included equipment in professional services
+      if (service && service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0) {
+        for (const equipmentItem of service.includedEquipment) {
+          try {
+            const equipmentService = await Service.findById(equipmentItem.equipmentId);
+            if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
+              equipmentService.quantity = Math.min(equipmentService.quantity + equipmentItem.quantity, equipmentService.quantity);
+              await equipmentService.save();
+              console.log('Inventory restored for included equipment:', equipmentService.name);
+            }
+          } catch (equipmentError) {
+            console.error('Error restoring equipment inventory:', equipmentError);
+          }
+        }
+      }
+    }
+
     return { success: true, payment };
   } catch (error) {
     console.error('Error cancelling payment:', error);
@@ -261,6 +291,21 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
       }
 
       if (!isAvailable) {
+        // Send payment failed notification due to unavailability
+        try {
+          await sendTemplateNotification(payment.userId._id, 'PAYMENT_FAILED', {
+            message: `Your payment for ${service.name} could not be processed because the service is no longer available.`,
+            metadata: {
+              bookingId: null,
+              serviceId: service._id,
+              amount: payment.amount,
+              reason: 'Service no longer available',
+            },
+          });
+        } catch (notificationError) {
+          console.error('Error sending payment failed notification:', notificationError);
+        }
+  
         return { success: false, error: 'Service is no longer available for the selected date and time.' };
       }
 

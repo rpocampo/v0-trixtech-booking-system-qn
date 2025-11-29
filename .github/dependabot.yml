@@ -1,0 +1,113 @@
+version: 2
+updates:
+  # Backend dependencies
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Manila"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "trixtech-team/backend"
+    assignees:
+      - "trixtech-team/backend"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "backend"
+    ignore:
+      # Ignore major version updates for critical packages
+      - dependency-name: "mongoose"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "express"
+        update-types: ["version-update:semver-major"]
+
+  # Frontend dependencies
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Manila"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "trixtech-team/frontend"
+    assignees:
+      - "trixtech-team/frontend"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "frontend"
+    ignore:
+      # Ignore major version updates for React
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Manila"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "trixtech-team/devops"
+    assignees:
+      - "trixtech-team/devops"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "github-actions"
+      - "dependencies"
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Manila"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "trixtech-team/devops"
+    assignees:
+      - "trixtech-team/devops"
+    commit-message:
+      prefix: "docker"
+    labels:
+      - "docker"
+      - "backend"
+
+  - package-ecosystem: "docker"
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Manila"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "trixtech-team/devops"
+    assignees:
+      - "trixtech-team/devops"
+    commit-message:
+      prefix: "docker"
+    labels:
+      - "docker"
+      - "frontend"

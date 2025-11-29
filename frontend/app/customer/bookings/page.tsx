@@ -6,7 +6,7 @@ import { useSocket } from '../../../components/SocketProvider';
 
 interface Booking {
   _id: string;
-  serviceId: { name: string; basePrice: number; category: string; description?: string; serviceType?: string };
+  serviceId: { name: string; basePrice: number; category: string; description?: string; serviceType?: string; requiresDelivery?: boolean };
   quantity: number;
   bookingDate: string;
   status: string;
@@ -17,7 +17,17 @@ interface Booking {
   deliveryEndTime?: string;
   requiresDelivery?: boolean;
   createdAt?: string;
+  updatedAt?: string;
   notes?: string;
+  duration?: number;
+  dailyRate?: number;
+  appliedMultiplier?: number;
+  daysBeforeCheckout?: number;
+  deliveryDuration?: number;
+  itemQuantities?: { [itemName: string]: number };
+  amountPaid?: number;
+  remainingBalance?: number;
+  downPaymentPercentage?: number;
 }
 
 export default function Bookings() {
@@ -220,7 +230,9 @@ export default function Bookings() {
                       booking.serviceId?.category === 'tents-canopies' ||
                       booking.serviceId?.category === 'linens-tableware' ||
                       booking.serviceId?.serviceType === 'equipment' ||
-                      booking.serviceId?.serviceType === 'supply') ? (
+                      booking.serviceId?.serviceType === 'supply' ||
+                      booking.serviceId?.requiresDelivery === true ||
+                      (booking.serviceId?.includedEquipment && booking.serviceId.includedEquipment.length > 0)) ? (
                       <p className="text-[var(--muted)] text-sm">
                         🚚 Pick-up: {booking.deliveryStartTime
                           ? new Date(booking.deliveryStartTime).toLocaleString()
@@ -263,11 +275,29 @@ export default function Bookings() {
                     </span>
                   </div>
                   <div className="flex justify-between">
+                    <span className="text-sm font-medium text-gray-600">Amount Paid:</span>
+                    <span className="text-sm text-gray-700 font-semibold">₱{booking.amountPaid || 0}</span>
+                  </div>
+                  {booking.remainingBalance && booking.remainingBalance > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-600">Remaining Balance:</span>
+                      <span className="text-sm text-red-600 font-semibold">₱{booking.remainingBalance}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
                     <span className="text-sm font-medium text-gray-600">Created:</span>
                     <span className="text-sm text-gray-700">
                       {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : 'N/A'}
                     </span>
                   </div>
+                  {booking.updatedAt && (
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-600">Last Updated:</span>
+                      <span className="text-sm text-gray-700">
+                        {new Date(booking.updatedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-3">
                   <div className="flex justify-between">
@@ -278,10 +308,53 @@ export default function Bookings() {
                     <span className="text-sm font-medium text-gray-600">Unit Price:</span>
                     <span className="text-sm text-gray-700">₱{booking.serviceId?.basePrice || 0}</span>
                   </div>
+                  {booking.appliedMultiplier && booking.appliedMultiplier !== 1.0 && (
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-600">Applied Multiplier:</span>
+                      <span className="text-sm text-gray-700">{booking.appliedMultiplier}x</span>
+                    </div>
+                  )}
+                  {booking.daysBeforeCheckout && booking.daysBeforeCheckout > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-600">Days Before Event:</span>
+                      <span className="text-sm text-gray-700">{booking.daysBeforeCheckout} days</span>
+                    </div>
+                  )}
+                  {booking.duration && booking.duration > 1 && (
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-600">Duration:</span>
+                      <span className="text-sm text-gray-700">{booking.duration} days</span>
+                    </div>
+                  )}
+                  {booking.dailyRate && booking.dailyRate > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-600">Daily Rate:</span>
+                      <span className="text-sm text-gray-700">₱{booking.dailyRate}</span>
+                    </div>
+                  )}
+                  {booking.deliveryDuration && booking.requiresDelivery && (
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium text-gray-600">Delivery Duration:</span>
+                      <span className="text-sm text-gray-700">{booking.deliveryDuration} minutes</span>
+                    </div>
+                  )}
                   {booking.notes && (
                     <div className="col-span-2">
                       <span className="text-sm font-medium text-gray-600">Notes:</span>
                       <p className="text-sm text-gray-700 mt-1 bg-gray-50 p-2 rounded">{booking.notes}</p>
+                    </div>
+                  )}
+                  {booking.itemQuantities && Object.keys(booking.itemQuantities).length > 0 && (
+                    <div className="col-span-2">
+                      <span className="text-sm font-medium text-gray-600">Item Breakdown:</span>
+                      <div className="mt-1 space-y-1">
+                        {Object.entries(booking.itemQuantities).map(([item, qty]) => (
+                          <div key={item} className="flex justify-between text-sm bg-gray-50 p-2 rounded">
+                            <span>{item}:</span>
+                            <span>{qty} item{qty !== 1 ? 's' : ''}</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

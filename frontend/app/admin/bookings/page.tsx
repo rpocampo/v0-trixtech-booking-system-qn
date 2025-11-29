@@ -1,11 +1,26 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSocket } from '../../../components/SocketProvider';
 
 interface Booking {
   _id: string;
   customerId: { name: string; email: string };
-  serviceId: { _id: string; name: string; price: number; includedItems?: string[]; quantity?: number; serviceType?: string };
+  serviceId: {
+    _id: string;
+    name: string;
+    price: number;
+    category?: string;
+    includedItems?: string[];
+    includedEquipment?: Array<{
+      equipmentId: string;
+      quantity: number;
+      name: string;
+    }>;
+    quantity?: number;
+    serviceType?: string;
+    requiresDelivery?: boolean
+  };
   bookingDate: string;
   status: string;
   paymentStatus: string;
@@ -20,9 +35,17 @@ interface Booking {
   deliveryStartTime?: string;
   deliveryEndTime?: string;
   requiresDelivery?: boolean;
+  duration?: number;
+  dailyRate?: number;
+  appliedMultiplier?: number;
+  daysBeforeCheckout?: number;
+  deliveryDuration?: number;
+  downPaymentPercentage?: number;
+  notes?: string;
 }
 
 export default function AdminBookings() {
+  const { socket } = useSocket();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,38 +70,71 @@ export default function AdminBookings() {
   const [updateMessage, setUpdateMessage] = useState('');
   const [updateMessageType, setUpdateMessageType] = useState<'success' | 'error' | ''>('');
 
-  useEffect(() => {
-    const fetchBookings = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
+  const fetchBookings = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5000/api/bookings/admin/all', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.status === 401) {
+        // Token expired or invalid, don't log as error
         setLoading(false);
         return;
       }
 
-      try {
-        const response = await fetch('http://localhost:5000/api/bookings/admin/all', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (response.status === 401) {
-          // Token expired or invalid, don't log as error
-          setLoading(false);
-          return;
-        }
-
-        const data = await response.json();
-        if (data.success) {
-          setBookings(data.bookings);
-        }
-      } catch (error) {
-        console.error('Failed to fetch bookings:', error);
-      } finally {
-        setLoading(false);
+      const data = await response.json();
+      if (data.success) {
+        setBookings(data.bookings);
       }
-    };
+    } catch (error) {
+      console.error('Failed to fetch bookings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchBookings();
   }, []);
+
+  // Real-time booking updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleNewPendingBooking = (data: any) => {
+      console.log('New pending booking received:', data);
+      // Refresh bookings list
+      fetchBookings();
+    };
+
+    const handleNewConfirmedBooking = (data: any) => {
+      console.log('New confirmed booking received:', data);
+      // Refresh bookings list
+      fetchBookings();
+    };
+
+    const handleBookingUpdated = (data: any) => {
+      console.log('Booking updated:', data);
+      // Refresh bookings list
+      fetchBookings();
+    };
+
+    socket.on('new-pending-booking', handleNewPendingBooking);
+    socket.on('new-confirmed-booking', handleNewConfirmedBooking);
+    socket.on('booking-updated', handleBookingUpdated);
+
+    return () => {
+      socket.off('new-pending-booking', handleNewPendingBooking);
+      socket.off('new-confirmed-booking', handleNewConfirmedBooking);
+      socket.off('booking-updated', handleBookingUpdated);
+    };
+  }, [socket]);
 
   useEffect(() => {
     let filtered = bookings;
@@ -136,19 +192,41 @@ export default function AdminBookings() {
       itemQuantities: booking.itemQuantities || {},
     });
 
-    // Fetch inventory levels for the service
+    // Fetch inventory levels for the service and all included equipment
     if (booking.serviceId && booking.serviceId._id) {
       try {
         const token = localStorage.getItem('token');
-        const response = await fetch(`http://localhost:5000/api/inventory/service/${booking.serviceId._id}/batches`, {
+
+        // Fetch inventory for main service
+        const mainServiceResponse = await fetch(`http://localhost:5000/api/services/${booking.serviceId._id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const data = await response.json();
-        if (data.success) {
+        const mainServiceData = await mainServiceResponse.json();
+        if (mainServiceData.success) {
           setInventoryLevels(prev => ({
             ...prev,
-            [booking.serviceId._id]: data.batchDetails.totalQuantity
+            [booking.serviceId._id]: mainServiceData.service.quantity || 0
           }));
+        }
+
+        // Fetch inventory for included equipment items
+        if (booking.serviceId.includedEquipment && booking.serviceId.includedEquipment.length > 0) {
+          for (const equipment of booking.serviceId.includedEquipment) {
+            try {
+              const equipmentResponse = await fetch(`http://localhost:5000/api/services/${equipment.equipmentId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              const equipmentData = await equipmentResponse.json();
+              if (equipmentData.success) {
+                setInventoryLevels(prev => ({
+                  ...prev,
+                  [equipment.equipmentId]: equipmentData.service.quantity || 0
+                }));
+              }
+            } catch (equipmentError) {
+              console.error('Failed to fetch equipment inventory:', equipmentError);
+            }
+          }
         }
       } catch (error) {
         console.error('Failed to fetch inventory levels:', error);
@@ -681,9 +759,9 @@ export default function AdminBookings() {
                           <div>
                             <span className="text-sm text-gray-600">Service:</span>
                             <p className="font-medium">{selectedBooking.serviceId?.name || 'Unknown Service'}</p>
-                            {selectedBooking.serviceId?.includedItems && selectedBooking.serviceId.includedItems.length > 0 && (
+                            {selectedBooking.serviceId?.includedEquipment && selectedBooking.serviceId.includedEquipment.length > 0 && (
                               <p className="text-xs text-gray-500 mt-1">
-                                Includes: {selectedBooking.serviceId.includedItems.join(', ')}
+                                Includes: {selectedBooking.serviceId.includedEquipment.map(eq => eq.name).join(', ')}
                               </p>
                             )}
                           </div>
@@ -732,7 +810,9 @@ export default function AdminBookings() {
                                 selectedBooking.serviceId?.category === 'tents-canopies' ||
                                 selectedBooking.serviceId?.category === 'linens-tableware' ||
                                 selectedBooking.serviceId?.serviceType === 'equipment' ||
-                                selectedBooking.serviceId?.serviceType === 'supply'
+                                selectedBooking.serviceId?.serviceType === 'supply' ||
+                                selectedBooking.serviceId?.requiresDelivery === true ||
+                                (selectedBooking.serviceId?.includedEquipment && selectedBooking.serviceId.includedEquipment.length > 0)
                               ? (() => {
                                   const pickupDate = new Date(selectedBooking.bookingDate);
                                   pickupDate.setDate(pickupDate.getDate() + 1);
@@ -749,7 +829,9 @@ export default function AdminBookings() {
                             selectedBooking.serviceId?.category === 'tents-canopies' ||
                             selectedBooking.serviceId?.category === 'linens-tableware' ||
                             selectedBooking.serviceId?.serviceType === 'equipment' ||
-                            selectedBooking.serviceId?.serviceType === 'supply') && (
+                            selectedBooking.serviceId?.serviceType === 'supply' ||
+                            selectedBooking.serviceId?.requiresDelivery === true ||
+                            (selectedBooking.serviceId?.includedEquipment && selectedBooking.serviceId.includedEquipment.length > 0)) && (
                             <p className="text-sm text-gray-500">
                               {selectedBooking.deliveryStartTime
                                 ? new Date(selectedBooking.deliveryStartTime).toLocaleTimeString()
@@ -758,6 +840,46 @@ export default function AdminBookings() {
                             </p>
                           )}
                         </div>
+                      </div>
+
+                      {/* Additional Booking Details */}
+                      <div className="grid md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-200">
+                        {selectedBooking.duration && selectedBooking.duration > 1 && (
+                          <div>
+                            <span className="text-sm text-gray-600">Duration:</span>
+                            <p className="font-medium">{selectedBooking.duration} days</p>
+                          </div>
+                        )}
+                        {selectedBooking.dailyRate && selectedBooking.dailyRate > 0 && (
+                          <div>
+                            <span className="text-sm text-gray-600">Daily Rate:</span>
+                            <p className="font-medium">₱{selectedBooking.dailyRate}</p>
+                          </div>
+                        )}
+                        {selectedBooking.appliedMultiplier && selectedBooking.appliedMultiplier !== 1.0 && (
+                          <div>
+                            <span className="text-sm text-gray-600">Applied Multiplier:</span>
+                            <p className="font-medium">{selectedBooking.appliedMultiplier}x</p>
+                          </div>
+                        )}
+                        {selectedBooking.daysBeforeCheckout && selectedBooking.daysBeforeCheckout > 0 && (
+                          <div>
+                            <span className="text-sm text-gray-600">Days Before Event:</span>
+                            <p className="font-medium">{selectedBooking.daysBeforeCheckout} days</p>
+                          </div>
+                        )}
+                        {selectedBooking.deliveryDuration && selectedBooking.requiresDelivery && (
+                          <div>
+                            <span className="text-sm text-gray-600">Delivery Duration:</span>
+                            <p className="font-medium">{selectedBooking.deliveryDuration} minutes</p>
+                          </div>
+                        )}
+                        {selectedBooking.downPaymentPercentage && selectedBooking.downPaymentPercentage !== 30 && (
+                          <div>
+                            <span className="text-sm text-gray-600">Down Payment %:</span>
+                            <p className="font-medium">{selectedBooking.downPaymentPercentage}%</p>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -861,16 +983,16 @@ export default function AdminBookings() {
                         </div>
 
                         {/* Items/Equipment Quantities */}
-                        {selectedBooking.serviceId.includedItems && selectedBooking.serviceId.includedItems.length > 0 && (
+                        {selectedBooking.serviceId.includedEquipment && selectedBooking.serviceId.includedEquipment.length > 0 && (
                           <div className="space-y-3">
                             <h5 className="text-sm font-medium text-gray-700 flex items-center gap-2">
                               <span>📦</span>
                               Included Items & Equipment
                             </h5>
 
-                            {selectedBooking.serviceId.includedItems.map((item, index) => {
-                              const currentQuantity = editFormData.itemQuantities?.[item] || (selectedBooking.itemQuantities?.[item] || 1);
-                              const inventoryLevel = inventoryLevels[selectedBooking.serviceId._id] || 0;
+                            {selectedBooking.serviceId.includedEquipment.map((equipment, index) => {
+                              const currentQuantity = editFormData.itemQuantities?.[equipment.name] || (selectedBooking.itemQuantities?.[equipment.name] || equipment.quantity);
+                              const inventoryLevel = inventoryLevels[equipment.equipmentId] || 0;
                               const isLowStock = inventoryLevel <= 5 && inventoryLevel > 0;
                               const isOutOfStock = inventoryLevel <= 0;
 
@@ -879,7 +1001,7 @@ export default function AdminBookings() {
                                   isEditingBooking ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
                                 } ${isOutOfStock ? 'border-red-300 bg-red-50' : ''} ${isLowStock ? 'border-yellow-300 bg-yellow-50' : ''}`}>
                                   <div className="flex-1">
-                                    <p className="font-medium text-sm">{item}</p>
+                                    <p className="font-medium text-sm">{equipment.name}</p>
                                     <div className="flex items-center gap-4 mt-1">
                                       <span className="text-xs text-gray-500">
                                         Current: {currentQuantity} item{currentQuantity !== 1 ? 's' : ''}
@@ -914,7 +1036,7 @@ export default function AdminBookings() {
                                             ...prev,
                                             itemQuantities: {
                                               ...prev.itemQuantities,
-                                              [item]: newQuantity
+                                              [equipment.name]: newQuantity
                                             }
                                           }));
                                         }}
@@ -942,9 +1064,9 @@ export default function AdminBookings() {
                           </div>
                         )}
 
-                        {(!selectedBooking.serviceId.includedItems || selectedBooking.serviceId.includedItems.length === 0) && (
+                        {(!selectedBooking.serviceId.includedEquipment || selectedBooking.serviceId.includedEquipment.length === 0) && (
                           <div className="text-center py-4 text-gray-500 text-sm bg-gray-50 rounded-lg">
-                            No specific items listed for this service
+                            No specific equipment listed for this service
                           </div>
                         )}
                       </div>
@@ -973,6 +1095,25 @@ export default function AdminBookings() {
                           <span className="text-sm text-red-600 font-medium">
                             ₱{selectedBooking.remainingBalance}
                           </span>
+                        </div>
+                      )}
+                      {selectedBooking.notes && (
+                        <div>
+                          <span className="text-sm font-medium text-gray-600">Notes:</span>
+                          <p className="text-sm text-gray-700 mt-1 bg-gray-50 p-2 rounded">{selectedBooking.notes}</p>
+                        </div>
+                      )}
+                      {selectedBooking.itemQuantities && Object.keys(selectedBooking.itemQuantities).length > 0 && (
+                        <div>
+                          <span className="text-sm font-medium text-gray-600">Item Breakdown:</span>
+                          <div className="mt-2 space-y-1">
+                            {Object.entries(selectedBooking.itemQuantities).map(([item, qty]) => (
+                              <div key={item} className="flex justify-between text-sm bg-gray-50 p-2 rounded">
+                                <span>{item}:</span>
+                                <span>{qty} item{qty !== 1 ? 's' : ''}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>

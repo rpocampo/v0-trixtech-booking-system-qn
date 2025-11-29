@@ -1,0 +1,325 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "TRIXTECH Alert History and Trends",
+    "tags": ["trixtech", "alerts", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Active Alerts",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ALERTS{alertstate=\"firing\"}",
+            "legendFormat": "{{alertname}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Alerts by Severity",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "count by (severity) (ALERTS{alertstate=\"firing\"})",
+            "legendFormat": "{{severity}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 8,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Alerts by Service",
+        "type": "bargauge",
+        "targets": [
+          {
+            "expr": "count by (service) (ALERTS{alertstate=\"firing\"})",
+            "legendFormat": "{{service}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 16,
+          "y": 0
+        }
+      },
+      {
+        "id": 4,
+        "title": "Alert Trends (24h)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "increase(alerts_total[1h])",
+            "legendFormat": "Alerts per hour"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 5,
+        "title": "Alert Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "time() - ALERTS_FOR_STATE",
+            "legendFormat": "{{alertname}} ({{service}})"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        }
+      },
+      {
+        "id": 6,
+        "title": "Critical Alerts Timeline",
+        "type": "status-history",
+        "targets": [
+          {
+            "expr": "ALERTS{severity=\"critical\", alertstate=\"firing\"}",
+            "legendFormat": "{{alertname}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "OK",
+                    "color": "green"
+                  },
+                  "1": {
+                    "text": "CRITICAL",
+                    "color": "red"
+                  }
+                },
+                "type": "value"
+              }
+            ]
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 7,
+        "title": "Warning Alerts Timeline",
+        "type": "status-history",
+        "targets": [
+          {
+            "expr": "ALERTS{severity=\"warning\", alertstate=\"firing\"}",
+            "legendFormat": "{{alertname}}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "options": {
+                  "0": {
+                    "text": "OK",
+                    "color": "green"
+                  },
+                  "1": {
+                    "text": "WARNING",
+                    "color": "orange"
+                  }
+                },
+                "type": "value"
+              }
+            ]
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 24
+        }
+      },
+      {
+        "id": 8,
+        "title": "Alert Resolution Time",
+        "type": "histogram",
+        "targets": [
+          {
+            "expr": "alert_resolution_time_seconds",
+            "legendFormat": "Resolution time"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 32
+        }
+      },
+      {
+        "id": 9,
+        "title": "Most Frequent Alerts",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(10, count by (alertname) (alerts_total))",
+            "legendFormat": ""
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "displayMode": "color-text"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 32
+        }
+      },
+      {
+        "id": 10,
+        "title": "Alert Notifications Sent",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(alert_notifications_total[5m])",
+            "legendFormat": "Notifications/min"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 40
+        }
+      },
+      {
+        "id": 11,
+        "title": "Alert Escalation Events",
+        "type": "logs",
+        "targets": [
+          {
+            "expr": "{job=\"alert-escalation\"}",
+            "legendFormat": ""
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 40
+        }
+      }
+    ],
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": [
+        {
+          "name": "severity",
+          "type": "custom",
+          "options": [
+            {
+              "text": "All",
+              "value": "",
+              "selected": true
+            },
+            {
+              "text": "Critical",
+              "value": "critical"
+            },
+            {
+              "text": "Warning",
+              "value": "warning"
+            },
+            {
+              "text": "Info",
+              "value": "info"
+            }
+          ],
+          "query": "critical,warning,info"
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Alert Events",
+          "datasource": "Prometheus",
+          "expr": "alerts_total",
+          "iconColor": "orange",
+          "textFormat": "{{alertname}} triggered"
+        }
+      ]
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 0,
+    "links": []
+  }
+}

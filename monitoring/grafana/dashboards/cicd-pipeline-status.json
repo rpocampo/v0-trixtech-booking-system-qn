@@ -1,0 +1,447 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "TRIXTECH CI/CD Pipeline Status",
+    "tags": ["trixtech", "cicd", "pipeline", "deployment"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Pipeline Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "cicd_pipeline_status{status=\"success\"}",
+            "legendFormat": "Successful Pipelines"
+          },
+          {
+            "expr": "cicd_pipeline_status{status=\"failed\"}",
+            "legendFormat": "Failed Pipelines"
+          },
+          {
+            "expr": "cicd_pipeline_status{status=\"running\"}",
+            "legendFormat": "Running Pipelines"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 1
+                },
+                {
+                  "color": "red",
+                  "value": 2
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Deployment Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "deployment_status{status=\"success\"}",
+            "legendFormat": "Successful Deployments"
+          },
+          {
+            "expr": "deployment_status{status=\"failed\"}",
+            "legendFormat": "Failed Deployments"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "Build Duration Trend",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "cicd_build_duration_seconds",
+            "legendFormat": "{{pipeline}} build duration"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 4,
+        "title": "Test Coverage",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "cicd_test_coverage_percent",
+            "legendFormat": "Test Coverage %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 70
+                },
+                {
+                  "color": "green",
+                  "value": 80
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 12,
+          "y": 8
+        }
+      },
+      {
+        "id": 5,
+        "title": "Test Results",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "cicd_tests_passed_total",
+            "legendFormat": "Tests Passed"
+          },
+          {
+            "expr": "cicd_tests_failed_total",
+            "legendFormat": "Tests Failed"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 1
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 18,
+          "y": 8
+        }
+      },
+      {
+        "id": 6,
+        "title": "Pipeline Success Rate (24h)",
+        "type": "bargauge",
+        "targets": [
+          {
+            "expr": "rate(cicd_pipeline_status{status=\"success\"}[24h]) / (rate(cicd_pipeline_status{status=\"success\"}[24h]) + rate(cicd_pipeline_status{status=\"failed\"}[24h])) * 100",
+            "legendFormat": "Success Rate %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 80
+                },
+                {
+                  "color": "green",
+                  "value": 95
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 7,
+        "title": "Deployment Frequency",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "increase(deployment_status{status=\"success\"}[1h])",
+            "legendFormat": "Deployments per hour"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        }
+      },
+      {
+        "id": 8,
+        "title": "Code Quality Metrics",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "cicd_code_quality_score",
+            "legendFormat": ""
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "displayMode": "color-background"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 0,
+          "y": 24
+        }
+      },
+      {
+        "id": 9,
+        "title": "Security Scan Results",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "cicd_security_vulnerabilities_total",
+            "legendFormat": "Security Issues"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "orange",
+                  "value": 1
+                },
+                {
+                  "color": "red",
+                  "value": 5
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 8,
+          "y": 24
+        }
+      },
+      {
+        "id": 10,
+        "title": "Artifact Size",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "cicd_artifact_size_bytes",
+            "legendFormat": "Artifact size (bytes)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 8,
+          "x": 16,
+          "y": 24
+        }
+      },
+      {
+        "id": 11,
+        "title": "Recent Pipeline Events",
+        "type": "logs",
+        "targets": [
+          {
+            "expr": "{job=\"cicd-pipeline\"}",
+            "legendFormat": ""
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 32
+        }
+      },
+      {
+        "id": 12,
+        "title": "Environment Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "environment_status",
+            "legendFormat": ""
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "displayMode": "color-text"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "status"
+              },
+              "properties": [
+                {
+                  "id": "mappings",
+                  "value": [
+                    {
+                      "options": {
+                        "healthy": {
+                          "color": "green",
+                          "text": "HEALTHY"
+                        },
+                        "degraded": {
+                          "color": "orange",
+                          "text": "DEGRADED"
+                        },
+                        "unhealthy": {
+                          "color": "red",
+                          "text": "UNHEALTHY"
+                        }
+                      },
+                      "type": "value"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 32
+        }
+      }
+    ],
+    "time": {
+      "from": "now-24h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": [
+        {
+          "name": "pipeline",
+          "type": "query",
+          "query": "label_values(cicd_pipeline_name)",
+          "refresh": 1
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Pipeline Failures",
+          "datasource": "Prometheus",
+          "expr": "cicd_pipeline_status{status=\"failed\"}",
+          "iconColor": "red",
+          "textFormat": "Pipeline {{pipeline}} failed"
+        },
+        {
+          "name": "Deployments",
+          "datasource": "Prometheus",
+          "expr": "deployment_status{status=\"success\"}",
+          "iconColor": "green",
+          "textFormat": "Successful deployment to {{environment}}"
+        }
+      ]
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 0,
+    "links": []
+  }
+}

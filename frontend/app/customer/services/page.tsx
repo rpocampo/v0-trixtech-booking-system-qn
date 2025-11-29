@@ -662,7 +662,7 @@ export default function Services() {
                       )}
                       {selectedService.maxOrder && (
                         <div className="flex justify-between">
-                          <span className="text-[var(--muted)]">Maximum Order:</span>
+                          <span className="text-[var(--muted)]">For Package of:</span>
                           <span className="font-medium">{selectedService.maxOrder}</span>
                         </div>
                       )}

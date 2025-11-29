@@ -1,0 +1,118 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  PROD_HOST: ${{ secrets.PROD_HOST }}
+  PROD_USER: ${{ secrets.PROD_USER }}
+  PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ${{ github.repository }}/backend
+  FRONTEND_IMAGE: ${{ github.repository }}/frontend
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency: production
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "$PROD_SSH_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H $PROD_HOST >> ~/.ssh/known_hosts
+
+    - name: Pre-deployment backup
+      run: |
+        ssh $PROD_USER@$PROD_HOST << EOF
+          echo "Creating backup before deployment..."
+          cd /opt/trixtech
+          # Create database backup
+          docker exec trixtech-mongodb-prod mongodump --db trixtech_prod --out /backup/$(date +%Y%m%d_%H%M%S)
+          # Backup current docker-compose file
+          cp docker-compose.prod.yml docker-compose.prod.yml.backup
+          echo "Backup completed"
+        EOF
+
+    - name: Deploy to production
+      run: |
+        ssh $PROD_USER@$PROD_HOST << EOF
+          cd /opt/trixtech
+          git pull origin main
+          echo "Pulling latest images..."
+          docker pull $REGISTRY/$BACKEND_IMAGE:latest
+          docker pull $REGISTRY/$FRONTEND_IMAGE:latest
+          docker pull mongo:7.0
+          docker pull redis:7.2-alpine
+          docker pull nginx:alpine
+          echo "Stopping existing containers..."
+          docker-compose -f docker-compose.prod.yml down
+          echo "Starting services..."
+          docker-compose -f docker-compose.prod.yml up -d
+          echo "Waiting for services to be healthy..."
+          sleep 60
+          echo "Checking backend health..."
+          for i in {1..10}; do
+            if curl -f http://localhost:5000/api/health; then
+              echo "Backend is healthy"
+              break
+            fi
+            echo "Waiting for backend... attempt $i"
+            sleep 10
+          done
+          echo "Checking frontend..."
+          for i in {1..10}; do
+            if curl -f http://localhost:3000; then
+              echo "Frontend is healthy"
+              break
+            fi
+            echo "Waiting for frontend... attempt $i"
+            sleep 10
+          done
+          echo "Deployment successful!"
+        EOF
+
+    - name: Post-deployment health check
+      run: |
+        ssh $PROD_USER@$PROD_HOST << EOF
+          echo "Performing comprehensive health checks..."
+          # Backend health
+          if curl -f --max-time 30 http://localhost:5000/api/health; then
+            echo "✅ Backend is healthy"
+          else
+            echo "❌ Backend health check failed - initiating rollback"
+            exit 1
+          fi
+          # Frontend health
+          if curl -f --max-time 30 http://localhost:3000; then
+            echo "✅ Frontend is healthy"
+          else
+            echo "❌ Frontend health check failed - initiating rollback"
+            exit 1
+          fi
+          # Database connectivity
+          if docker exec trixtech-mongodb-prod mongo --eval "db.stats()" trixtech_prod; then
+            echo "✅ Database is accessible"
+          else
+            echo "❌ Database connectivity failed"
+            exit 1
+          fi
+        EOF
+
+    - name: Slack Notification
+      uses: 8398a7/action-slack@v3
+      if: always()
+      with:
+        status: ${{ job.status }}
+        text: "Production deployment completed for ${{ github.repository }} - ${{ github.sha }}"
+        fields: repo,message,commit,author,action,eventName,ref,workflow
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

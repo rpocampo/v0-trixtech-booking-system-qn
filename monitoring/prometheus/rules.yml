@@ -1,0 +1,179 @@
+groups:
+  - name: trixtech_service_alerts
+    rules:
+      # Service Availability Alerts
+      - alert: BackendServiceDown
+        expr: up{job="trixtech-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: backend
+        annotations:
+          summary: "Backend service is down"
+          description: "TRIXTECH backend service has been down for more than 1 minute."
+
+      - alert: FrontendServiceDown
+        expr: up{job="trixtech-frontend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: frontend
+        annotations:
+          summary: "Frontend service is down"
+          description: "TRIXTECH frontend service has been down for more than 1 minute."
+
+      # Database Connection Failures
+      - alert: DatabaseConnectionFailure
+        expr: mysql_up == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: database
+        annotations:
+          summary: "Database connection failure"
+          description: "Unable to connect to the database for more than 30 seconds."
+
+      - alert: RedisConnectionFailure
+        expr: redis_up == 0
+        for: 30s
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis connection failure"
+          description: "Unable to connect to Redis for more than 30 seconds."
+
+      # High Error Rates
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) * 100 > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }}% which is above the 5% threshold over the last 5 minutes."
+
+      - alert: CriticalErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) * 100 > 10
+        for: 2m
+        labels:
+          severity: critical
+          service: api
+        annotations:
+          summary: "Critical error rate detected"
+          description: "Error rate is {{ $value }}% which is above the 10% threshold over the last 5 minutes."
+
+      # Memory/CPU Usage Thresholds
+      - alert: HighMemoryUsage
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}% which is above the 85% threshold."
+
+      - alert: CriticalMemoryUsage
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Critical memory usage"
+          description: "Memory usage is {{ $value }}% which is above the 95% threshold."
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% which is above the 85% threshold."
+
+      - alert: CriticalCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Critical CPU usage"
+          description: "CPU usage is {{ $value }}% which is above the 95% threshold."
+
+      # Disk Space Alerts
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 15
+        for: 5m
+        labels:
+          severity: warning
+          service: system
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space is {{ $value }}% available which is below the 15% threshold on {{ $labels.mountpoint }}."
+
+      - alert: CriticalDiskSpace
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 5
+        for: 2m
+        labels:
+          severity: critical
+          service: system
+        annotations:
+          summary: "Critical disk space"
+          description: "Disk space is {{ $value }}% available which is below the 5% threshold on {{ $labels.mountpoint }}."
+
+      # Backup Failure Alerts
+      - alert: BackupJobFailed
+        expr: backup_status{status="failed"} == 1
+        for: 1m
+        labels:
+          severity: critical
+          service: backup
+        annotations:
+          summary: "Backup job failed"
+          description: "Backup job '{{ $labels.job_name }}' has failed."
+
+      - alert: BackupVerificationFailed
+        expr: backup_verification_status == 0
+        for: 5m
+        labels:
+          severity: warning
+          service: backup
+        annotations:
+          summary: "Backup verification failed"
+          description: "Backup verification failed for the latest backup."
+
+      # Application-specific alerts
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          service: api
+        annotations:
+          summary: "High response time"
+          description: "95th percentile response time is {{ $value }}s which is above the 5s threshold."
+
+      - alert: QueueBacklogHigh
+        expr: booking_queue_size > 50
+        for: 5m
+        labels:
+          severity: warning
+          service: booking
+        annotations:
+          summary: "High booking queue backlog"
+          description: "Booking queue size is {{ $value }} which is above the threshold of 50."
+
+      - alert: PaymentGatewayDown
+        expr: payment_gateway_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: payment
+        annotations:
+          summary: "Payment gateway is down"
+          description: "Payment gateway has been unreachable for more than 1 minute."

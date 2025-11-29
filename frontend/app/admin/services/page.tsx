@@ -63,6 +63,7 @@ export default function AdminServices() {
     serviceType: 'service', // Allow selection between service, equipment, supply
     price: 0,
     duration: 1, // Default to 1 day as per system update
+    maxOrder: 1, // Maximum number of guests for professional services
     includedItems: [] as string[],
     includedEquipment: [] as Array<{equipmentId: string, quantity: number, name: string}>,
     image: null as File | null,
@@ -217,6 +218,7 @@ export default function AdminServices() {
       formDataToSend.append('price', formData.price.toString());
       formDataToSend.append('priceType', 'flat-rate'); // Default to flat-rate for simplicity
       formDataToSend.append('serviceType', formData.serviceType);
+      formDataToSend.append('maxOrder', formData.maxOrder.toString());
 
       // Add duration for services, quantity for equipment/supply
       if (formData.serviceType === 'service') {
@@ -316,6 +318,7 @@ export default function AdminServices() {
       serviceType: service.serviceType,
       price: service.price,
       duration: service.duration || 1,
+      maxOrder: service.maxOrder || 1,
       includedItems: Array.isArray(service.includedItems)
         ? service.includedItems
         : service.includedItems ? [service.includedItems] : [],
@@ -350,6 +353,7 @@ export default function AdminServices() {
       serviceType: 'service',
       price: 0,
       duration: 1, // Reset to 1 day default
+      maxOrder: 1,
       includedItems: [],
       includedEquipment: [],
       image: null,
@@ -376,6 +380,7 @@ export default function AdminServices() {
       formDataToSend.append('serviceType', formData.serviceType);
       formDataToSend.append('price', formData.price.toString());
       formDataToSend.append('duration', formData.duration.toString());
+      formDataToSend.append('maxOrder', formData.maxOrder.toString());
 
       // Add included items as separate entries (skip for equipment)
       if (formData.serviceType !== 'equipment') {
@@ -557,6 +562,24 @@ export default function AdminServices() {
                 />
                 <p className="text-xs text-gray-500 mt-1">Duration of the service in days</p>
               </div>
+
+              {/* Maximum Guests - Only for professional services */}
+              {formData.serviceType === 'service' && (
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    Maximum Guests *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.maxOrder}
+                    onChange={(e) => setFormData({ ...formData, maxOrder: parseInt(e.target.value) || 1 })}
+                    className="input-field"
+                    min="1"
+                    placeholder="1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Maximum number of guests this service can accommodate</p>
+                </div>
+              )}
             </div>
 
             {/* Inclusions - Only show for non-equipment services */}
@@ -744,6 +767,9 @@ export default function AdminServices() {
                   <span>Category: <span className="font-semibold capitalize">{service.category}</span></span>
                   <span>Duration: <span className="font-semibold">{service.duration || 1} day{service.duration !== 1 ? 's' : ''}</span></span>
                   <span>Price: <span className="font-semibold text-[var(--primary)]">₱{service.price}</span></span>
+                  {service.serviceType === 'service' && (
+                    <span>Max Guests: <span className="font-semibold">{service.maxOrder || 1}</span></span>
+                  )}
                   {(service.serviceType === 'equipment' || service.serviceType === 'supply') && (
                     <span className="flex items-center gap-2">
                       Stock:

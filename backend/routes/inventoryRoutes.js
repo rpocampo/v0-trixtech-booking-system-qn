@@ -1,115 +1,128 @@
 const express = require('express');
-const { adminMiddleware } = require('../middleware/auth');
-const { getLowStockStatus, triggerLowStockCheck } = require('../utils/lowStockAlertService');
+const InventoryTransaction = require('../models/InventoryTransaction');
+const Service = require('../models/Service');
+const { inventoryAnalyticsService } = require('../utils/inventoryAnalyticsService');
+const { authMiddleware, adminMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Get low stock status for dashboard
-router.get('/low-stock-status', adminMiddleware, async (req, res, next) => {
+// Get inventory transaction history for a service
+router.get('/transactions/:serviceId', adminMiddleware, async (req, res, next) => {
   try {
-    const status = await getLowStockStatus();
+    const { serviceId } = req.params;
+    const { limit = 50, page = 1 } = req.query;
 
-    if (status.error) {
-      return res.status(500).json({
+    const transactions = await InventoryTransaction.getInventoryHistory(serviceId, parseInt(limit));
+    const total = await InventoryTransaction.countDocuments({ serviceId });
+
+    res.json({
+      success: true,
+      transactions,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get all inventory transactions with filtering
+router.get('/transactions', adminMiddleware, async (req, res, next) => {
+  try {
+    const {
+      serviceId,
+      transactionType,
+      startDate,
+      endDate,
+      limit = 100,
+      page = 1
+    } = req.query;
+
+    let query = {};
+
+    if (serviceId) query.serviceId = serviceId;
+    if (transactionType) query.transactionType = transactionType;
+
+    if (startDate || endDate) {
+      query.createdAt = {};
+      if (startDate) query.createdAt.$gte = new Date(startDate);
+      if (endDate) query.createdAt.$lte = new Date(endDate);
+    }
+
+    const transactions = await InventoryTransaction.find(query)
+      .populate('serviceId', 'name category')
+      .populate('bookingId', 'customerId quantity bookingDate')
+      .populate('performedBy', 'name email')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit));
+
+    const total = await InventoryTransaction.countDocuments(query);
+
+    res.json({
+      success: true,
+      transactions,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get inventory health report
+router.get('/health-report', adminMiddleware, async (req, res, next) => {
+  try {
+    const report = await inventoryAnalyticsService.getInventoryHealthReport();
+    res.json({ success: true, report });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get demand forecast
+router.get('/demand-forecast', adminMiddleware, async (req, res, next) => {
+  try {
+    const { daysAhead = 30 } = req.query;
+    const forecast = await inventoryAnalyticsService.getDemandForecast(parseInt(daysAhead));
+    res.json({ success: true, forecast });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get optimal reorder quantities
+router.get('/reorder-recommendations', adminMiddleware, async (req, res, next) => {
+  try {
+    const recommendations = await inventoryAnalyticsService.getOptimalReorderQuantities();
+    res.json({ success: true, recommendations });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Manual inventory adjustment (admin only)
+router.post('/adjust/:serviceId', adminMiddleware, async (req, res, next) => {
+  try {
+    const { serviceId } = req.params;
+    const { quantity, reason } = req.body;
+
+    if (!quantity || quantity === 0) {
+      return res.status(400).json({
         success: false,
-        message: status.error
+        message: 'Quantity adjustment is required and cannot be zero'
       });
     }
 
-    res.json({
-      success: true,
-      ...status
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Manually trigger low stock check for a specific service
-router.post('/check-low-stock/:serviceId', adminMiddleware, async (req, res, next) => {
-  try {
-    const { serviceId } = req.params;
-
-    await triggerLowStockCheck(serviceId);
-
-    res.json({
-      success: true,
-      message: 'Low stock check triggered successfully'
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Trigger low stock check for all services
-router.post('/check-all-low-stock', adminMiddleware, async (req, res, next) => {
-  try {
-    // Import the checkLowStockAlerts function
-    const { checkLowStockAlerts } = require('../utils/lowStockAlertService');
-
-    await checkLowStockAlerts();
-
-    res.json({
-      success: true,
-      message: 'Low stock check completed for all services'
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get inventory summary with batch details
-router.get('/summary', adminMiddleware, async (req, res, next) => {
-  try {
-    const Service = require('../models/Service');
-    const summary = await Service.getInventorySummary();
-
-    res.json({
-      success: true,
-      summary
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get batch details for a specific service
-router.get('/service/:serviceId/batches', adminMiddleware, async (req, res, next) => {
-  try {
-    const { serviceId } = req.params;
-    const Service = require('../models/Service');
-
     const service = await Service.findById(serviceId);
-    if (!service) {
-      return res.status(404).json({ success: false, message: 'Service not found' });
-    }
-
-    const batchDetails = service.getBatchInventoryDetails();
-
-    res.json({
-      success: true,
-      service: {
-        id: service._id,
-        name: service.name,
-        category: service.category,
-        totalQuantity: service.quantity
-      },
-      batchDetails
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Add a new batch to a service
-router.post('/service/:serviceId/batches', adminMiddleware, async (req, res, next) => {
-  try {
-    const { serviceId } = req.params;
-    const batchData = req.body;
-
-    const Service = require('../models/Service');
-    const service = await Service.findById(serviceId);
-
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
     }
@@ -117,23 +130,40 @@ router.post('/service/:serviceId/batches', adminMiddleware, async (req, res, nex
     if (service.serviceType !== 'equipment' && service.serviceType !== 'supply') {
       return res.status(400).json({
         success: false,
-        message: 'Batch tracking is only available for equipment and supply items'
+        message: 'Inventory adjustments can only be made for equipment and supply items'
       });
     }
 
-    await service.addBatch(batchData);
+    const previousStock = service.quantity;
+    const newStock = Math.max(0, previousStock + quantity);
 
-    // Trigger low stock check
-    const { triggerLowStockCheck } = require('../utils/lowStockAlertService');
-    await triggerLowStockCheck(serviceId);
+    // Update service quantity
+    service.quantity = newStock;
+    await service.save();
+
+    // Log the transaction
+    await InventoryTransaction.logTransaction({
+      serviceId,
+      transactionType: 'manual_adjustment',
+      quantity,
+      previousStock,
+      newStock,
+      reason: reason || 'Manual inventory adjustment',
+      performedBy: req.user.id,
+      metadata: {
+        adjustedBy: req.user.id,
+        adjustmentReason: reason
+      }
+    });
 
     res.json({
       success: true,
-      message: 'Batch added successfully',
+      message: `Inventory adjusted by ${quantity} units`,
       service: {
         id: service._id,
         name: service.name,
-        quantity: service.quantity
+        previousStock,
+        newStock
       }
     });
   } catch (error) {
@@ -141,141 +171,42 @@ router.post('/service/:serviceId/batches', adminMiddleware, async (req, res, nex
   }
 });
 
-// Update batch information
-router.put('/service/:serviceId/batches/:batchId', adminMiddleware, async (req, res, next) => {
+// Get real-time inventory summary
+router.get('/summary', adminMiddleware, async (req, res, next) => {
   try {
-    const { serviceId, batchId } = req.params;
-    const updateData = req.body;
-
-    const Service = require('../models/Service');
-    const service = await Service.findById(serviceId);
-
-    if (!service) {
-      return res.status(404).json({ success: false, message: 'Service not found' });
-    }
-
-    const batch = service.batches.find(b => b.batchId === batchId && b.isActive);
-    if (!batch) {
-      return res.status(404).json({ success: false, message: 'Batch not found' });
-    }
-
-    // Update batch fields
-    Object.keys(updateData).forEach(key => {
-      if (key !== 'batchId' && key !== '_id') { // Don't allow updating batchId
-        batch[key] = updateData[key];
-      }
-    });
-
-    await service.save();
-
-    res.json({
-      success: true,
-      message: 'Batch updated successfully',
-      batch
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get expiring batches across all services
-router.get('/expiring-batches', adminMiddleware, async (req, res, next) => {
-  try {
-    const { days = 30 } = req.query;
-    const Service = require('../models/Service');
-
     const services = await Service.find({
       serviceType: { $in: ['equipment', 'supply'] },
       isAvailable: true
     });
 
-    const expiringBatches = [];
+    const summary = {
+      totalServices: services.length,
+      totalStock: 0,
+      lowStockCount: 0,
+      outOfStockCount: 0,
+      services: []
+    };
 
     for (const service of services) {
-      const expiring = service.getExpiringBatches(parseInt(days));
-      expiring.forEach(batch => {
-        expiringBatches.push({
-          serviceId: service._id,
-          serviceName: service.name,
-          category: service.category,
-          ...batch.toObject()
-        });
+      summary.totalStock += service.quantity || 0;
+
+      if (service.quantity === 0) {
+        summary.outOfStockCount++;
+      } else if (service.quantity <= 5) {
+        summary.lowStockCount++;
+      }
+
+      summary.services.push({
+        id: service._id,
+        name: service.name,
+        category: service.category,
+        quantity: service.quantity || 0,
+        status: service.quantity === 0 ? 'out_of_stock' :
+                service.quantity <= 5 ? 'low_stock' : 'healthy'
       });
     }
 
-    // Sort by expiry date
-    expiringBatches.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
-
-    res.json({
-      success: true,
-      daysAhead: parseInt(days),
-      count: expiringBatches.length,
-      expiringBatches
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get inventory analytics and forecasting
-router.get('/analytics/health-report', adminMiddleware, async (req, res, next) => {
-  try {
-    const { getInventoryHealthReport } = require('../utils/inventoryAnalyticsService');
-    const report = await getInventoryHealthReport();
-
-    res.json({
-      success: true,
-      report
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get demand forecast
-router.get('/analytics/demand-forecast', adminMiddleware, async (req, res, next) => {
-  try {
-    const { days = 30 } = req.query;
-    const { getDemandForecast } = require('../utils/inventoryAnalyticsService');
-    const forecast = await getDemandForecast(parseInt(days));
-
-    res.json({
-      success: true,
-      forecast
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get optimal reorder quantities
-router.get('/analytics/reorder-recommendations', adminMiddleware, async (req, res, next) => {
-  try {
-    const { getOptimalReorderQuantities } = require('../utils/inventoryAnalyticsService');
-    const recommendations = await getOptimalReorderQuantities();
-
-    res.json({
-      success: true,
-      recommendations
-    });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get analytics for specific service
-router.get('/analytics/service/:serviceId', adminMiddleware, async (req, res, next) => {
-  try {
-    const { serviceId } = req.params;
-    const { days = 30 } = req.query;
-    const { analyzeInventoryPatterns } = require('../utils/inventoryAnalyticsService');
-
-    const analysis = await analyzeInventoryPatterns(serviceId, parseInt(days));
-
-    res.json({
-      success: true,
-      analysis
-    });
+    res.json({ success: true, summary });
   } catch (error) {
     next(error);
   }

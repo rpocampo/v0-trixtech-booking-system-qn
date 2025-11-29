@@ -340,6 +340,40 @@ serviceSchema.methods.reduceBatchQuantity = async function(reduceQuantity) {
   return this.quantity;
 };
 
+// Instance method to restore batch quantity (reverse of reduceBatchQuantity)
+serviceSchema.methods.restoreBatchQuantity = async function(restoreQuantity) {
+  if (restoreQuantity <= 0) return;
+
+  // For restoration, we add to the most recently added active batch (LIFO for restoration)
+  // or create a new batch if needed
+  let activeBatches = this.getActiveBatches().sort((a, b) =>
+    new Date(b.createdAt) - new Date(a.createdAt)
+  ); // Sort by creation date descending (most recent first)
+
+  if (activeBatches.length === 0) {
+    // No active batches, create a restoration batch
+    this.batches.push({
+      batchId: `RESTORED_${Date.now()}`,
+      supplier: 'System Restoration',
+      quantity: restoreQuantity,
+      unitCost: 0,
+      location: 'Restored Inventory',
+      notes: 'Inventory restored due to booking cancellation',
+      isActive: true,
+      createdAt: new Date()
+    });
+  } else {
+    // Add to the most recent batch
+    activeBatches[0].quantity += restoreQuantity;
+  }
+
+  // Update total quantity
+  this.quantity += restoreQuantity;
+
+  await this.save();
+  return this.quantity;
+};
+
 // Instance method to get batch inventory details
 serviceSchema.methods.getBatchInventoryDetails = function() {
   const activeBatches = this.getActiveBatches();
