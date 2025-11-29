@@ -39,6 +39,11 @@ interface Service {
   tags?: string[];
   features?: string[];
   includedItems?: string[];
+  includedEquipment?: Array<{
+    equipmentId: string;
+    quantity: number;
+    name: string;
+  }>;
   requirements?: string[];
   isAvailable: boolean;
   minOrder?: number;
@@ -59,8 +64,10 @@ export default function AdminServices() {
     price: 0,
     duration: 1,
     includedItems: [] as string[],
+    includedEquipment: [] as Array<{equipmentId: string, quantity: number, name: string}>,
     image: null as File | null,
   });
+  const [availableEquipment, setAvailableEquipment] = useState<Service[]>([]);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
 
   // Inclusions management functions
@@ -85,6 +92,39 @@ export default function AdminServices() {
     }));
   };
 
+  // Equipment management functions
+  const addEquipment = () => {
+    setFormData(prev => ({
+      ...prev,
+      includedEquipment: [...prev.includedEquipment, { equipmentId: '', quantity: 1, name: '' }]
+    }));
+  };
+
+  const removeEquipment = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      includedEquipment: prev.includedEquipment.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateEquipment = (index: number, field: string, value: string | number) => {
+    setFormData(prev => ({
+      ...prev,
+      includedEquipment: prev.includedEquipment.map((equipment, i) => {
+        if (i === index) {
+          const updated = { ...equipment, [field]: value };
+          // If equipmentId changed, update the name
+          if (field === 'equipmentId' && typeof value === 'string') {
+            const selectedEquipment = availableEquipment.find(eq => eq._id === value);
+            updated.name = selectedEquipment ? selectedEquipment.name : '';
+          }
+          return updated;
+        }
+        return equipment;
+      })
+    }));
+  };
+
   useEffect(() => {
     const fetchServices = async () => {
       const token = localStorage.getItem('token');
@@ -105,6 +145,27 @@ export default function AdminServices() {
 
     fetchServices();
   }, []);
+
+  useEffect(() => {
+    const fetchAvailableEquipment = async () => {
+      const token = localStorage.getItem('token');
+      try {
+        const response = await fetch('http://localhost:5000/api/services?type=equipment', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (data.success) {
+          setAvailableEquipment(data.services.filter((s: Service) => s.serviceType === 'equipment' || s.serviceType === 'supply'));
+        }
+      } catch (error) {
+        console.error('Failed to fetch equipment:', error);
+      }
+    };
+
+    if (showForm) {
+      fetchAvailableEquipment();
+    }
+  }, [showForm]);
 
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
@@ -178,6 +239,17 @@ export default function AdminServices() {
         });
       }
 
+      // Add included equipment for professional services
+      if (formData.serviceType === 'service' && formData.includedEquipment.length > 0) {
+        formData.includedEquipment.forEach(equipment => {
+          if (equipment.equipmentId && equipment.quantity > 0) {
+            formDataToSend.append('includedEquipment[][equipmentId]', equipment.equipmentId);
+            formDataToSend.append('includedEquipment[][quantity]', equipment.quantity.toString());
+            formDataToSend.append('includedEquipment[][name]', equipment.name);
+          }
+        });
+      }
+
       // Add image if exists
       if (formData.image) {
         formDataToSend.append('image', formData.image);
@@ -203,6 +275,7 @@ export default function AdminServices() {
           price: 0,
           duration: 1,
           includedItems: [],
+          includedEquipment: [],
           image: null,
         });
         setErrors({});
@@ -246,9 +319,26 @@ export default function AdminServices() {
       includedItems: Array.isArray(service.includedItems)
         ? service.includedItems
         : service.includedItems ? [service.includedItems] : [],
+      includedEquipment: service.includedEquipment || [],
       image: null,
     });
     setShowForm(true);
+
+    // Auto-scroll to the form section after a brief delay to ensure it's rendered
+    setTimeout(() => {
+      const formElement = document.getElementById('service-edit-form');
+      if (formElement) {
+        formElement.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+        // Focus on the first input field for better UX
+        const firstInput = formElement.querySelector('input[type="text"]') as HTMLInputElement;
+        if (firstInput) {
+          firstInput.focus();
+        }
+      }
+    }, 100);
   };
 
   const cancelEditing = () => {
@@ -261,6 +351,7 @@ export default function AdminServices() {
       price: 0,
       duration: 1,
       includedItems: [],
+      includedEquipment: [],
       image: null,
     });
     setShowForm(false);
@@ -295,6 +386,19 @@ export default function AdminServices() {
         });
       }
 
+      // Add included equipment for professional services
+      if (formData.serviceType === 'service' && formData.includedEquipment.length > 0) {
+        formData.includedEquipment.forEach(equipment => {
+          if (equipment.equipmentId && equipment.quantity > 0) {
+            formDataToSend.append('includedEquipment[][equipmentId]', equipment.equipmentId);
+            formDataToSend.append('includedEquipment[][quantity]', equipment.quantity.toString());
+            formDataToSend.append('includedEquipment[][name]', equipment.name);
+          }
+        });
+      }
+
+      console.log('Sending update request for service:', editingService._id);
+
       const response = await fetch(`http://localhost:5000/api/services/${editingService._id}`, {
         method: 'PUT',
         headers: {
@@ -303,17 +407,30 @@ export default function AdminServices() {
         body: formDataToSend,
       });
 
-      const data = await response.json();
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
+      let data;
+      try {
+        data = await response.json();
+        console.log('Response data:', data);
+      } catch (jsonError) {
+        console.error('JSON parsing error:', jsonError);
+        throw new Error('Invalid response format from server');
+      }
 
       if (response.ok) {
+        console.log('Service updated successfully');
         setServices(services.map(s => s._id === editingService._id ? data.service : s));
         cancelEditing();
       } else {
+        console.error('Server returned error:', data);
         setErrors({ submit: data.message || 'Failed to update service' });
       }
     } catch (error) {
       console.error('Failed to update service:', error);
-      setErrors({ submit: 'Network error. Please try again.' });
+      const errorMessage = error instanceof Error ? error.message : 'Please try again.';
+      setErrors({ submit: `Network error: ${errorMessage}` });
     }
   };
 
@@ -342,7 +459,7 @@ export default function AdminServices() {
       </div>
 
       {showForm && (
-        <div className="card p-6 mb-8">
+        <div id="service-edit-form" className="card p-6 mb-8">
           <h2 className="text-2xl font-bold mb-4">
             {editingService ? 'Edit Service' : 'Create New Service'}
           </h2>
@@ -494,6 +611,73 @@ export default function AdminServices() {
               </div>
             )}
 
+            {/* Equipment Selection - Only show for professional services */}
+            {formData.serviceType === 'service' && (
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Included Equipment
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addEquipment}
+                    className="text-sm text-green-600 hover:text-green-800 flex items-center gap-1"
+                  >
+                    <span>+</span> Add Equipment
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {formData.includedEquipment.length === 0 ? (
+                    <div className="text-center py-4 text-gray-500 text-sm border-2 border-dashed border-gray-300 rounded-md">
+                      No equipment selected. Click "Add Equipment" to include equipment in this service package.
+                    </div>
+                  ) : (
+                    formData.includedEquipment.map((equipment, index) => (
+                      <div key={index} className="flex gap-3 items-center p-3 border border-gray-200 rounded-lg">
+                        <div className="flex-1">
+                          <select
+                            value={equipment.equipmentId}
+                            onChange={(e) => updateEquipment(index, 'equipmentId', e.target.value)}
+                            className="input-field w-full"
+                          >
+                            <option value="">Select Equipment</option>
+                            {availableEquipment.map((eq) => (
+                              <option key={eq._id} value={eq._id}>
+                                {eq.name} ({eq.quantity || 0} available)
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="w-24">
+                          <input
+                            type="number"
+                            min="1"
+                            value={equipment.quantity}
+                            onChange={(e) => updateEquipment(index, 'quantity', parseInt(e.target.value) || 1)}
+                            className="input-field w-full text-center"
+                            placeholder="Qty"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeEquipment(index)}
+                          className="text-red-500 hover:text-red-700 p-2"
+                          title="Remove this equipment"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <p className="text-xs text-blue-600 mt-2">
+                  💡 Equipment will be automatically deducted from inventory when customers book this service
+                </p>
+              </div>
+            )}
+
             {/* Equipment notice */}
             {formData.serviceType === 'equipment' && (
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -576,6 +760,22 @@ export default function AdminServices() {
                     </span>
                   )}
                 </div>
+                {/* Display included equipment for professional services */}
+                {service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0 && (
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <h4 className="text-sm font-semibold text-blue-800 mb-2">📦 Included Equipment:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {service.includedEquipment.map((equipment, index) => (
+                        <span key={index} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+                          {equipment.name} (x{equipment.quantity})
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-xs text-blue-600 mt-2">
+                      Equipment will be automatically deducted from inventory when this service is booked.
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 <button

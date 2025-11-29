@@ -365,6 +365,30 @@ router.post('/', authMiddleware, async (req, res, next) => {
             }
           }
 
+          // Decrease inventory for included equipment in professional services
+          if (service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0) {
+            for (const equipmentItem of service.includedEquipment) {
+              try {
+                const equipmentService = await Service.findById(equipmentItem.equipmentId);
+                if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
+                  // Use batch tracking for inventory reduction (FIFO)
+                  await equipmentService.reduceBatchQuantity(equipmentItem.quantity);
+
+                  // Trigger low stock alert check for equipment
+                  try {
+                    await triggerLowStockCheck(equipmentItem.equipmentId);
+                  } catch (alertError) {
+                    console.error('Error triggering low stock alert for equipment:', alertError);
+                    // Don't fail the booking if alert fails
+                  }
+                }
+              } catch (equipmentError) {
+                console.error('Error reducing equipment inventory:', equipmentError);
+                // Don't fail the booking if equipment inventory reduction fails
+              }
+            }
+          }
+
           console.log('Booking and inventory update completed');
 
         } catch (bookingError) {
@@ -1007,6 +1031,30 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       }
     }
 
+    // Decrease inventory for included equipment in professional services
+    if (service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0) {
+      for (const equipmentItem of service.includedEquipment) {
+        try {
+          const equipmentService = await Service.findById(equipmentItem.equipmentId);
+          if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
+            // Use batch tracking for inventory reduction (FIFO)
+            await equipmentService.reduceBatchQuantity(equipmentItem.quantity);
+
+            // Trigger low stock alert check for equipment
+            try {
+              await triggerLowStockCheck(equipmentItem.equipmentId);
+            } catch (alertError) {
+              console.error('Error triggering low stock alert for equipment:', alertError);
+              // Don't fail the booking if alert fails
+            }
+          }
+        } catch (equipmentError) {
+          console.error('Error reducing equipment inventory:', equipmentError);
+          // Don't fail the booking if equipment inventory reduction fails
+        }
+      }
+    }
+
     // Send confirmation notifications
     try {
       await sendTemplateNotification(req.user.id, 'BOOKING_CONFIRMED', {
@@ -1260,6 +1308,88 @@ router.get('/delivery-slots/available', authMiddleware, async (req, res, next) =
       timeSlots
     });
   } catch (error) {
+    next(error);
+  }
+});
+
+// Update booking details (guests and item quantities) - admin only
+router.put('/:id/update-details', adminMiddleware, async (req, res, next) => {
+  try {
+    const { quantity, itemQuantities } = req.body;
+
+    const booking = await Booking.findById(req.params.id)
+      .populate('serviceId')
+      .populate('customerId', 'name email');
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Validate quantity
+    if (quantity !== undefined) {
+      if (quantity < 1 || quantity > 100) {
+        return res.status(400).json({
+          success: false,
+          message: 'Number of guests must be between 1 and 100'
+        });
+      }
+      booking.quantity = quantity;
+    }
+
+    // Validate and update item quantities
+    if (itemQuantities && booking.serviceId) {
+      // Check inventory levels for each item
+      const service = await Service.findById(booking.serviceId._id);
+      if (!service) {
+        return res.status(404).json({ success: false, message: 'Service not found' });
+      }
+
+      // For equipment/supply services, check inventory levels
+      if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+        const totalRequested = Object.values(itemQuantities).reduce((sum, qty) => sum + (qty || 0), 0);
+        if (totalRequested > service.quantity) {
+          return res.status(400).json({
+            success: false,
+            message: `Requested quantity (${totalRequested}) exceeds available inventory (${service.quantity})`
+          });
+        }
+      }
+
+      booking.itemQuantities = itemQuantities;
+    }
+
+    // Recalculate total price if quantity changed
+    if (quantity !== undefined && booking.serviceId) {
+      const service = booking.serviceId;
+      const calculatedPrice = service.calculatePrice ? service.calculatePrice() : service.basePrice || service.price || 0;
+      booking.totalPrice = calculatedPrice * booking.quantity;
+    }
+
+    await booking.save();
+
+    // Send notification to customer about booking update
+    try {
+      await sendTemplateNotification(booking.customerId._id, 'BOOKING_UPDATED', {
+        message: `Your booking details for ${booking.serviceId.name} have been updated by an administrator.`,
+        metadata: {
+          bookingId: booking._id,
+          serviceId: booking.serviceId._id,
+          quantity: booking.quantity,
+        },
+      });
+    } catch (notificationError) {
+      console.error('Error sending booking update notification:', notificationError);
+      // Don't fail the update if notification fails
+    }
+
+    res.json({
+      success: true,
+      booking,
+      message: 'Booking details updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Error updating booking details:', error);
     next(error);
   }
 });

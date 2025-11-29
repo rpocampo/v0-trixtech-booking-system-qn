@@ -112,6 +112,18 @@ const serviceSchema = new mongoose.Schema(
     includedItems: [{
       type: String,
     }],
+    includedEquipment: [{
+      equipmentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Service',
+      },
+      quantity: {
+        type: Number,
+        default: 1,
+        min: 1,
+      },
+      name: String, // Cache the equipment name for display
+    }],
     requirements: [{
       type: String,
     }],

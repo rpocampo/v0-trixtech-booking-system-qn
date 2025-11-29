@@ -92,6 +92,11 @@ const bookingSchema = new mongoose.Schema(
       type: Number, // in minutes
       default: 60, // 1 hour default
     },
+    itemQuantities: {
+      type: Map,
+      of: Number,
+      default: {},
+    },
   },
   { timestamps: true }
 );

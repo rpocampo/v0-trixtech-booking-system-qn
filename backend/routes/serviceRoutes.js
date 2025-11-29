@@ -24,6 +24,39 @@ const validateInclusions = (includedItems, serviceType) => {
   return { valid: true, inclusions: validItems };
 };
 
+// Helper function to parse includedEquipment from FormData
+const parseIncludedEquipment = (req) => {
+  const equipment = [];
+
+  // Check if we have equipment data in the request
+  if (req.body['includedEquipment[][equipmentId]']) {
+    const equipmentIds = Array.isArray(req.body['includedEquipment[][equipmentId]'])
+      ? req.body['includedEquipment[][equipmentId]']
+      : [req.body['includedEquipment[][equipmentId]']];
+
+    const quantities = Array.isArray(req.body['includedEquipment[][quantity]'])
+      ? req.body['includedEquipment[][quantity]']
+      : [req.body['includedEquipment[][quantity]']];
+
+    const names = Array.isArray(req.body['includedEquipment[][name]'])
+      ? req.body['includedEquipment[][name]']
+      : [req.body['includedEquipment[][name]']];
+
+    // Build equipment array
+    for (let i = 0; i < equipmentIds.length; i++) {
+      if (equipmentIds[i] && quantities[i] && names[i]) {
+        equipment.push({
+          equipmentId: equipmentIds[i],
+          quantity: parseInt(quantities[i]) || 1,
+          name: names[i]
+        });
+      }
+    }
+  }
+
+  return equipment;
+};
+
 const router = express.Router();
 
 // Configure multer for file uploads
@@ -179,6 +212,9 @@ router.post('/', adminMiddleware, upload.fields([
       leadTime
     } = req.body;
 
+    // Parse includedEquipment from FormData
+    const includedEquipment = parseIncludedEquipment(req);
+
     // Validate required fields
     if (!name || !description) {
       return res.status(400).json({
@@ -209,6 +245,7 @@ router.post('/', adminMiddleware, upload.fields([
       tags: tags ? (Array.isArray(tags) ? tags : [tags]) : [],
       features: features ? (Array.isArray(features) ? features : [features]) : [],
       includedItems: includedItems ? (Array.isArray(includedItems) ? includedItems : [includedItems]) : [],
+      includedEquipment: includedEquipment ? (Array.isArray(includedEquipment) ? includedEquipment : [includedEquipment]) : [],
       requirements: requirements ? (Array.isArray(requirements) ? requirements : [requirements]) : [],
       minOrder: minOrder ? parseInt(minOrder) : 1,
       leadTime: leadTime ? parseInt(leadTime) : 24,
@@ -288,6 +325,9 @@ router.put('/:id', adminMiddleware, upload.fields([
       leadTime
     } = req.body;
 
+    // Parse includedEquipment from FormData
+    const includedEquipment = parseIncludedEquipment(req);
+
     const updateData = {};
 
     // Only validate and include fields that are provided
@@ -336,6 +376,9 @@ router.put('/:id', adminMiddleware, upload.fields([
     }
     if (includedItems !== undefined) {
       updateData.includedItems = Array.isArray(includedItems) ? includedItems : [includedItems];
+    }
+    if (includedEquipment !== undefined) {
+      updateData.includedEquipment = Array.isArray(includedEquipment) ? includedEquipment : [includedEquipment];
     }
     if (requirements !== undefined) {
       updateData.requirements = Array.isArray(requirements) ? requirements : [requirements];

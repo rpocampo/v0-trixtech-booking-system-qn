@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 interface Booking {
   _id: string;
   customerId: { name: string; email: string };
-  serviceId: { name: string; price: number };
+  serviceId: { _id: string; name: string; price: number; includedItems?: string[]; quantity?: number; serviceType?: string };
   bookingDate: string;
   status: string;
   paymentStatus: string;
@@ -16,6 +16,7 @@ interface Booking {
   quantity: number;
   createdAt?: string;
   updatedAt?: string;
+  itemQuantities?: { [itemName: string]: number };
 }
 
 export default function AdminBookings() {
@@ -34,6 +35,14 @@ export default function AdminBookings() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [dailyBookings, setDailyBookings] = useState<Booking[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [isEditingBooking, setIsEditingBooking] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    quantity: 1,
+    itemQuantities: {} as { [itemName: string]: number },
+  });
+  const [inventoryLevels, setInventoryLevels] = useState<{ [serviceId: string]: number }>({});
+  const [updateMessage, setUpdateMessage] = useState('');
+  const [updateMessageType, setUpdateMessageType] = useState<'success' | 'error' | ''>('');
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -111,9 +120,37 @@ export default function AdminBookings() {
     }
   };
 
-  const viewBooking = (booking: Booking) => {
+  const viewBooking = async (booking: Booking) => {
     setSelectedBooking(booking);
     setShowBookingModal(true);
+    setIsEditingBooking(false);
+    setUpdateMessage('');
+    setUpdateMessageType('');
+
+    // Initialize edit form data
+    setEditFormData({
+      quantity: booking.quantity,
+      itemQuantities: booking.itemQuantities || {},
+    });
+
+    // Fetch inventory levels for the service
+    if (booking.serviceId && booking.serviceId._id) {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://localhost:5000/api/inventory/service/${booking.serviceId._id}/batches`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await response.json();
+        if (data.success) {
+          setInventoryLevels(prev => ({
+            ...prev,
+            [booking.serviceId._id]: data.batchDetails.totalQuantity
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch inventory levels:', error);
+      }
+    }
   };
 
   const handleDateClick = (date: Date) => {
@@ -141,6 +178,78 @@ export default function AdminBookings() {
       }
       return newMonth;
     });
+  };
+
+  const startEditingBooking = () => {
+    setIsEditingBooking(true);
+    setUpdateMessage('');
+    setUpdateMessageType('');
+  };
+
+  const cancelEditingBooking = () => {
+    setIsEditingBooking(false);
+    setUpdateMessage('');
+    setUpdateMessageType('');
+    if (selectedBooking) {
+      setEditFormData({
+        quantity: selectedBooking.quantity,
+        itemQuantities: selectedBooking.itemQuantities || {},
+      });
+    }
+  };
+
+  const saveBookingChanges = async () => {
+    if (!selectedBooking) return;
+
+    const token = localStorage.getItem('token');
+    try {
+      const response = await fetch(`http://localhost:5000/api/bookings/${selectedBooking._id}/update-details`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          quantity: editFormData.quantity,
+          itemQuantities: editFormData.itemQuantities,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Update the booking in the local state
+        setBookings(bookings.map(b =>
+          b._id === selectedBooking._id
+            ? { ...b, quantity: editFormData.quantity, itemQuantities: editFormData.itemQuantities }
+            : b
+        ));
+
+        // Update selected booking
+        setSelectedBooking(prev => prev ? {
+          ...prev,
+          quantity: editFormData.quantity,
+          itemQuantities: editFormData.itemQuantities
+        } : null);
+
+        setUpdateMessage('Booking details updated successfully!');
+        setUpdateMessageType('success');
+        setIsEditingBooking(false);
+
+        // Clear message after 3 seconds
+        setTimeout(() => {
+          setUpdateMessage('');
+          setUpdateMessageType('');
+        }, 3000);
+      } else {
+        setUpdateMessage(data.message || 'Failed to update booking details');
+        setUpdateMessageType('error');
+      }
+    } catch (error) {
+      console.error('Failed to update booking:', error);
+      setUpdateMessage('Network error. Please try again.');
+      setUpdateMessageType('error');
+    }
   };
 
   const getBookingsForDate = (date: Date) => {
@@ -492,17 +601,58 @@ export default function AdminBookings() {
           {/* Booking Details Modal */}
           {showBookingModal && selectedBooking && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-6">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-2xl font-bold">Booking Details</h3>
-                    <button
-                      onClick={() => setShowBookingModal(false)}
-                      className="text-gray-500 hover:text-gray-700 text-2xl"
-                    >
-                      ×
-                    </button>
+                    <div className="flex gap-2">
+                      {!isEditingBooking ? (
+                        <button
+                          onClick={startEditingBooking}
+                          className="btn-primary text-sm px-4 py-2"
+                        >
+                          ✏️ Edit Details
+                        </button>
+                      ) : (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={saveBookingChanges}
+                            className="btn-primary text-sm px-4 py-2"
+                          >
+                            💾 Save Changes
+                          </button>
+                          <button
+                            onClick={cancelEditingBooking}
+                            className="btn-secondary text-sm px-4 py-2"
+                          >
+                            ❌ Cancel
+                          </button>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => setShowBookingModal(false)}
+                        className="text-gray-500 hover:text-gray-700 text-2xl ml-2"
+                      >
+                        ×
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Update Message */}
+                  {updateMessage && (
+                    <div className={`p-4 rounded-lg mb-6 ${
+                      updateMessageType === 'success'
+                        ? 'bg-green-50 border border-green-200 text-green-800'
+                        : 'bg-red-50 border border-red-200 text-red-800'
+                    }`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">
+                          {updateMessageType === 'success' ? '✅' : '❌'}
+                        </span>
+                        <p className="font-medium">{updateMessage}</p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-6">
                     {/* Booking ID */}
@@ -603,6 +753,141 @@ export default function AdminBookings() {
                             </select>
                           </div>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Editable Booking Details */}
+                    <div className="card p-4">
+                      <h4 className="font-semibold mb-3 flex items-center gap-2">
+                        <span>👥</span>
+                        Guest & Item Details
+                        {isEditingBooking && (
+                          <span className="text-sm text-blue-600 font-normal">(Editable)</span>
+                        )}
+                      </h4>
+
+                      <div className="space-y-4">
+                        {/* Number of Guests */}
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                          <div className="flex-1">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Number of Guests
+                            </label>
+                            <p className="text-xs text-gray-500">
+                              Current: {selectedBooking.quantity} guest{selectedBooking.quantity !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                          {isEditingBooking ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                min="1"
+                                max="100"
+                                value={editFormData.quantity}
+                                onChange={(e) => setEditFormData(prev => ({
+                                  ...prev,
+                                  quantity: parseInt(e.target.value) || 1
+                                }))}
+                                className="input-field w-20 text-center"
+                              />
+                              <span className="text-sm text-gray-600">guests</span>
+                            </div>
+                          ) : (
+                            <div className="text-right">
+                              <span className="text-lg font-semibold text-[var(--primary)]">
+                                {selectedBooking.quantity}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Items/Equipment Quantities */}
+                        {selectedBooking.serviceId.includedItems && selectedBooking.serviceId.includedItems.length > 0 && (
+                          <div className="space-y-3">
+                            <h5 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                              <span>📦</span>
+                              Included Items & Equipment
+                            </h5>
+
+                            {selectedBooking.serviceId.includedItems.map((item, index) => {
+                              const currentQuantity = editFormData.itemQuantities?.[item] || (selectedBooking.itemQuantities?.[item] || 1);
+                              const inventoryLevel = inventoryLevels[selectedBooking.serviceId._id] || 0;
+                              const isLowStock = inventoryLevel <= 5 && inventoryLevel > 0;
+                              const isOutOfStock = inventoryLevel <= 0;
+
+                              return (
+                                <div key={index} className={`flex items-center justify-between p-3 rounded-lg border ${
+                                  isEditingBooking ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
+                                } ${isOutOfStock ? 'border-red-300 bg-red-50' : ''} ${isLowStock ? 'border-yellow-300 bg-yellow-50' : ''}`}>
+                                  <div className="flex-1">
+                                    <p className="font-medium text-sm">{item}</p>
+                                    <div className="flex items-center gap-4 mt-1">
+                                      <span className="text-xs text-gray-500">
+                                        Current: {currentQuantity} item{currentQuantity !== 1 ? 's' : ''}
+                                      </span>
+                                      {inventoryLevel > 0 && (
+                                        <span className={`text-xs flex items-center gap-1 ${
+                                          isLowStock ? 'text-yellow-600' : 'text-green-600'
+                                        }`}>
+                                          <span>📊</span>
+                                          {inventoryLevel} in stock
+                                        </span>
+                                      )}
+                                      {isOutOfStock && (
+                                        <span className="text-xs text-red-600 flex items-center gap-1">
+                                          <span>⚠️</span>
+                                          Out of stock
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  {isEditingBooking ? (
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max={inventoryLevel || 100}
+                                        value={currentQuantity}
+                                        onChange={(e) => {
+                                          const newQuantity = parseInt(e.target.value) || 0;
+                                          setEditFormData(prev => ({
+                                            ...prev,
+                                            itemQuantities: {
+                                              ...prev.itemQuantities,
+                                              [item]: newQuantity
+                                            }
+                                          }));
+                                        }}
+                                        className={`input-field w-20 text-center ${
+                                          currentQuantity > inventoryLevel && inventoryLevel > 0
+                                            ? 'border-red-300 focus:border-red-500'
+                                            : ''
+                                        }`}
+                                      />
+                                      <span className="text-sm text-gray-600">items</span>
+                                      {currentQuantity > inventoryLevel && inventoryLevel > 0 && (
+                                        <span className="text-xs text-red-600">⚠️ Exceeds stock</span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <div className="text-right">
+                                      <span className="text-lg font-semibold text-[var(--primary)]">
+                                        {currentQuantity}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {(!selectedBooking.serviceId.includedItems || selectedBooking.serviceId.includedItems.length === 0) && (
+                          <div className="text-center py-4 text-gray-500 text-sm bg-gray-50 rounded-lg">
+                            No specific items listed for this service
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
