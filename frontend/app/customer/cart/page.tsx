@@ -6,6 +6,17 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '../../../components/CartContext';
 import { useSocket } from '../../../components/SocketProvider';
 
+interface EquipmentRecommendation {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  serviceType: string;
+  image?: string;
+  quantity?: number;
+}
+
 export default function CartPage() {
   const router = useRouter();
   const { socket } = useSocket();
@@ -18,7 +29,8 @@ export default function CartPage() {
     getTotalPrice,
     validateStockAvailability,
     refreshStockData,
-    canCheckout
+    canCheckout,
+    addToCart
   } = useCart();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -26,6 +38,9 @@ export default function CartPage() {
   const [isValidatingStock, setIsValidatingStock] = useState(false);
   const [lastStockUpdate, setLastStockUpdate] = useState<Date | null>(null);
   const [scheduledItems, setScheduledItems] = useState<{ [key: string]: { date: string; notes: string } }>({});
+  const [equipmentRecommendations, setEquipmentRecommendations] = useState<EquipmentRecommendation[]>([]);
+  const [loadingRecommendations, setLoadingRecommendations] = useState(false);
+  const [showAllRecommendations, setShowAllRecommendations] = useState(false);
 
   // Auto-validate stock when cart changes
   useEffect(() => {
@@ -50,6 +65,47 @@ export default function CartPage() {
       setStockValidationIssues([]);
     }
   }, [items, validateStockAvailability]);
+
+  // Fetch equipment recommendations when cart has services
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      if (items.length === 0) {
+        setEquipmentRecommendations([]);
+        return;
+      }
+
+      // Check if cart has any non-equipment services
+      const hasServices = items.some(item => item.serviceType !== 'equipment');
+      if (!hasServices) {
+        setEquipmentRecommendations([]);
+        return;
+      }
+
+      setLoadingRecommendations(true);
+      try {
+        const serviceIds = items.map(item => item.id).join(',');
+        const response = await fetch(`http://localhost:5000/api/analytics/equipment-recommendations?serviceIds=${serviceIds}`);
+        const data = await response.json();
+        if (data.success) {
+          // Filter out equipment already in cart
+          const cartEquipmentIds = items
+            .filter(item => item.serviceType === 'equipment')
+            .map(item => item.id);
+          const filteredRecommendations = data.recommendations.filter(
+            (rec: EquipmentRecommendation) => !cartEquipmentIds.includes(rec._id)
+          );
+          setEquipmentRecommendations(filteredRecommendations);
+        }
+      } catch (error) {
+        console.error('Failed to fetch equipment recommendations:', error);
+        setEquipmentRecommendations([]);
+      } finally {
+        setLoadingRecommendations(false);
+      }
+    };
+
+    fetchRecommendations();
+  }, [items]);
 
   // Real-time stock updates
   useEffect(() => {
@@ -97,6 +153,19 @@ export default function CartPage() {
       clearCart();
       setScheduledItems({});
     }
+  };
+
+  const handleAddRecommendation = (recommendation: EquipmentRecommendation) => {
+    addToCart({
+      id: recommendation._id,
+      name: recommendation.name,
+      price: recommendation.price,
+      serviceType: recommendation.serviceType,
+      category: recommendation.category,
+      image: recommendation.image,
+      maxOrder: recommendation.quantity,
+      availableQuantity: recommendation.quantity,
+    });
   };
 
 
@@ -372,6 +441,96 @@ export default function CartPage() {
           </div>
         </div>
       </div>
+
+      {/* Equipment Recommendations */}
+      {equipmentRecommendations.length > 0 && (
+        <div className="mt-8">
+          <div className="card p-6">
+            <h2 className="text-2xl font-bold text-[var(--foreground)] mb-4 flex items-center gap-2">
+              <span>🔧</span>
+              Recommended Equipment
+            </h2>
+            <p className="text-[var(--muted)] mb-6">
+              Enhance your event with these recommended equipment rentals that complement your selected services.
+            </p>
+
+            {loadingRecommendations ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-[var(--primary)] border-t-transparent"></div>
+                <span className="ml-3 text-[var(--muted)]">Loading recommendations...</span>
+              </div>
+            ) : (
+              <>
+                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {(showAllRecommendations ? equipmentRecommendations : equipmentRecommendations.slice(0, 4)).map((rec) => (
+                    <div key={rec._id} className="border border-[var(--border)] rounded-lg p-4 hover:shadow-md transition-shadow">
+                      {/* Equipment Image */}
+                      <div className="w-full h-24 rounded-lg bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 flex items-center justify-center text-2xl mb-3">
+                        {rec.image ? (
+                          <img
+                            src={rec.image.startsWith('/uploads/') ? `http://localhost:5000${rec.image}` : rec.image}
+                            alt={rec.name}
+                            className="w-full h-full object-cover rounded-lg"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://via.placeholder.com/80x80?text=EQUIP';
+                            }}
+                          />
+                        ) : (
+                          '🎪'
+                        )}
+                      </div>
+
+                      {/* Equipment Details */}
+                      <h3 className="font-semibold text-sm mb-1 line-clamp-2">{rec.name}</h3>
+                      <p className="text-xs text-[var(--muted)] mb-2 line-clamp-2">{rec.description}</p>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-lg font-bold text-[var(--primary)]">₱{rec.price}</span>
+                        {rec.quantity && (
+                          <span className="text-xs text-green-600">{rec.quantity} available</span>
+                        )}
+                      </div>
+
+                      {/* Add to Cart Button */}
+                      <button
+                        onClick={() => handleAddRecommendation(rec)}
+                        className="w-full btn-primary text-sm py-2"
+                      >
+                        Add to Cart
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* See More Button */}
+                {equipmentRecommendations.length > 4 && (
+                  <div className="flex justify-center mt-6">
+                    <button
+                      onClick={() => setShowAllRecommendations(!showAllRecommendations)}
+                      className="btn-secondary flex items-center gap-2"
+                    >
+                      {showAllRecommendations ? (
+                        <>
+                          <span>Show Less</span>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                          </svg>
+                        </>
+                      ) : (
+                        <>
+                          <span>See More Equipment ({equipmentRecommendations.length - 4} more)</span>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Continue Shopping Banner */}
       <div className="mt-12 card-gradient p-8 text-center">
