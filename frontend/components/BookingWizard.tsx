@@ -89,6 +89,10 @@ export default function BookingWizard({ service, onComplete, onCancel }: Booking
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [suggestions, setSuggestions] = useState<PredictiveSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [smartScheduleSuggestions, setSmartScheduleSuggestions] = useState<any[]>([]);
+  const [showSmartSchedule, setShowSmartSchedule] = useState(false);
+  const [personalizedData, setPersonalizedData] = useState<any>(null);
+  const [showPersonalization, setShowPersonalization] = useState(false);
 
   // Auto-save booking data to localStorage with debouncing
   useEffect(() => {
@@ -279,6 +283,80 @@ export default function BookingWizard({ service, onComplete, onCancel }: Booking
     fetchSuggestions();
   }, [service._id]);
 
+  // Fetch smart scheduling suggestions
+  const fetchSmartScheduleSuggestions = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const params = new URLSearchParams({
+        serviceId: service._id,
+        quantity: bookingData.quantity.toString()
+      });
+
+      if (bookingData.bookingDate) {
+        params.append('bookingDate', bookingData.bookingDate.split('T')[0]);
+      }
+
+      const response = await fetch(`http://localhost:5000/api/bookings/smart-schedule?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSmartScheduleSuggestions(data.suggestions);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching smart schedule suggestions:', error);
+    }
+  };
+
+  // Load smart schedule suggestions when date or quantity changes
+  useEffect(() => {
+    if (currentStep >= 1) { // Only fetch after service details step
+      fetchSmartScheduleSuggestions();
+    }
+  }, [bookingData.bookingDate, bookingData.quantity, currentStep]);
+
+  // Fetch personalized booking data
+  const fetchPersonalizedData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`http://localhost:5000/api/bookings/personalized/${service._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setPersonalizedData(data);
+          // Auto-fill form with personalized data if confidence is high
+          if (data.personalizedData.confidence > 0.6) {
+            setBookingData((prev: any) => ({
+              ...prev,
+              quantity: data.personalizedData.quantity || prev.quantity,
+              bookingDate: data.personalizedData.bookingDate || prev.bookingDate,
+              deliveryTime: data.personalizedData.deliveryTime || prev.deliveryTime,
+              notes: data.personalizedData.notes || prev.notes,
+              addons: data.personalizedData.addons || prev.addons
+            }));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching personalized data:', error);
+    }
+  };
+
+  // Load personalized data when component mounts
+  useEffect(() => {
+    fetchPersonalizedData();
+  }, [service._id]);
+
   const handleNext = async () => {
     // Validate current step
     if (!validateStep(currentStep)) {
@@ -464,6 +542,42 @@ export default function BookingWizard({ service, onComplete, onCancel }: Booking
                   </div>
                 </div>
               )}
+
+              {/* Auto-Personalization Indicator */}
+              {personalizedData && personalizedData.personalizedData.confidence > 0.4 && (
+                <div className="mt-6">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-lg font-semibold text-green-800 flex items-center gap-2">
+                        <span>🎯</span>
+                        Personalized for You
+                      </h4>
+                      <button
+                        onClick={() => setShowPersonalization(!showPersonalization)}
+                        className="text-green-600 hover:text-green-800 text-sm underline"
+                      >
+                        {showPersonalization ? 'Hide' : 'Show'} details
+                      </button>
+                    </div>
+
+                    {showPersonalization && (
+                      <div className="space-y-2">
+                        <p className="text-sm text-green-700">
+                          Form pre-filled based on your booking history:
+                        </p>
+                        <ul className="text-sm text-green-600 space-y-1">
+                          {personalizedData.reasoning.map((reason: string, index: number) => (
+                            <li key={index}>• {reason}</li>
+                          ))}
+                        </ul>
+                        <p className="text-xs text-green-500 mt-2">
+                          💡 You can still modify any field as needed
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -562,6 +676,76 @@ export default function BookingWizard({ service, onComplete, onCancel }: Booking
                     }`}>
                       {availabilityStatus.reason}
                     </p>
+                  </div>
+                )}
+
+                {/* Smart Scheduling Suggestions */}
+                {smartScheduleSuggestions.length > 0 && (
+                  <div className="mt-6">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="text-lg font-semibold text-blue-800 flex items-center gap-2">
+                          <span>🧠</span>
+                          Smart Scheduling
+                        </h4>
+                        <button
+                          onClick={() => setShowSmartSchedule(!showSmartSchedule)}
+                          className="text-blue-600 hover:text-blue-800 text-sm underline"
+                        >
+                          {showSmartSchedule ? 'Hide' : 'Show'} suggestions
+                        </button>
+                      </div>
+
+                      {showSmartSchedule && (
+                        <div className="space-y-3">
+                          <p className="text-sm text-blue-700">
+                            Based on your preferences and booking patterns, here are optimal times:
+                          </p>
+                          <div className="grid gap-3">
+                            {smartScheduleSuggestions.slice(0, 3).map((suggestion, index) => (
+                              <div key={index} className="bg-white border border-blue-200 rounded-lg p-3">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="text-sm font-medium text-gray-800">
+                                        {new Date(suggestion.time).toLocaleDateString()} at {new Date(suggestion.time).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                                      </span>
+                                      <span className={`px-2 py-0.5 rounded text-xs ${
+                                        suggestion.score >= 0.8 ? 'bg-green-100 text-green-800' :
+                                        suggestion.score >= 0.6 ? 'bg-blue-100 text-blue-800' :
+                                        'bg-yellow-100 text-yellow-800'
+                                      }`}>
+                                        {Math.round(suggestion.score * 100)}% optimal
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-gray-600 line-clamp-2">
+                                      {suggestion.reason}
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      const selectedDateTime = new Date(suggestion.time);
+                                      const date = selectedDateTime.toISOString().split('T')[0];
+                                      const time = selectedDateTime.toTimeString().split(' ')[0].substring(0, 5);
+                                      const dateTime = `${date}T${time}:00`;
+                                      handleFieldChange('bookingDate', dateTime);
+                                      setShowSmartSchedule(false);
+                                    }}
+                                    className="ml-3 btn-primary text-xs px-3 py-1"
+                                    disabled={!suggestion.available}
+                                  >
+                                    {suggestion.available ? 'Select' : 'Unavailable'}
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-xs text-blue-600 mt-2">
+                            💡 These suggestions consider your booking history, availability, and optimal pricing
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>

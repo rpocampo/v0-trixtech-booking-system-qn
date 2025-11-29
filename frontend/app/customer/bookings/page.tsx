@@ -6,7 +6,19 @@ import { useSocket } from '../../../components/SocketProvider';
 
 interface Booking {
   _id: string;
-  serviceId: { name: string; basePrice: number; category: string; description?: string; serviceType?: string; requiresDelivery?: boolean };
+  serviceId: {
+    name: string;
+    basePrice: number;
+    category: string;
+    description?: string;
+    serviceType?: string;
+    requiresDelivery?: boolean;
+    includedEquipment?: Array<{
+      equipmentId: string;
+      quantity: number;
+      name: string;
+    }>;
+  };
   quantity: number;
   bookingDate: string;
   status: string;

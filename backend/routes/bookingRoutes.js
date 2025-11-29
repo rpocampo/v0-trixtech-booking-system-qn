@@ -12,6 +12,15 @@ const { sendTemplateNotification } = require('../utils/notificationService');
 const { findAlternativeServices, processReservationQueue } = require('../utils/recommendationService');
 const { triggerLowStockCheck } = require('../utils/lowStockAlertService');
 const lockService = require('../utils/lockService');
+const SmartScheduler = require('../utils/smartScheduler');
+const AutoRebookingService = require('../utils/autoRebookingService');
+const AutoPersonalizationService = require('../utils/autoPersonalizationService');
+const AutoPaymentService = require('../utils/autoPaymentService');
+const AutoRecoveryService = require('../utils/autoRecoveryService');
+const AutoCompletionService = require('../utils/autoCompletionService');
+const DynamicDiscountService = require('../utils/dynamicDiscountService');
+const AutoWaitlistService = require('../utils/autoWaitlistService');
+const AutoInventoryService = require('../utils/autoInventoryService');
 
 const router = express.Router();
 
@@ -308,7 +317,23 @@ router.post('/', authMiddleware, async (req, res, next) => {
           throw new Error('Unable to calculate service price. Please try again or contact support.');
         }
 
-        const totalPrice = calculatedPrice * requestedQuantity;
+        let totalPrice = calculatedPrice * requestedQuantity;
+
+        // Apply dynamic discounts
+        const discountInfo = await DynamicDiscountService.calculateDynamicDiscount(
+          serviceId,
+          bookingDateTime,
+          requestedQuantity,
+          req.user.id
+        );
+
+        let finalPrice = totalPrice;
+        let discountAmount = 0;
+
+        if (discountInfo.discount > 0) {
+          discountAmount = (totalPrice * discountInfo.discount) / 100;
+          finalPrice = totalPrice - discountAmount;
+        }
 
         // Ensure total price is valid
         if (isNaN(totalPrice) || totalPrice <= 0) {
@@ -332,10 +357,18 @@ router.post('/', authMiddleware, async (req, res, next) => {
           paymentStatus: 'unpaid', // Explicitly set payment status
           paymentType: 'full', // Default to full payment
           amountPaid: 0,
-          remainingBalance: totalPrice,
+          remainingBalance: finalPrice, // Use final price after discount
           downPaymentPercentage: 30, // Default 30%
           notes,
           requiresDelivery: serviceRequiresDelivery,
+          // Add discount information
+          discountApplied: discountInfo.discount,
+          discountAmount,
+          finalPrice,
+          discountReason: discountInfo.primaryReason,
+          discountFactors: discountInfo.discountFactors,
+          discountAppliedAt: new Date(),
+          discountExpiresAt: discountInfo.validUntil,
         };
 
         // Add delivery time fields if service requires delivery
@@ -360,8 +393,14 @@ router.post('/', authMiddleware, async (req, res, next) => {
           booking = new Booking(bookingData);
           await booking.save();
 
-          // Decrease inventory if it's equipment or supply
-          if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+          // Decrease inventory if it's equipment or supply or equipment category
+          const shouldDeductMainServiceInventory = (
+            service.serviceType === 'equipment' ||
+            service.serviceType === 'supply' ||
+            (service.category === 'equipment' && service.quantity !== undefined && service.quantity > 0)
+          );
+
+          if (shouldDeductMainServiceInventory) {
             const previousStock = service.quantity;
             // Use batch tracking for inventory reduction (FIFO)
             await service.reduceBatchQuantity(requestedQuantity);
@@ -379,7 +418,9 @@ router.post('/', authMiddleware, async (req, res, next) => {
               metadata: {
                 customerId: req.user.id,
                 bookingDate: bookingDateTime,
-                serviceName: service.name
+                serviceName: service.name,
+                serviceCategory: service.category,
+                serviceType: service.serviceType
               }
             });
 
@@ -524,8 +565,31 @@ router.post('/', authMiddleware, async (req, res, next) => {
         return res.status(200).json(bookingResult);
       }
     } else {
-      // Add to reservation queue when not available
-      // Add to reservation queue
+      // Attempt auto-recovery before queuing
+      const bookingData = {
+        customerId: req.user.id,
+        serviceId,
+        quantity: requestedQuantity,
+        bookingDate: bookingDateObj,
+        totalPrice: 0, // Will be calculated
+        notes,
+        status: 'failed'
+      };
+
+      const recoveryResult = await AutoRecoveryService.handleBookingFailure(bookingData, 'availability_conflict');
+
+      if (recoveryResult.success && recoveryResult.recoveryResult) {
+        // Auto-recovery successful
+        return res.status(200).json({
+          success: true,
+          autoRecovered: true,
+          recoveryBooking: recoveryResult.recoveryResult.recoveryBooking,
+          alternative: recoveryResult.recoveryResult.alternative,
+          message: 'Booking automatically recovered with an alternative option!'
+        });
+      }
+
+      // Fall back to reservation queue
       const alternatives = await findAlternativeServices(serviceId, new Date(bookingDate), requestedQuantity);
 
       const queueEntry = new ReservationQueue({
@@ -543,46 +607,48 @@ router.post('/', authMiddleware, async (req, res, next) => {
 
       await queueEntry.save();
 
-      // Send notification about queue placement
-      await sendTemplateNotification(req.user.id, 'BOOKING_QUEUED', {
-        message: `Your requested ${service.name} is currently unavailable. You've been added to the reservation queue.`,
+      // Send notification about queue placement with recovery suggestions
+      await sendTemplateNotification(req.user.id, 'BOOKING_QUEUED_WITH_RECOVERY', {
+        message: `Your requested ${service.name} is currently unavailable. We've added you to the reservation queue and found some alternatives.`,
         metadata: {
           serviceId: service._id,
           requestedQuantity,
           alternativesCount: alternatives.length,
+          recoverySuggestions: recoveryResult.suggestionsSent ? alternatives.slice(0, 3) : [],
+          queueId: queueEntry._id
         },
       });
 
-      // Send email with alternatives
+      // Send email with alternatives and recovery options
       const customer = await User.findById(req.user.id);
       if (customer) {
-        // Custom email for queued reservations
         const mailOptions = {
           from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
           to: customer.email,
-          subject: 'Reservation Queued - TRIXTECH',
+          subject: 'Reservation Queued with Recovery Options - TRIXTECH',
           html: `
             <h2>Your Reservation Has Been Queued</h2>
             <p>Dear ${customer.name},</p>
             <p>Your requested booking for <strong>${service.name}</strong> is currently unavailable for the selected date.</p>
-            <p>You've been added to our reservation queue with first-come, first-served priority.</p>
+            <p>We've added you to our reservation queue with first-come, first-served priority.</p>
             <p><strong>Requested:</strong> ${requestedQuantity} ${service.category === 'equipment' ? 'items' : 'service'}</p>
             <p><strong>Date:</strong> ${new Date(bookingDate).toLocaleDateString()}</p>
 
             ${alternatives.length > 0 ? `
-            <h3>Alternative Options Available:</h3>
+            <h3>💡 Alternative Options Available:</h3>
+            <p>While you wait, consider these alternatives:</p>
             <ul>
-              ${alternatives.map(alt => `
+              ${alternatives.slice(0, 3).map(alt => `
                 <li>
                   <strong>${alt.name}</strong> - ₱${alt.price}
-                  ${alt.isAvailable ? '<span style="color: green;">(Available)</span>' : '<span style="color: red;">(Limited)</span>'}
+                  ${alt.isAvailable ? '<span style="color: green;">(Available now!)</span>' : '<span style="color: orange;">(May have limited availability)</span>'}
                   <br><small>${alt.reason}</small>
                 </li>
               `).join('')}
             </ul>
             ` : ''}
 
-            <p>We'll notify you immediately when your reservation becomes available!</p>
+            <p>We'll notify you immediately when your reservation becomes available or if better alternatives open up!</p>
             <p>Thank you for your patience.</p>
           `,
         };
@@ -602,7 +668,8 @@ router.post('/', authMiddleware, async (req, res, next) => {
         queued: true,
         queueId: queueEntry._id,
         alternatives: alternatives.slice(0, 3),
-        message: 'Item currently unavailable. Added to reservation queue with first-come, first-served priority.'
+        recoveryAttempted: true,
+        message: 'Item currently unavailable. Added to reservation queue with recovery suggestions.'
       });
     }
   } catch (error) {
@@ -686,7 +753,7 @@ router.get('/', authMiddleware, async (req, res, next) => {
 // Get all bookings (admin only) - show all bookings including pending for management
 router.get('/admin/all', adminMiddleware, async (req, res, next) => {
   try {
-    const { limit, status, paymentStatus } = req.query;
+    const { limit, status, paymentStatus, needsReview } = req.query;
     const limitNum = limit ? parseInt(limit) : undefined;
 
     let query = Booking.find()
@@ -704,6 +771,11 @@ router.get('/admin/all', adminMiddleware, async (req, res, next) => {
       query = query.where('paymentStatus').equals(paymentStatus);
     }
 
+    // Filter for bookings needing review if requested
+    if (needsReview === 'true') {
+      query = query.where('status').equals('pending_admin_review');
+    }
+
     // Get total count before applying limit
     const totalCount = await Booking.countDocuments(query.getFilter());
 
@@ -714,6 +786,76 @@ router.get('/admin/all', adminMiddleware, async (req, res, next) => {
     const bookings = await query;
 
     res.json({ success: true, bookings, total: totalCount });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Confirm pending booking (admin only)
+router.put('/:id/confirm', adminMiddleware, async (req, res, next) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('serviceId')
+      .populate('customerId', 'name email');
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    if (booking.status !== 'pending_admin_review') {
+      return res.status(400).json({ success: false, message: 'Booking is not pending admin review' });
+    }
+
+    // Update booking status to confirmed
+    booking.status = 'confirmed';
+    booking.notes = (booking.notes || '') + ' [Manually confirmed by admin]';
+    await booking.save();
+
+    // Send confirmation notifications
+    try {
+      await sendTemplateNotification(booking.customerId._id, 'BOOKING_MANUALLY_CONFIRMED', {
+        message: `Your booking for ${booking.serviceId.name} has been confirmed by our team!`,
+        metadata: {
+          bookingId: booking._id,
+          serviceId: booking.serviceId._id,
+          amount: booking.totalPrice,
+          manuallyConfirmed: true,
+        }
+      });
+
+      // Send booking confirmation email
+      if (booking.customerId.email) {
+        await sendBookingConfirmation(booking.customerId.email, {
+          serviceName: booking.serviceId.name,
+          quantity: booking.quantity,
+          date: booking.bookingDate,
+          time: booking.bookingDate.toLocaleTimeString(),
+          totalPrice: booking.totalPrice,
+          manuallyConfirmed: true,
+        });
+      }
+
+      // Emit real-time event
+      const io = global.io;
+      if (io && booking.customerId) {
+        io.to(`user_${booking.customerId._id}`).emit('booking-manually-confirmed', {
+          booking: {
+            id: booking._id,
+            serviceName: booking.serviceId.name,
+            status: 'confirmed',
+            date: booking.bookingDate,
+          }
+        });
+      }
+    } catch (notificationError) {
+      console.error('Error sending manual confirmation notifications:', notificationError);
+    }
+
+    res.json({
+      success: true,
+      booking,
+      message: 'Booking manually confirmed successfully'
+    });
   } catch (error) {
     next(error);
   }
@@ -800,8 +942,14 @@ router.put('/:id/cancel', authMiddleware, async (req, res, next) => {
     if (booking.status === 'pending' && booking.paymentStatus === 'unpaid') {
       const service = booking.serviceId;
       if (service) {
-        // Restore inventory for equipment/supply items
-        if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+        // Restore inventory for equipment/supply items and equipment category services
+        const shouldRestoreMainServiceInventory = (
+          service.serviceType === 'equipment' ||
+          service.serviceType === 'supply' ||
+          (service.category === 'equipment' && service.quantity !== undefined)
+        );
+
+        if (shouldRestoreMainServiceInventory) {
           const previousStock = service.quantity;
           // Use batch tracking for inventory restoration (reverse of reduceBatchQuantity)
           await service.restoreBatchQuantity(booking.quantity);
@@ -819,7 +967,9 @@ router.put('/:id/cancel', authMiddleware, async (req, res, next) => {
             metadata: {
               customerId: booking.customerId,
               bookingDate: booking.bookingDate,
-              serviceName: service.name
+              serviceName: service.name,
+              serviceCategory: service.category,
+              serviceType: service.serviceType
             }
           });
 
@@ -827,33 +977,44 @@ router.put('/:id/cancel', authMiddleware, async (req, res, next) => {
         }
 
         // Restore inventory for included equipment in professional services
-        if (service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0) {
+        if (service.includedEquipment && service.includedEquipment.length > 0) {
           for (const equipmentItem of service.includedEquipment) {
             try {
               const equipmentService = await Service.findById(equipmentItem.equipmentId);
-              if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
-                const previousStock = equipmentService.quantity;
-                await equipmentService.restoreBatchQuantity(equipmentItem.quantity);
-                const newStock = equipmentService.quantity;
+              if (equipmentService) {
+                // Check if equipment service should have inventory restored
+                const shouldRestoreEquipmentInventory = (
+                  equipmentService.serviceType === 'equipment' ||
+                  equipmentService.serviceType === 'supply' ||
+                  (equipmentService.category === 'equipment' && equipmentService.quantity !== undefined)
+                );
 
-                // Log inventory transaction for equipment restoration
-                await InventoryTransaction.logTransaction({
-                  serviceId: equipmentItem.equipmentId,
-                  bookingId: booking._id,
-                  transactionType: 'booking_cancellation',
-                  quantity: equipmentItem.quantity, // Positive for restoration
-                  previousStock,
-                  newStock,
-                  reason: `Booking cancellation inventory restoration for included equipment: ${equipmentService.name} (from service: ${service.name})`,
-                  metadata: {
-                    customerId: booking.customerId,
-                    bookingDate: booking.bookingDate,
-                    mainServiceName: service.name,
-                    equipmentName: equipmentService.name
-                  }
-                });
+                if (shouldRestoreEquipmentInventory) {
+                  const previousStock = equipmentService.quantity;
+                  await equipmentService.restoreBatchQuantity(equipmentItem.quantity);
+                  const newStock = equipmentService.quantity;
 
-                console.log('Inventory restored for included equipment:', equipmentService.name);
+                  // Log inventory transaction for equipment restoration
+                  await InventoryTransaction.logTransaction({
+                    serviceId: equipmentItem.equipmentId,
+                    bookingId: booking._id,
+                    transactionType: 'booking_cancellation',
+                    quantity: equipmentItem.quantity, // Positive for restoration
+                    previousStock,
+                    newStock,
+                    reason: `Booking cancellation inventory restoration for included equipment: ${equipmentService.name} (from service: ${service.name})`,
+                    metadata: {
+                      customerId: booking.customerId,
+                      bookingDate: booking.bookingDate,
+                      mainServiceName: service.name,
+                      equipmentName: equipmentService.name,
+                      serviceCategory: service.category,
+                      serviceType: service.serviceType
+                    }
+                  });
+
+                  console.log('Inventory restored for included equipment:', equipmentService.name);
+                }
               }
             } catch (equipmentError) {
               console.error('Error restoring equipment inventory:', equipmentError);
@@ -1097,6 +1258,58 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
   }
 });
 
+// Function to determine if a booking should be auto-confirmed
+const shouldAutoConfirmBooking = async (customerId, serviceId, totalPrice, bookingDate) => {
+  try {
+    // Get customer booking history
+    const customerBookings = await Booking.find({
+      customerId,
+      status: 'confirmed',
+      paymentStatus: 'paid'
+    });
+
+    const isReturningCustomer = customerBookings.length > 0;
+    const successfulBookings = customerBookings.length;
+
+    // Get service details
+    const service = await Service.findById(serviceId);
+    if (!service) return false;
+
+    // Calculate days until booking
+    const now = new Date();
+    const daysUntilBooking = Math.ceil((new Date(bookingDate).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Auto-confirmation criteria
+    const criteria = {
+      // Returning customers with good history
+      returningCustomer: isReturningCustomer && successfulBookings >= 2,
+
+      // Low-value bookings (under ₱5,000)
+      lowValue: totalPrice < 5000,
+
+      // High availability services (more than 50% stock remaining)
+      highAvailability: service.quantity && service.quantity > (service.originalQuantity || service.quantity) * 0.5,
+
+      // Bookings made well in advance (more than 7 days)
+      advanceBooking: daysUntilBooking > 7,
+
+      // Low-risk service categories
+      lowRiskCategory: ['party', 'corporate', 'birthday'].includes(service.category),
+
+      // Non-equipment services (lower risk)
+      nonEquipment: service.category !== 'equipment'
+    };
+
+    // Auto-confirm if at least 3 criteria are met
+    const metCriteriaCount = Object.values(criteria).filter(Boolean).length;
+
+    return metCriteriaCount >= 3;
+  } catch (error) {
+    console.error('Error checking auto-confirmation criteria:', error);
+    return false; // Default to manual confirmation on error
+  }
+};
+
 // Confirm booking after successful payment
 router.post('/confirm', authMiddleware, async (req, res, next) => {
   try {
@@ -1174,6 +1387,14 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       });
     }
 
+    // Check if booking should be auto-confirmed
+    const shouldAutoConfirm = await shouldAutoConfirmBooking(
+      req.user.id,
+      bookingIntent.serviceId,
+      bookingIntent.totalPrice,
+      bookingIntent.bookingDate
+    );
+
     // Create the actual booking now that payment is confirmed
     const bookingData = {
       customerId: req.user.id,
@@ -1181,12 +1402,14 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       quantity: bookingIntent.quantity,
       bookingDate: new Date(bookingIntent.bookingDate),
       totalPrice: bookingIntent.totalPrice,
-      status: 'confirmed',
+      status: shouldAutoConfirm ? 'confirmed' : 'pending_admin_review',
       paymentStatus: 'paid',
       paymentId: payment._id,
       notes: bookingIntent.notes,
       duration: bookingIntent.duration,
       dailyRate: bookingIntent.dailyRate,
+      autoConfirmed: shouldAutoConfirm,
+      confirmationReason: shouldAutoConfirm ? 'Auto-confirmed based on low-risk criteria' : 'Requires admin review',
     };
 
     // Check if service requires delivery and set delivery fields
@@ -1214,7 +1437,14 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     await payment.save();
 
     // Decrease inventory for equipment/supply items using batch tracking
-    if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+    // Handle both direct equipment bookings and equipment category services
+    const shouldDeductMainServiceInventory = (
+      service.serviceType === 'equipment' ||
+      service.serviceType === 'supply' ||
+      (service.category === 'equipment' && service.quantity !== undefined && service.quantity > 0)
+    );
+
+    if (shouldDeductMainServiceInventory) {
       const previousStock = service.quantity;
       // Use batch tracking for inventory reduction (FIFO)
       await service.reduceBatchQuantity(bookingIntent.quantity);
@@ -1232,37 +1462,18 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
         metadata: {
           customerId: req.user.id,
           bookingDate: new Date(bookingIntent.bookingDate),
-          serviceName: service.name
+          serviceName: service.name,
+          serviceCategory: service.category,
+          serviceType: service.serviceType
         }
       });
 
       console.log('Inventory update completed using batch tracking for booking confirmation');
 
-      // Update inventory reports automatically for main service and all included equipment
+      // Update inventory reports automatically for main service
       try {
         const { updateInventoryReports } = require('../utils/paymentService');
         await updateInventoryReports(booking._id);
-
-        // Also update reports for included equipment items individually for better monitoring
-        if (service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0) {
-          for (const equipmentItem of service.includedEquipment) {
-            try {
-              const equipmentService = await Service.findById(equipmentItem.equipmentId);
-              if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
-                // Create a temporary booking-like object for the equipment item
-                const equipmentBooking = {
-                  _id: booking._id,
-                  serviceId: equipmentService,
-                  quantity: equipmentItem.quantity
-                };
-                // Update reports for this specific equipment item
-                await updateInventoryReports(booking._id);
-              }
-            } catch (equipmentReportError) {
-              console.error('Error updating reports for included equipment:', equipmentReportError);
-            }
-          }
-        }
       } catch (reportError) {
         console.error('Error updating inventory reports:', reportError);
         // Don't fail the booking if report update fails
@@ -1278,39 +1489,50 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     }
 
     // Decrease inventory for included equipment in professional services
-    if (service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0) {
+    if (service.includedEquipment && service.includedEquipment.length > 0) {
       for (const equipmentItem of service.includedEquipment) {
         try {
           const equipmentService = await Service.findById(equipmentItem.equipmentId);
-          if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
-            const previousStock = equipmentService.quantity;
-            // Use batch tracking for inventory reduction (FIFO)
-            await equipmentService.reduceBatchQuantity(equipmentItem.quantity);
-            const newStock = equipmentService.quantity;
+          if (equipmentService) {
+            // Check if equipment service should have inventory deducted
+            const shouldDeductEquipmentInventory = (
+              equipmentService.serviceType === 'equipment' ||
+              equipmentService.serviceType === 'supply' ||
+              (equipmentService.category === 'equipment' && equipmentService.quantity !== undefined && equipmentService.quantity > 0)
+            );
 
-            // Log inventory transaction for included equipment
-            await InventoryTransaction.logTransaction({
-              serviceId: equipmentItem.equipmentId,
-              bookingId: booking._id,
-              transactionType: 'booking_deduction',
-              quantity: -equipmentItem.quantity, // Negative for deduction
-              previousStock,
-              newStock,
-              reason: `Booking deduction for included equipment: ${equipmentService.name} (from service: ${service.name})`,
-              metadata: {
-                customerId: req.user.id,
-                bookingDate: bookingDateTime,
-                mainServiceName: service.name,
-                equipmentName: equipmentService.name
+            if (shouldDeductEquipmentInventory) {
+              const previousStock = equipmentService.quantity;
+              // Use batch tracking for inventory reduction (FIFO)
+              await equipmentService.reduceBatchQuantity(equipmentItem.quantity);
+              const newStock = equipmentService.quantity;
+
+              // Log inventory transaction for included equipment
+              await InventoryTransaction.logTransaction({
+                serviceId: equipmentItem.equipmentId,
+                bookingId: booking._id,
+                transactionType: 'booking_deduction',
+                quantity: -equipmentItem.quantity, // Negative for deduction
+                previousStock,
+                newStock,
+                reason: `Booking deduction for included equipment: ${equipmentService.name} (from service: ${service.name})`,
+                metadata: {
+                  customerId: req.user.id,
+                  bookingDate: bookingDateTime,
+                  mainServiceName: service.name,
+                  equipmentName: equipmentService.name,
+                  serviceCategory: service.category,
+                  serviceType: service.serviceType
+                }
+              });
+
+              // Trigger low stock alert check for equipment
+              try {
+                await triggerLowStockCheck(equipmentItem.equipmentId);
+              } catch (alertError) {
+                console.error('Error triggering low stock alert for equipment:', alertError);
+                // Don't fail the booking if alert fails
               }
-            });
-
-            // Trigger low stock alert check for equipment
-            try {
-              await triggerLowStockCheck(equipmentItem.equipmentId);
-            } catch (alertError) {
-              console.error('Error triggering low stock alert for equipment:', alertError);
-              // Don't fail the booking if alert fails
             }
           }
         } catch (equipmentError) {
@@ -1322,39 +1544,71 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
 
     // Send confirmation notifications
     try {
-      await sendTemplateNotification(req.user.id, 'BOOKING_CONFIRMED', {
-        message: `Your booking for ${service.name} has been confirmed!`,
-        metadata: {
-          bookingId: booking._id,
-          serviceId: service._id,
-          amount: booking.totalPrice,
-        }
-      });
-
-      // Send booking confirmation email
-      const customer = await User.findById(req.user.id);
-      if (customer && customer.email) {
-        await sendBookingConfirmation(customer.email, {
-          serviceName: service.name,
-          quantity: booking.quantity,
-          date: booking.bookingDate,
-          time: booking.bookingDate.toLocaleTimeString(),
-          totalPrice: booking.totalPrice,
-        });
-      }
-
-      // Admin notification
-      const User = require('../models/User');
-      const adminUsers = await User.find({ role: 'admin' });
-      for (const admin of adminUsers) {
-        await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
-          message: `New confirmed booking from customer for ${service.name}.`,
+      if (shouldAutoConfirm) {
+        // Auto-confirmed booking notifications
+        await sendTemplateNotification(req.user.id, 'BOOKING_AUTO_CONFIRMED', {
+          message: `🎉 Your booking for ${service.name} has been automatically confirmed! No admin review needed.`,
           metadata: {
             bookingId: booking._id,
             serviceId: service._id,
             amount: booking.totalPrice,
+            autoConfirmed: true,
           }
         });
+
+        // Send booking confirmation email
+        const customer = await User.findById(req.user.id);
+        if (customer && customer.email) {
+          await sendBookingConfirmation(customer.email, {
+            serviceName: service.name,
+            quantity: booking.quantity,
+            date: booking.bookingDate,
+            time: booking.bookingDate.toLocaleTimeString(),
+            totalPrice: booking.totalPrice,
+            autoConfirmed: true,
+          });
+        }
+
+        // Admin notification for auto-confirmed booking
+        const User = require('../models/User');
+        const adminUsers = await User.find({ role: 'admin' });
+        for (const admin of adminUsers) {
+          await sendTemplateNotification(admin._id, 'AUTO_CONFIRMED_BOOKING_ADMIN', {
+            message: `🤖 Auto-confirmed booking from customer for ${service.name} (low-risk criteria met).`,
+            metadata: {
+              bookingId: booking._id,
+              serviceId: service._id,
+              amount: booking.totalPrice,
+              autoConfirmed: true,
+            }
+          });
+        }
+      } else {
+        // Manual review required notifications
+        await sendTemplateNotification(req.user.id, 'BOOKING_PENDING_REVIEW', {
+          message: `Your booking for ${service.name} has been received and is pending admin review.`,
+          metadata: {
+            bookingId: booking._id,
+            serviceId: service._id,
+            amount: booking.totalPrice,
+            pendingReview: true,
+          }
+        });
+
+        // Admin notification for manual review
+        const User = require('../models/User');
+        const adminUsers = await User.find({ role: 'admin' });
+        for (const admin of adminUsers) {
+          await sendTemplateNotification(admin._id, 'BOOKING_NEEDS_REVIEW_ADMIN', {
+            message: `📋 New booking from customer for ${service.name} requires manual review.`,
+            metadata: {
+              bookingId: booking._id,
+              serviceId: service._id,
+              amount: booking.totalPrice,
+              needsReview: true,
+            }
+          });
+        }
       }
 
       // Send admin booking notification email
@@ -1373,27 +1627,55 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       // Emit real-time events
       const io = global.io;
       if (io) {
-        io.to(`user_${req.user.id}`).emit('booking-confirmed', {
-          booking: {
-            id: booking._id,
-            serviceName: service.name,
-            quantity: bookingIntent.quantity,
-            date: booking.bookingDate,
-            totalPrice: booking.totalPrice,
-            status: 'confirmed',
-          }
-        });
+        if (shouldAutoConfirm) {
+          io.to(`user_${req.user.id}`).emit('booking-auto-confirmed', {
+            booking: {
+              id: booking._id,
+              serviceName: service.name,
+              quantity: bookingIntent.quantity,
+              date: booking.bookingDate,
+              totalPrice: booking.totalPrice,
+              status: 'confirmed',
+              autoConfirmed: true,
+            }
+          });
 
-        io.to('admin').emit('new-confirmed-booking', {
-          booking: {
-            id: booking._id,
-            serviceName: service.name,
-            quantity: bookingIntent.quantity,
-            date: booking.bookingDate,
-            totalPrice: booking.totalPrice,
-            status: 'confirmed',
-          }
-        });
+          io.to('admin').emit('new-auto-confirmed-booking', {
+            booking: {
+              id: booking._id,
+              serviceName: service.name,
+              quantity: bookingIntent.quantity,
+              date: booking.bookingDate,
+              totalPrice: booking.totalPrice,
+              status: 'confirmed',
+              autoConfirmed: true,
+            }
+          });
+        } else {
+          io.to(`user_${req.user.id}`).emit('booking-pending-review', {
+            booking: {
+              id: booking._id,
+              serviceName: service.name,
+              quantity: bookingIntent.quantity,
+              date: booking.bookingDate,
+              totalPrice: booking.totalPrice,
+              status: 'pending_admin_review',
+              pendingReview: true,
+            }
+          });
+
+          io.to('admin').emit('booking-needs-review', {
+            booking: {
+              id: booking._id,
+              serviceName: service.name,
+              quantity: bookingIntent.quantity,
+              date: booking.bookingDate,
+              totalPrice: booking.totalPrice,
+              status: 'pending_admin_review',
+              needsReview: true,
+            }
+          });
+        }
       }
     } catch (notificationError) {
       console.error('Error sending booking confirmation notifications:', notificationError);
@@ -1407,7 +1689,7 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       // Don't fail the booking if analytics recording fails
     }
 
-    // Track user preferences
+    // Track user preferences and update personalization data
     try {
       const UserPreferences = require('../models/UserPreferences');
       const service = await Service.findById(bookingIntent.serviceId);
@@ -1419,6 +1701,16 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
           bookingIntent.totalPrice,
           null // eventType - could be added later if available
         );
+
+        // Update auto-personalization data
+        await AutoPersonalizationService.updateUserPreferences(req.user.id, {
+          serviceId: bookingIntent.serviceId,
+          quantity: bookingIntent.quantity,
+          bookingDate: bookingIntent.bookingDate,
+          deliveryTime: bookingIntent.deliveryTime,
+          notes: bookingIntent.notes,
+          totalPrice: bookingIntent.totalPrice
+        });
       }
     } catch (preferenceError) {
       console.error('Error tracking user preferences:', preferenceError);
@@ -1429,7 +1721,10 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       success: true,
       booking,
       cartCleared: true, // Flag to indicate cart should be cleared on frontend
-      message: 'Booking confirmed successfully!'
+      autoConfirmed: shouldAutoConfirm,
+      message: shouldAutoConfirm
+        ? '🎉 Booking automatically confirmed! Your reservation is ready.'
+        : '📋 Booking received and pending admin review. You will be notified once confirmed.'
     });
 
   } catch (error) {
@@ -1827,6 +2122,816 @@ router.get('/suggestions/predictive', authMiddleware, async (req, res, next) => 
   }
 });
 
+// Get smart scheduling suggestions for booking wizard
+router.get('/smart-schedule', authMiddleware, async (req, res, next) => {
+  try {
+    const { serviceId, bookingDate, quantity } = req.query;
+
+    if (!serviceId) {
+      return res.status(400).json({ success: false, message: 'Service ID is required' });
+    }
+
+    const currentSelections = {
+      bookingDate: bookingDate || null,
+      quantity: parseInt(quantity) || 1
+    };
+
+    const suggestions = await SmartScheduler.getSmartSuggestions(serviceId, req.user.id, currentSelections);
+
+    res.json({
+      success: true,
+      suggestions,
+      total: suggestions.length
+    });
+
+  } catch (error) {
+    console.error('Error getting smart scheduling suggestions:', error);
+    next(error);
+  }
+});
+
+// Get auto-rebooking suggestions for customer
+router.get('/auto-rebooking/suggestions', authMiddleware, async (req, res, next) => {
+  try {
+    const suggestions = await AutoRebookingService.generateRebookingSuggestions(req.user.id);
+
+    res.json({
+      success: true,
+      suggestions,
+      total: suggestions.length
+    });
+
+  } catch (error) {
+    console.error('Error getting auto-rebooking suggestions:', error);
+    next(error);
+  }
+});
+
+// Get customer's auto-rebooking status and preferences
+router.get('/auto-rebooking/status', authMiddleware, async (req, res, next) => {
+  try {
+    const status = await AutoRebookingService.getCustomerRebookingStatus(req.user.id);
+
+    res.json({
+      success: true,
+      ...status
+    });
+
+  } catch (error) {
+    console.error('Error getting auto-rebooking status:', error);
+    next(error);
+  }
+});
+
+// Update customer's auto-rebooking preferences
+router.put('/auto-rebooking/preferences', authMiddleware, async (req, res, next) => {
+  try {
+    const { enabled, servicePreferences } = req.body;
+
+    const result = await AutoRebookingService.updateAutoRebookingPreferences(
+      req.user.id,
+      enabled,
+      servicePreferences
+    );
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Auto-rebooking preferences updated successfully',
+        preferences: result.preferences
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+
+  } catch (error) {
+    console.error('Error updating auto-rebooking preferences:', error);
+    next(error);
+  }
+});
+
+// Create auto-rebooking for customer
+router.post('/auto-rebooking/create', authMiddleware, async (req, res, next) => {
+  try {
+    const { serviceId, bookingDate } = req.body;
+
+    if (!serviceId || !bookingDate) {
+      return res.status(400).json({ success: false, message: 'Service ID and booking date are required' });
+    }
+
+    const result = await AutoRebookingService.createAutoRebooking(
+      req.user.id,
+      serviceId,
+      new Date(bookingDate)
+    );
+
+    if (result.success) {
+      res.json({
+        success: true,
+        booking: result.booking,
+        message: result.message
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+
+  } catch (error) {
+    console.error('Error creating auto-rebooking:', error);
+    next(error);
+  }
+});
+
+// Get personalized booking data for form pre-filling
+router.get('/personalized/:serviceId', authMiddleware, async (req, res, next) => {
+  try {
+    const { serviceId } = req.params;
+
+    const result = await AutoPersonalizationService.getPersonalizedBookingData(req.user.id, serviceId);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        personalizedData: result.personalizedData,
+        reasoning: result.reasoning
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+
+  } catch (error) {
+    console.error('Error getting personalized booking data:', error);
+    next(error);
+  }
+});
+
+// Get personalized service recommendations
+router.get('/personalized/recommendations', authMiddleware, async (req, res, next) => {
+  try {
+    const { limit } = req.query;
+    const limitNum = limit ? parseInt(limit) : 5;
+
+    const recommendations = await AutoPersonalizationService.getPersonalizedRecommendations(req.user.id, limitNum);
+
+    res.json({
+      success: true,
+      recommendations,
+      total: recommendations.length
+    });
+
+  } catch (error) {
+    console.error('Error getting personalized recommendations:', error);
+    next(error);
+  }
+});
+
+// Get quick booking options for user
+router.get('/personalized/quick-options', authMiddleware, async (req, res, next) => {
+  try {
+    const options = await AutoPersonalizationService.getQuickBookingOptions(req.user.id);
+
+    res.json({
+      success: true,
+      options,
+      total: options.length
+    });
+
+  } catch (error) {
+    console.error('Error getting quick booking options:', error);
+    next(error);
+  }
+});
+
+// Get user's payment preferences and auto-payment status
+router.get('/auto-payment/preferences', authMiddleware, async (req, res, next) => {
+  try {
+    const preferences = await AutoPaymentService.getUserPaymentPreferences(req.user.id);
+
+    res.json({
+      success: true,
+      ...preferences
+    });
+
+  } catch (error) {
+    console.error('Error getting payment preferences:', error);
+    next(error);
+  }
+});
+
+// Get recommended payment method for booking
+router.get('/auto-payment/recommendation', authMiddleware, async (req, res, next) => {
+  try {
+    const { amount, serviceCategory } = req.query;
+
+    const recommendation = await AutoPaymentService.getRecommendedPaymentMethod(
+      req.user.id,
+      parseFloat(amount) || 0,
+      serviceCategory || 'general'
+    );
+
+    res.json({
+      success: true,
+      recommendation
+    });
+
+  } catch (error) {
+    console.error('Error getting payment recommendation:', error);
+    next(error);
+  }
+});
+
+// Enable/disable auto-payment for user
+router.put('/auto-payment/enable', authMiddleware, async (req, res, next) => {
+  try {
+    const { enabled } = req.body;
+
+    const result = await AutoPaymentService.setAutoPaymentEnabled(req.user.id, enabled);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: result.message
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.error,
+        requirements: result.requirements
+      });
+    }
+
+  } catch (error) {
+    console.error('Error setting auto-payment:', error);
+    next(error);
+  }
+});
+
+// Check auto-payment eligibility for user
+router.get('/auto-payment/eligibility', authMiddleware, async (req, res, next) => {
+  try {
+    const eligibility = await AutoPaymentService.checkAutoPaymentEligibility(req.user.id);
+
+    res.json({
+      success: true,
+      eligibility
+    });
+
+  } catch (error) {
+    console.error('Error checking auto-payment eligibility:', error);
+    next(error);
+  }
+});
+
+// Process auto-payment for booking
+router.post('/auto-payment/process', authMiddleware, async (req, res, next) => {
+  try {
+    const { bookingId, amount, paymentMethod } = req.body;
+
+    const result = await AutoPaymentService.processAutoPayment(
+      req.user.id,
+      bookingId,
+      parseFloat(amount),
+      paymentMethod
+    );
+
+    if (result.success) {
+      res.json({
+        success: true,
+        payment: result.payment,
+        qrCode: result.qrCode,
+        instructions: result.instructions,
+        referenceNumber: result.referenceNumber,
+        transactionId: result.transactionId,
+        message: result.message,
+        autoPayment: result.autoPayment
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+
+  } catch (error) {
+    console.error('Error processing auto-payment:', error);
+    next(error);
+  }
+});
+
+// Analyze failed booking and get recovery options
+router.get('/auto-recovery/analyze/:bookingId', authMiddleware, async (req, res, next) => {
+  try {
+    const { bookingId } = req.params;
+    const { failureReason } = req.query;
+
+    const recoveryOptions = await AutoRecoveryService.analyzeFailedBooking(bookingId, failureReason);
+
+    res.json({
+      success: true,
+      recoveryOptions
+    });
+
+  } catch (error) {
+    console.error('Error analyzing failed booking:', error);
+    next(error);
+  }
+});
+
+// Execute auto-recovery for a failed booking
+router.post('/auto-recovery/execute/:bookingId', authMiddleware, async (req, res, next) => {
+  try {
+    const { bookingId } = req.params;
+
+    // First analyze the booking
+    const recoveryOptions = await AutoRecoveryService.analyzeFailedBooking(bookingId);
+
+    if (!recoveryOptions.autoRecoveryPossible) {
+      return res.status(400).json({
+        success: false,
+        message: 'Auto-recovery not possible for this booking',
+        recoveryOptions
+      });
+    }
+
+    const recoveryResult = await AutoRecoveryService.executeAutoRecovery(bookingId, recoveryOptions);
+
+    if (recoveryResult.success) {
+      res.json({
+        success: true,
+        recoveryBooking: recoveryResult.recoveryBooking,
+        alternative: recoveryResult.alternative,
+        message: recoveryResult.message
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: recoveryResult.error
+      });
+    }
+
+  } catch (error) {
+    console.error('Error executing auto-recovery:', error);
+    next(error);
+  }
+});
+
+// Get recovery suggestions for a failed booking
+router.get('/auto-recovery/suggestions/:bookingId', authMiddleware, async (req, res, next) => {
+  try {
+    const { bookingId } = req.params;
+
+    const recoveryOptions = await AutoRecoveryService.analyzeFailedBooking(bookingId);
+
+    res.json({
+      success: true,
+      suggestions: recoveryOptions.suggestions,
+      urgency: recoveryOptions.urgency,
+      autoRecoveryPossible: recoveryOptions.autoRecoveryPossible
+    });
+
+  } catch (error) {
+    console.error('Error getting recovery suggestions:', error);
+    next(error);
+  }
+});
+
+// Get customer's recovery statistics
+router.get('/auto-recovery/statistics', authMiddleware, async (req, res, next) => {
+  try {
+    const statistics = await AutoRecoveryService.getRecoveryStatistics(req.user.id);
+
+    res.json({
+      success: true,
+      statistics
+    });
+
+  } catch (error) {
+    console.error('Error getting recovery statistics:', error);
+    next(error);
+  }
+});
+
+// Check if booking qualifies for auto-completion
+router.post('/auto-completion/check-eligibility', authMiddleware, async (req, res, next) => {
+  try {
+    const { serviceId, quantity, bookingDate, notes, deliveryTime, totalPrice } = req.body;
+
+    const bookingData = {
+      serviceId,
+      quantity: quantity || 1,
+      bookingDate,
+      notes,
+      deliveryTime,
+      totalPrice: totalPrice || 0
+    };
+
+    const eligibility = await AutoCompletionService.checkAutoCompletionEligibility(
+      req.user.id,
+      serviceId,
+      bookingData
+    );
+
+    res.json({
+      success: true,
+      eligibility
+    });
+
+  } catch (error) {
+    console.error('Error checking auto-completion eligibility:', error);
+    next(error);
+  }
+});
+
+// Execute auto-completion for a simple booking
+router.post('/auto-completion/execute', authMiddleware, async (req, res, next) => {
+  try {
+    const bookingData = req.body;
+
+    const result = await AutoCompletionService.executeAutoCompletion(req.user.id, bookingData);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        booking: result.booking,
+        message: result.message,
+        autoCompleted: true,
+        savedTime: result.savedTime,
+        eligibility: result.eligibility
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.error,
+        autoCompleted: false
+      });
+    }
+
+  } catch (error) {
+    console.error('Error executing auto-completion:', error);
+    next(error);
+  }
+});
+
+// Get auto-completion suggestions for user
+router.get('/auto-completion/suggestions', authMiddleware, async (req, res, next) => {
+  try {
+    const suggestions = await AutoCompletionService.getAutoCompletionSuggestions(req.user.id);
+
+    res.json({
+      success: true,
+      suggestions,
+      total: suggestions.length
+    });
+
+  } catch (error) {
+    console.error('Error getting auto-completion suggestions:', error);
+    next(error);
+  }
+});
+
+// Process quick booking (auto-completion)
+router.post('/auto-completion/quick-book', authMiddleware, async (req, res, next) => {
+  try {
+    const { serviceId, quantity, bookingDate, notes, deliveryTime } = req.body;
+
+    const result = await AutoCompletionService.processQuickBooking(req.user.id, serviceId, {
+      quantity,
+      bookingDate,
+      notes,
+      deliveryTime
+    });
+
+    if (result.success) {
+      res.json({
+        success: true,
+        booking: result.booking,
+        message: result.message,
+        autoCompleted: true,
+        quickBook: true
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.error,
+        quickBook: false
+      });
+    }
+
+  } catch (error) {
+    console.error('Error processing quick booking:', error);
+    next(error);
+  }
+});
+
+// Get auto-completion statistics for user
+router.get('/auto-completion/statistics', authMiddleware, async (req, res, next) => {
+  try {
+    const statistics = await AutoCompletionService.getAutoCompletionStatistics(req.user.id);
+
+    res.json({
+      success: true,
+      statistics
+    });
+
+  } catch (error) {
+    console.error('Error getting auto-completion statistics:', error);
+    next(error);
+  }
+});
+
+// Calculate dynamic discount for booking
+router.post('/dynamic-discount/calculate', authMiddleware, async (req, res, next) => {
+  try {
+    const { serviceId, bookingDate, quantity } = req.body;
+
+    const discountInfo = await DynamicDiscountService.calculateDynamicDiscount(
+      serviceId,
+      bookingDate,
+      quantity || 1,
+      req.user.id
+    );
+
+    res.json({
+      success: true,
+      discount: discountInfo.discount,
+      discountFactors: discountInfo.discountFactors,
+      primaryReason: discountInfo.primaryReason,
+      validUntil: discountInfo.validUntil,
+      appliedAutomatically: discountInfo.appliedAutomatically
+    });
+
+  } catch (error) {
+    console.error('Error calculating dynamic discount:', error);
+    next(error);
+  }
+});
+
+// Get available discounts for user
+router.get('/dynamic-discount/available', authMiddleware, async (req, res, next) => {
+  try {
+    const discounts = await DynamicDiscountService.getAvailableDiscounts(req.user.id);
+
+    res.json({
+      success: true,
+      discounts,
+      total: discounts.length
+    });
+
+  } catch (error) {
+    console.error('Error getting available discounts:', error);
+    next(error);
+  }
+});
+
+// Get discount analytics (admin only)
+router.get('/dynamic-discount/analytics', adminMiddleware, async (req, res, next) => {
+  try {
+    const analytics = await DynamicDiscountService.getDiscountAnalytics();
+
+    res.json({
+      success: true,
+      analytics
+    });
+
+  } catch (error) {
+    console.error('Error getting discount analytics:', error);
+    next(error);
+  }
+});
+
+// Optimize pricing for service (admin only)
+router.post('/dynamic-discount/optimize-pricing', adminMiddleware, async (req, res, next) => {
+  try {
+    const { serviceId, date } = req.body;
+
+    const optimization = await DynamicDiscountService.optimizePricing(serviceId, new Date(date));
+
+    if (optimization) {
+      res.json({
+        success: true,
+        optimization
+      });
+    } else {
+      res.status(404).json({
+        success: false,
+        message: 'Could not optimize pricing for this service/date'
+      });
+    }
+
+  } catch (error) {
+    console.error('Error optimizing pricing:', error);
+    next(error);
+  }
+});
+
+// Add user to smart waitlist
+router.post('/auto-waitlist/join', authMiddleware, async (req, res, next) => {
+  try {
+    const { serviceId, bookingDate, quantity, notes, urgency, preferences } = req.body;
+
+    const result = await AutoWaitlistService.addToSmartWaitlist(req.user.id, serviceId, {
+      bookingDate,
+      quantity: quantity || 1,
+      notes,
+      urgency: urgency || 'medium',
+      preferences
+    });
+
+    if (result.success) {
+      res.json({
+        success: true,
+        waitlistEntry: result.waitlistEntry,
+        priorityScore: result.priorityScore,
+        estimatedWaitTime: result.estimatedWaitTime,
+        alternatives: result.alternatives,
+        message: 'Successfully added to smart waitlist'
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+
+  } catch (error) {
+    console.error('Error joining smart waitlist:', error);
+    next(error);
+  }
+});
+
+// Accept waitlist offer
+router.post('/auto-waitlist/accept/:entryId', authMiddleware, async (req, res, next) => {
+  try {
+    const { entryId } = req.params;
+
+    const result = await AutoWaitlistService.acceptWaitlistOffer(req.user.id, entryId);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        booking: result.booking,
+        message: result.message
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: result.error
+      });
+    }
+
+  } catch (error) {
+    console.error('Error accepting waitlist offer:', error);
+    next(error);
+  }
+});
+
+// Get user's waitlist status
+router.get('/auto-waitlist/status', authMiddleware, async (req, res, next) => {
+  try {
+    const status = await AutoWaitlistService.getUserWaitlistStatus(req.user.id);
+
+    res.json({
+      success: true,
+      status
+    });
+
+  } catch (error) {
+    console.error('Error getting waitlist status:', error);
+    next(error);
+  }
+});
+
+// Remove user from waitlist
+router.delete('/auto-waitlist/:entryId', authMiddleware, async (req, res, next) => {
+  try {
+    const { entryId } = req.params;
+
+    const ReservationQueue = require('../models/ReservationQueue');
+    const entry = await ReservationQueue.findOneAndUpdate(
+      { _id: entryId, customerId: req.user.id },
+      { 'waitlistMetadata.status': 'cancelled' },
+      { new: true }
+    );
+
+    if (!entry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Waitlist entry not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Successfully removed from waitlist'
+    });
+
+  } catch (error) {
+    console.error('Error removing from waitlist:', error);
+    next(error);
+  }
+});
+
+// Process waitlist when slots become available (admin/internal)
+router.post('/auto-waitlist/process-availability', adminMiddleware, async (req, res, next) => {
+  try {
+    const { serviceId, availableDate, availableQuantity } = req.body;
+
+    const result = await AutoWaitlistService.processWaitlistOnAvailability(
+      serviceId,
+      new Date(availableDate),
+      availableQuantity
+    );
+
+    res.json({
+      success: true,
+      result,
+      message: `Processed ${result.processed} waitlist entries, filled ${result.slotsFilled} slots`
+    });
+
+  } catch (error) {
+    console.error('Error processing waitlist availability:', error);
+    next(error);
+  }
+});
+
+// Analyze inventory levels (admin only)
+router.get('/auto-inventory/analyze', adminMiddleware, async (req, res, next) => {
+  try {
+    const { serviceId } = req.query;
+    const analysis = await AutoInventoryService.analyzeInventoryLevels(serviceId);
+
+    res.json({
+      success: true,
+      analysis
+    });
+
+  } catch (error) {
+    console.error('Error analyzing inventory:', error);
+    next(error);
+  }
+});
+
+// Get inventory optimization dashboard (admin only)
+router.get('/auto-inventory/dashboard', adminMiddleware, async (req, res, next) => {
+  try {
+    const dashboard = await AutoInventoryService.getInventoryDashboard();
+
+    res.json({
+      success: true,
+      dashboard
+    });
+
+  } catch (error) {
+    console.error('Error getting inventory dashboard:', error);
+    next(error);
+  }
+});
+
+// Optimize inventory levels (admin only)
+router.post('/auto-inventory/optimize', adminMiddleware, async (req, res, next) => {
+  try {
+    const result = await AutoInventoryService.optimizeInventoryLevels();
+
+    res.json({
+      success: true,
+      message: `Optimized ${result.optimizationsApplied} inventory items`,
+      result
+    });
+
+  } catch (error) {
+    console.error('Error optimizing inventory:', error);
+    next(error);
+  }
+});
+
+// Generate purchase orders (admin only)
+router.post('/auto-inventory/generate-orders', adminMiddleware, async (req, res, next) => {
+  try {
+    const { execute } = req.query; // execute=true to actually create orders
+    const result = await AutoInventoryService.generatePurchaseOrders(execute === 'true');
+
+    res.json({
+      success: true,
+      result,
+      message: execute === 'true'
+        ? `Generated ${result.ordersGenerated} purchase orders`
+        : `Simulated ${result.ordersGenerated} purchase orders`
+    });
+
+  } catch (error) {
+    console.error('Error generating purchase orders:', error);
+    next(error);
+  }
+});
+
 // Auto-cancel expired pending bookings (utility function for scheduled tasks)
 const autoCancelExpiredBookings = async () => {
   try {
@@ -1855,8 +2960,14 @@ const autoCancelExpiredBookings = async () => {
         // Restore inventory
         const service = booking.serviceId;
         if (service) {
-          // Restore inventory for equipment/supply items
-          if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+          // Restore inventory for equipment/supply items and equipment category services
+          const shouldRestoreMainServiceInventory = (
+            service.serviceType === 'equipment' ||
+            service.serviceType === 'supply' ||
+            (service.category === 'equipment' && service.quantity !== undefined)
+          );
+
+          if (shouldRestoreMainServiceInventory) {
             const previousStock = service.quantity;
             await service.restoreBatchQuantity(booking.quantity);
             const newStock = service.quantity;
@@ -1874,6 +2985,8 @@ const autoCancelExpiredBookings = async () => {
                 customerId: booking.customerId?._id,
                 bookingDate: booking.bookingDate,
                 serviceName: service.name,
+                serviceCategory: service.category,
+                serviceType: service.serviceType,
                 autoCancelled: true
               }
             });
@@ -1882,34 +2995,45 @@ const autoCancelExpiredBookings = async () => {
           }
 
           // Restore inventory for included equipment in professional services
-          if (service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0) {
+          if (service.includedEquipment && service.includedEquipment.length > 0) {
             for (const equipmentItem of service.includedEquipment) {
               try {
                 const equipmentService = await Service.findById(equipmentItem.equipmentId);
-                if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
-                  const previousStock = equipmentService.quantity;
-                  await equipmentService.restoreBatchQuantity(equipmentItem.quantity);
-                  const newStock = equipmentService.quantity;
+                if (equipmentService) {
+                  // Check if equipment service should have inventory restored
+                  const shouldRestoreEquipmentInventory = (
+                    equipmentService.serviceType === 'equipment' ||
+                    equipmentService.serviceType === 'supply' ||
+                    (equipmentService.category === 'equipment' && equipmentService.quantity !== undefined)
+                  );
 
-                  // Log inventory transaction for equipment restoration
-                  await InventoryTransaction.logTransaction({
-                    serviceId: equipmentItem.equipmentId,
-                    bookingId: booking._id,
-                    transactionType: 'booking_cancellation',
-                    quantity: equipmentItem.quantity, // Positive for restoration
-                    previousStock,
-                    newStock,
-                    reason: `Auto-cancellation inventory restoration for included equipment: ${equipmentService.name} (from service: ${service.name})`,
-                    metadata: {
-                      customerId: booking.customerId?._id,
-                      bookingDate: booking.bookingDate,
-                      mainServiceName: service.name,
-                      equipmentName: equipmentService.name,
-                      autoCancelled: true
-                    }
-                  });
+                  if (shouldRestoreEquipmentInventory) {
+                    const previousStock = equipmentService.quantity;
+                    await equipmentService.restoreBatchQuantity(equipmentItem.quantity);
+                    const newStock = equipmentService.quantity;
 
-                  console.log('Inventory restored for included equipment:', equipmentService.name);
+                    // Log inventory transaction for equipment restoration
+                    await InventoryTransaction.logTransaction({
+                      serviceId: equipmentItem.equipmentId,
+                      bookingId: booking._id,
+                      transactionType: 'booking_cancellation',
+                      quantity: equipmentItem.quantity, // Positive for restoration
+                      previousStock,
+                      newStock,
+                      reason: `Auto-cancellation inventory restoration for included equipment: ${equipmentService.name} (from service: ${service.name})`,
+                      metadata: {
+                        customerId: booking.customerId?._id,
+                        bookingDate: booking.bookingDate,
+                        mainServiceName: service.name,
+                        equipmentName: equipmentService.name,
+                        serviceCategory: service.category,
+                        serviceType: service.serviceType,
+                        autoCancelled: true
+                      }
+                    });
+
+                    console.log('Inventory restored for included equipment:', equipmentService.name);
+                  }
                 }
               } catch (equipmentError) {
                 console.error('Error restoring equipment inventory during auto-cancellation:', equipmentError);

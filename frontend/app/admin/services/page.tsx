@@ -276,6 +276,7 @@ export default function AdminServices() {
           serviceType: 'service',
           price: 0,
           duration: 1, // Reset to 1 day default
+          maxOrder: 1,
           includedItems: [],
           includedEquipment: [],
           image: null,

@@ -24,6 +24,10 @@ const { processReservationQueue, cleanupExpiredReservations } = require('./utils
 const { cleanupExpiredOTPs } = require('./utils/otpService');
 const { sendBookingReminders } = require('./utils/notificationService');
 const { autoCancelExpiredBookings } = require('./routes/bookingRoutes');
+const { autoApplyDiscounts } = require('./utils/dynamicDiscountService');
+const { cleanupExpiredWaitlistEntries, sendProactiveWaitlistUpdates } = require('./utils/autoWaitlistService');
+const { sendReorderAlerts, optimizeInventoryLevels } = require('./utils/autoInventoryService');
+const AutoRebookingService = require('./utils/autoRebookingService');
 const { errorHandler, requestLogger } = require('./middleware/errorHandler');
 const { monitoringMiddleware } = require('./utils/monitoring');
 
@@ -170,6 +174,66 @@ if (process.env.NODE_ENV !== 'test') {
     }
   }, 60 * 60 * 1000); // 1 hour
 
+  // Auto-apply dynamic discounts every 30 minutes
+  setInterval(async () => {
+    try {
+      const result = await autoApplyDiscounts();
+      if (result.discountsApplied > 0) {
+        console.log(`Auto-applied discounts to ${result.discountsApplied} bookings, total savings: ₱${result.totalDiscountAmount.toFixed(2)}`);
+      }
+    } catch (error) {
+      console.error('Error auto-applying discounts:', error);
+    }
+  }, 30 * 60 * 1000); // 30 minutes
+
+  // Clean up expired waitlist entries daily
+  setInterval(async () => {
+    try {
+      const result = await cleanupExpiredWaitlistEntries();
+      if (result.expiredOffers > 0 || result.cleanedCompleted > 0 || result.cleanedExpired > 0) {
+        console.log(`Cleaned up waitlist: ${result.expiredOffers} expired offers, ${result.cleanedCompleted} old completed, ${result.cleanedExpired} old expired`);
+      }
+    } catch (error) {
+      console.error('Error cleaning up expired waitlist entries:', error);
+    }
+  }, 24 * 60 * 60 * 1000); // 24 hours
+
+  // Send proactive waitlist updates every 6 hours
+  setInterval(async () => {
+    try {
+      const result = await sendProactiveWaitlistUpdates();
+      if (result.notificationsSent > 0) {
+        console.log(`Sent ${result.notificationsSent} proactive waitlist updates`);
+      }
+    } catch (error) {
+      console.error('Error sending proactive waitlist updates:', error);
+    }
+  }, 6 * 60 * 60 * 1000); // 6 hours
+
+  // Send inventory reorder alerts daily
+  setInterval(async () => {
+    try {
+      const result = await sendReorderAlerts();
+      if (result.total > 0) {
+        console.log(`Sent ${result.total} inventory reorder alerts (${result.critical} critical, ${result.normal} normal)`);
+      }
+    } catch (error) {
+      console.error('Error sending inventory reorder alerts:', error);
+    }
+  }, 24 * 60 * 60 * 1000); // 24 hours
+
+  // Optimize inventory levels weekly
+  setInterval(async () => {
+    try {
+      const result = await optimizeInventoryLevels();
+      if (result.optimizationsApplied > 0) {
+        console.log(`Applied ${result.optimizationsApplied} inventory optimizations (${result.reorderPointsAdjusted} reorder points adjusted)`);
+      }
+    } catch (error) {
+      console.error('Error optimizing inventory levels:', error);
+    }
+  }, 7 * 24 * 60 * 60 * 1000); // 7 days
+
   // Send automated follow-up communications every 6 hours
   setInterval(async () => {
     try {
@@ -191,6 +255,18 @@ if (process.env.NODE_ENV !== 'test') {
       console.error('Error processing overdue invoices:', error);
     }
   }, 24 * 60 * 60 * 1000); // 24 hours
+
+  // Process auto-rebookings weekly
+  setInterval(async () => {
+    try {
+      const result = await AutoRebookingService.processAutoRebookings();
+      if (result.rebooked > 0) {
+        console.log(`Auto-rebooked ${result.rebooked} services for ${result.processed} customers`);
+      }
+    } catch (error) {
+      console.error('Error processing auto-rebookings:', error);
+    }
+  }, 7 * 24 * 60 * 60 * 1000); // 7 days
 }
 
 // Function to send automated follow-up communications
