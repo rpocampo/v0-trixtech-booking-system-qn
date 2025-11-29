@@ -73,7 +73,7 @@ npm run dev            # Starts both backend and frontend
 
 Before starting, ensure you have:
 
-- ✅ **Node.js 16+** installed (`node --version`)
+- ✅ **Node.js 18+** installed (`node --version`) - Recommended for Next.js 16 and React 19
 - ✅ **npm** installed (`npm --version`)
 - ✅ **MongoDB** installed and running
 - ✅ **Git** (for cloning the repository)

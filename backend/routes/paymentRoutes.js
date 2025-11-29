@@ -340,58 +340,50 @@ router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next)
 
     const { validation } = verificationResult;
 
-    if (validation.isValid) {
-      // Verification successful - complete the payment
+    // Strict OCR validation - only accept perfectly valid receipts
+    if (validation.isValid && validation.amountMatch) {
+      // Receipt passed all validations - complete payment
       const verifyResult = await verifyQRPayment(referenceNumber, {
         receiptVerified: true,
+        autoConfirmed: true,
         extractedAmount: validation.extractedAmount,
-        extractedReference: validation.extractedReference
+        extractedReference: validation.extractedReference,
+        validationNotes: validation.issues.length > 0 ? validation.issues.join('; ') : 'All validations passed'
       });
 
       if (verifyResult.success) {
         return res.json({
           success: true,
-          message: 'Receipt verified successfully! Payment completed.',
+          message: 'Payment verified successfully! Transaction completed.',
           payment: verifyResult.payment,
           booking: verifyResult.booking,
           verification: {
+            autoConfirmed: true,
+            amountVerified: validation.amountMatch,
+            referenceVerified: validation.referenceMatch,
             extractedAmount: validation.extractedAmount,
             extractedReference: validation.extractedReference,
-            confidence: verificationResult.extractedData.confidence
+            confidence: verificationResult.extractedData.confidence,
+            validationNotes: validation.issues
           }
         });
       } else {
-        // Flag for manual review
-        payment.status = 'pending_review';
-        payment.paymentData.receiptVerification = {
-          attemptedAt: new Date(),
-          validation,
-          flaggedForReview: true,
-          reason: 'Validation passed but payment completion failed'
-        };
-        await payment.save();
-
-        return res.status(400).json({
+        // Payment completion failed despite valid receipt
+        console.error('Payment completion failed for valid receipt');
+        return res.status(500).json({
           success: false,
-          message: 'Receipt appears valid but payment processing failed. Flagged for manual review.',
+          message: 'Receipt is valid but payment processing failed. Please contact support.',
           validation,
-          flaggedForReview: true
+          flaggedForReview: false
         });
       }
     } else {
-      // Validation failed - flag for manual review
-      payment.status = 'pending_review';
-      payment.paymentData.receiptVerification = {
-        attemptedAt: new Date(),
-        validation,
-        extractedData: verificationResult.extractedData,
-        flaggedForReview: true
-      };
-      await payment.save();
+      // Receipt validation failed - reject the upload
+      console.log('Receipt validation failed:', validation.issues);
 
       return res.status(400).json({
         success: false,
-        message: 'Receipt validation failed. Your payment has been flagged for manual review.',
+        message: 'Receipt validation failed. Please ensure you upload a valid GCash receipt with the correct amount.',
         validation,
         issues: validation.issues,
         extractedData: {
@@ -399,7 +391,7 @@ router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next)
           reference: validation.extractedReference,
           confidence: verificationResult.extractedData.confidence
         },
-        flaggedForReview: true
+        flaggedForReview: false
       });
     }
 
@@ -414,6 +406,36 @@ router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next)
     res.status(500).json({
       success: false,
       message: 'Internal server error during receipt verification'
+    });
+  }
+});
+
+// Get all payments for admin review (admin only)
+router.get('/all', authMiddleware, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Admin privileges required.'
+      });
+    }
+
+    const Payment = require('../models/Payment');
+    const allPayments = await Payment.find({})
+    .populate('bookingId')
+    .populate('userId', 'name email')
+    .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      payments: allPayments
+    });
+  } catch (error) {
+    console.error('Error fetching all payments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
     });
   }
 });

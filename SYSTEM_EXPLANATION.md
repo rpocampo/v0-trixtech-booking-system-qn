@@ -2,15 +2,20 @@
 
 ## Overview
 
-TRIXTECH is a comprehensive full-stack booking and reservation system designed for event management, equipment rental, and service bookings. The platform allows customers to browse and book various services while providing administrators with powerful tools to manage inventory, bookings, and operations.
+TRIXTECH is a comprehensive enterprise-grade booking and reservation system designed for event management, equipment rental, and service bookings. The platform features advanced automation, intelligent recommendations, comprehensive inventory management, and sophisticated business intelligence tools.
 
 ### What the System Does
 - **Customer Portal**: Browse services, make bookings, track payments, receive notifications
 - **Admin Dashboard**: Manage services, monitor bookings, handle inventory, view analytics
 - **Real-time Updates**: Live notifications and status updates via WebSocket
-- **Payment Processing**: Secure GCash QR code payments
-- **Inventory Management**: Track stock levels, prevent overbooking, low-stock alerts
-- **Smart Recommendations**: AI-powered service suggestions based on booking patterns
+- **Payment Processing**: Secure GCash QR code payments with down payments and installments
+- **Advanced Inventory Management**: Track stock levels, prevent overbooking, low-stock alerts, batch management
+- **Smart Recommendations**: AI-powered service suggestions based on booking patterns and user preferences
+- **Package Management**: Bundled service offerings with dynamic pricing
+- **Delivery Management**: Scheduled delivery coordination and tracking
+- **Event Type Management**: Specialized configurations for different event categories
+- **Automated Business Processes**: Auto-rebooking, dynamic discounts, waitlist management, invoice processing
+- **Advanced Analytics**: Booking patterns, user preferences, revenue analytics, performance metrics
 
 ## System Architecture
 
@@ -53,36 +58,73 @@ The system follows a modern full-stack architecture with clear separation of con
 - **Role-based access control**: Customer vs Admin roles
 - **Password hashing** using bcrypt
 - **Protected routes** with middleware validation
+- **OTP verification** for account security
+- **Password reset** functionality
 
-### 2. Service Management
+### 2. Advanced Service Management
 - **Dynamic pricing** based on booking timeline (early booking discounts)
 - **Inventory tracking** with batch management (FIFO)
 - **Service categories**: Events, equipment, supplies
 - **Availability checking** with real-time stock validation
+- **Pricing tiers** based on advance booking time
+- **Service packages** with bundled offerings
+- **Event type specialization** with custom configurations
 
-### 3. Booking System
+### 3. Intelligent Booking System
 - **Double-booking prevention** using distributed locking
 - **Reservation queues** for unavailable items
 - **Flexible booking flow**: Pay-first or book-first options
 - **Status tracking**: Pending → Confirmed → Completed
+- **Auto-cancellation** of expired pending bookings
+- **Waitlist management** with proactive notifications
+- **Auto-rebooking** for recurring customers
 
-### 4. Payment Processing
+### 4. Advanced Payment Processing
 - **GCash QR integration** for secure payments
 - **Dynamic QR generation** with unique reference numbers
 - **Payment verification** and status tracking
-- **Partial payments** support (down payments)
+- **Partial payments** support (down payments and installments)
+- **Invoice generation** with detailed billing
+- **Payment reminders** for overdue amounts
 
-### 5. Real-time Features
+### 5. Real-time Features & Notifications
 - **WebSocket connections** for live updates
 - **Push notifications** for booking status changes
 - **Admin dashboard** live monitoring
 - **Customer notifications** for important updates
+- **Automated follow-up** communications
+- **Booking reminders** and confirmations
 
-### 6. Inventory Management
+### 6. Comprehensive Inventory Management
 - **Stock level monitoring** with low-stock alerts
 - **Batch tracking** for equipment/supply items
 - **Automatic inventory reduction** on confirmed bookings
 - **Real-time availability** updates
+- **Inventory optimization** with reorder point management
+- **Supplier tracking** and cost analysis
+- **Stock transaction history**
+
+### 7. Smart Recommendations & Personalization
+- **AI-powered service suggestions** based on booking patterns
+- **User preference learning** and personalized recommendations
+- **Collaborative filtering** using similar user behavior
+- **Dynamic pricing** with personalized discounts
+- **Package recommendations** based on event types
+
+### 8. Delivery & Logistics Management
+- **Scheduled delivery coordination** and tracking
+- **Delivery route optimization**
+- **Real-time delivery status** updates
+- **Customer delivery preferences**
+- **Delivery fee calculation** and management
+
+### 9. Advanced Analytics & Business Intelligence
+- **Booking pattern analysis** with trend identification
+- **Revenue analytics** and financial reporting
+- **User behavior insights** and segmentation
+- **Service performance metrics**
+- **Inventory turnover analysis**
+- **Customer lifetime value** calculations
 
 ## User Flows
 
@@ -119,10 +161,21 @@ The backend is organized into clear modules:
 
 #### Models (Database Schemas)
 - **`models/User.js`**: User accounts with roles and preferences
-- **`models/Service.js`**: Service definitions with pricing and inventory
-- **`models/Booking.js`**: Booking records with status and payment tracking
+- **`models/UserPreferences.js`**: Personalized user preferences and behavior tracking
+- **`models/Service.js`**: Service definitions with pricing, inventory, and batch management
+- **`models/Booking.js`**: Booking records with status, payment tracking, and delivery info
+- **`models/BookingAnalytics.js`**: Booking pattern analysis and recommendation data
 - **`models/Payment.js`**: Payment transactions and verification
+- **`models/Invoice.js`**: Invoice generation and billing management
 - **`models/Notification.js`**: User notifications and messaging
+- **`models/OTP.js`**: OTP verification and security
+- **`models/PasswordResetToken.js`**: Password reset functionality
+- **`models/Delivery.js`**: Delivery scheduling and tracking
+- **`models/Package.js`**: Bundled service packages with dynamic pricing
+- **`models/EventType.js`**: Event type configurations and recommendations
+- **`models/InventoryTransaction.js`**: Inventory movement tracking
+- **`models/ReservationQueue.js`**: Waitlist and reservation queue management
+- **`models/Analytics.js`**: System analytics and reporting data
 
 #### Routes (API Endpoints)
 - **`routes/authRoutes.js`**: Authentication (login, register, profile)
@@ -281,6 +334,16 @@ useEffect(() => {
 - **Expired OTP cleanup** (hourly)
 - **Expired reservation cleanup** (daily)
 - **Low stock alerts** (real-time)
+- **Booking reminders** (every 15 minutes)
+- **Auto-cancellation of expired bookings** (hourly)
+- **Dynamic discount application** (every 30 minutes)
+- **Waitlist cleanup and notifications** (daily)
+- **Proactive waitlist updates** (every 6 hours)
+- **Inventory reorder alerts** (daily)
+- **Inventory optimization** (weekly)
+- **Automated follow-up communications** (every 6 hours)
+- **Overdue invoice processing** (daily)
+- **Auto-rebooking for recurring customers** (weekly)
 
 ## Future Enhancements
 

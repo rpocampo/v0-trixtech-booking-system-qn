@@ -246,7 +246,11 @@ invoiceSchema.statics.generateFromBooking = async function(bookingId) {
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 30);
 
+  // Generate invoice number manually to ensure it's set before validation
+  const invoiceNumber = this.generateInvoiceNumber();
+
   const invoice = new this({
+    invoiceNumber, // Explicitly set invoice number
     bookingId: booking._id,
     customerId: booking.customerId._id,
     serviceId: booking.serviceId._id,
@@ -270,6 +274,7 @@ invoiceSchema.statics.generateFromBooking = async function(bookingId) {
   await invoice.populate('customerId', 'name email');
   await invoice.populate('serviceId', 'name category');
 
+  console.log(`Invoice ${invoice.invoiceNumber} generated for booking ${bookingId}`);
   return invoice;
 };
 

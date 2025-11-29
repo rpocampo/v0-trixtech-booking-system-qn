@@ -27,6 +27,9 @@ interface Payment {
         rawText: string;
       };
       validation?: {
+        isValid?: boolean;
+        amountMatch?: boolean;
+        referenceMatch?: boolean;
         issues: string[];
         extractedAmount: number;
         extractedReference: string;
@@ -45,13 +48,14 @@ export default function AdminPaymentsPage() {
   const [reviewing, setReviewing] = useState(false);
 
   useEffect(() => {
-    fetchFlaggedPayments();
+    fetchAllPayments();
   }, []);
 
-  const fetchFlaggedPayments = async () => {
+  const fetchAllPayments = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/payments/flagged', {
+      // Fetch all payments instead of just flagged ones
+      const response = await fetch('http://localhost:5000/api/payments/all', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -65,7 +69,7 @@ export default function AdminPaymentsPage() {
           setError(data.message || 'Failed to fetch payments');
         }
       } else {
-        setError('Failed to fetch flagged payments');
+        setError('Failed to fetch payments');
       }
     } catch (error) {
       console.error('Error fetching payments:', error);
@@ -102,7 +106,7 @@ export default function AdminPaymentsPage() {
           alert(`Payment ${action}d successfully`);
           setSelectedPayment(null);
           setReviewNotes('');
-          fetchFlaggedPayments(); // Refresh the list
+          fetchAllPayments(); // Refresh the list
         } else {
           alert(data.message || 'Failed to process review');
         }
@@ -128,8 +132,8 @@ export default function AdminPaymentsPage() {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Payment Reviews</h1>
-        <p className="text-gray-600">Review payments flagged for manual verification</p>
+        <h1 className="text-2xl font-bold text-gray-800">All Payments</h1>
+        <p className="text-gray-600">View all payment transactions including OCR-verified ones</p>
       </div>
 
       {error && (
@@ -144,45 +148,93 @@ export default function AdminPaymentsPage() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {payments.map((payment) => (
-            <div key={payment._id} className="bg-white border border-gray-200 rounded-lg p-6">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    ₱{payment.amount.toFixed(2)} - {payment.referenceNumber}
-                  </h3>
-                  <p className="text-gray-600">
-                    {payment.userId.name} ({payment.userId.email})
-                  </p>
-                  {payment.bookingId && (
-                    <p className="text-sm text-gray-500">
-                      Service: {payment.bookingId.serviceId.name}
-                    </p>
-                  )}
-                  <p className="text-sm text-gray-500">
-                    Created: {new Date(payment.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                <button
-                  onClick={() => setSelectedPayment(payment)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium"
-                >
-                  Review
-                </button>
-              </div>
+          {payments.map((payment) => {
+            const isOcrVerified = payment.paymentData?.receiptVerification?.validation?.isValid;
+            const isCompleted = payment.status === 'completed';
+            const isPendingReview = payment.status === 'pending_review';
 
-              {payment.paymentData.receiptVerification?.validation && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <h4 className="font-semibold text-yellow-800 mb-2">OCR Results</h4>
-                  <div className="text-sm text-yellow-700">
-                    <p>Extracted Amount: ₱{payment.paymentData.receiptVerification.validation.extractedAmount || 'Not found'}</p>
-                    <p>Extracted Reference: {payment.paymentData.receiptVerification.validation.extractedReference || 'Not found'}</p>
-                    <p>Issues: {payment.paymentData.receiptVerification.validation.issues.join(', ') || 'None'}</p>
+            return (
+              <div key={payment._id} className={`border rounded-lg p-6 ${
+                isCompleted && isOcrVerified ? 'bg-green-50 border-green-200' :
+                isPendingReview ? 'bg-yellow-50 border-yellow-200' :
+                'bg-white border-gray-200'
+              }`}>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        ₱{payment.amount.toFixed(2)} - {payment.referenceNumber}
+                      </h3>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        isCompleted && isOcrVerified ? 'bg-green-100 text-green-800' :
+                        isCompleted ? 'bg-blue-100 text-blue-800' :
+                        isPendingReview ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {isCompleted && isOcrVerified ? 'OCR Verified' :
+                         isCompleted ? 'Completed' :
+                         isPendingReview ? 'Needs Review' :
+                         payment.status}
+                      </span>
+                    </div>
+                    <p className="text-gray-600">
+                      {payment.userId.name} ({payment.userId.email})
+                    </p>
+                    {payment.bookingId && (
+                      <p className="text-sm text-gray-500">
+                        Service: {payment.bookingId.serviceId.name}
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-500">
+                      Created: {new Date(payment.createdAt).toLocaleString()}
+                    </p>
                   </div>
+                  {isPendingReview && (
+                    <button
+                      onClick={() => setSelectedPayment(payment)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium"
+                    >
+                      Review
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-          ))}
+
+                {payment.paymentData?.receiptVerification?.validation && (
+                  <div className={`border rounded-lg p-4 ${
+                    isOcrVerified ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                  }`}>
+                    <h4 className={`font-semibold mb-2 ${
+                      isOcrVerified ? 'text-green-800' : 'text-red-800'
+                    }`}>
+                      OCR Verification Results
+                    </h4>
+                    <div className={`text-sm ${
+                      isOcrVerified ? 'text-green-700' : 'text-red-700'
+                    }`}>
+                      <p>Extracted Amount: ₱{payment.paymentData.receiptVerification.validation.extractedAmount || 'Not found'}</p>
+                      <p>Extracted Reference: {payment.paymentData.receiptVerification.validation.extractedReference || 'Not found'}</p>
+                      <p>Amount Match: {payment.paymentData.receiptVerification.validation.amountMatch ? '✅' : '❌'}</p>
+                      <p>Reference Match: {payment.paymentData.receiptVerification.validation.referenceMatch ? '✅' : '❌'}</p>
+                      {payment.paymentData.receiptVerification.validation.issues.length > 0 && (
+                        <p>Issues: {payment.paymentData.receiptVerification.validation.issues.join(', ')}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {isCompleted && isOcrVerified && (
+                  <div className="mt-4 bg-green-100 border border-green-300 rounded-lg p-3">
+                    <div className="flex items-center text-green-800">
+                      <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span className="font-medium">Successfully verified via OCR</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

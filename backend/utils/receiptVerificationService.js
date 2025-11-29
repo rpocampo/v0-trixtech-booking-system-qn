@@ -98,29 +98,47 @@ const parseReceiptData = (text) => {
   };
 };
 
-// Validate extracted data against expected values
+// Strict OCR validation for GCash receipts
 const validateReceiptData = (extractedData, expectedAmount, expectedReference) => {
   const { extractedAmount, extractedReference } = extractedData;
 
+  // Amount MUST match exactly (strictly required)
   const amountMatch = extractedAmount !== null &&
-                     Math.abs(extractedAmount - expectedAmount) < 0.01; // Allow for small floating point differences
+                      Math.abs(extractedAmount - expectedAmount) < 0.01;
 
+  // Reference validation (not required but must be real if present)
   const referenceMatch = extractedReference !== null &&
-                        extractedReference === expectedReference;
+                         extractedReference === expectedReference;
 
-  const isValid = amountMatch && referenceMatch;
+  // Validate reference format for GCash (should start with QR_ and be properly formatted)
+  const referenceFormatValid = extractedReference &&
+                              extractedReference.startsWith('QR_') &&
+                              extractedReference.length >= 10 &&
+                              /^[A-Z]{2}_\d+_[A-Z0-9]+$/.test(extractedReference);
+
+  // Strict validation: Amount MUST match, reference should be valid if present
+  const isValid = amountMatch && (extractedReference === null || referenceFormatValid);
+
+  // Additional check: if reference is present but doesn't match expected, it's invalid
+  const referenceValid = extractedReference === null ||
+                        (referenceFormatValid && (referenceMatch || expectedReference === null));
+
+  const finalValidation = amountMatch && referenceValid;
 
   return {
-    isValid,
+    isValid: finalValidation,
     amountMatch,
     referenceMatch,
+    referenceFormatValid,
     extractedAmount,
     extractedReference,
     expectedAmount,
     expectedReference,
+    autoConfirmed: finalValidation, // Only auto-confirm if all validations pass
     issues: []
-      .concat(amountMatch ? [] : ['Amount does not match expected payment amount'])
-      .concat(referenceMatch ? [] : ['Reference number does not match'])
+      .concat(!amountMatch ? ['Amount does not match expected payment amount'] : [])
+      .concat(extractedReference && !referenceFormatValid ? ['Reference number format is invalid'] : [])
+      .concat(extractedReference && referenceFormatValid && !referenceMatch ? ['Reference number does not match expected value'] : [])
   };
 };
 
