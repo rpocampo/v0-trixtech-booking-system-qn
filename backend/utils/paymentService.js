@@ -2,6 +2,150 @@ const Payment = require('../models/Payment');
 const Booking = require('../models/Booking');
 const { sendTemplateNotification } = require('./notificationService');
 const { generateQRCodeDataURL, generatePaymentInstructions } = require('./qrCodeService');
+const { getInventoryHealthReport, analyzeInventoryPatterns } = require('./inventoryAnalyticsService');
+
+// Auto-update inventory reports after booking confirmation
+const updateInventoryReports = async (bookingId) => {
+  try {
+    const booking = await Booking.findById(bookingId).populate('serviceId');
+
+    if (!booking || !booking.serviceId) {
+      console.log('Booking or service not found for inventory report update');
+      return;
+    }
+
+    const service = booking.serviceId;
+    const servicesToUpdate = [];
+
+    // Add main service if it's equipment or supply
+    if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+      servicesToUpdate.push(service);
+    }
+
+    // Add included equipment items
+    if (service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0) {
+      for (const equipmentItem of service.includedEquipment) {
+        try {
+          const equipmentService = await require('../models/Service').findById(equipmentItem.equipmentId);
+          if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
+            servicesToUpdate.push(equipmentService);
+          }
+        } catch (equipmentError) {
+          console.error('Error fetching included equipment for reports:', equipmentError);
+        }
+      }
+    }
+
+    // Generate updated inventory health report
+    const healthReport = await getInventoryHealthReport();
+
+    // Update reports for all relevant services
+    for (const serviceToUpdate of servicesToUpdate) {
+      const serviceReport = healthReport.services.find(s => s.serviceId.toString() === serviceToUpdate._id.toString());
+
+      if (serviceReport) {
+        console.log(`Inventory report updated for ${serviceToUpdate.name}: ${serviceReport.healthStatus} (${serviceReport.currentStock} remaining, ${serviceReport.daysRemaining} days left)`);
+
+        // Emit real-time update for admin dashboard
+        const io = global.io;
+        if (io) {
+          io.to('admin').emit('inventory-report-updated', {
+            serviceId: serviceToUpdate._id,
+            serviceName: serviceToUpdate.name,
+            currentStock: serviceReport.currentStock,
+            healthStatus: serviceReport.healthStatus,
+            daysRemaining: serviceReport.daysRemaining,
+            recommendations: serviceReport.recommendations,
+            bookingId: booking._id,
+            bookingServiceName: service.name
+          });
+        }
+
+        // Check if this service needs urgent attention
+        if (serviceReport.healthStatus === 'critical' || serviceReport.healthStatus === 'out_of_stock') {
+          // Send urgent notification to admins
+          const User = require('../models/User');
+          const adminUsers = await User.find({ role: 'admin' });
+
+          for (const admin of adminUsers) {
+            await sendTemplateNotification(admin._id, 'INVENTORY_CRITICAL', {
+              message: `URGENT: ${serviceToUpdate.name} inventory is ${serviceReport.healthStatus.replace('_', ' ')}. Only ${serviceReport.currentStock} units remaining.`,
+              metadata: {
+                serviceId: serviceToUpdate._id,
+                serviceName: serviceToUpdate.name,
+                currentStock: serviceReport.currentStock,
+                daysRemaining: serviceReport.daysRemaining,
+                healthStatus: serviceReport.healthStatus,
+                bookingId: booking._id,
+                bookingServiceName: service.name
+              }
+            });
+          }
+        }
+      }
+    }
+
+    // Log comprehensive inventory update
+    console.log(`Inventory reports updated for booking ${bookingId}: ${servicesToUpdate.length} services monitored`);
+
+  } catch (error) {
+    console.error('Error updating inventory reports:', error);
+  }
+};
+
+// Auto-generate invoice for completed booking
+const generateInvoice = async (bookingId) => {
+  try {
+    const booking = await Booking.findById(bookingId)
+      .populate('serviceId')
+      .populate('customerId', 'name email')
+      .populate('paymentId');
+
+    if (!booking) {
+      throw new Error('Booking not found');
+    }
+
+    const invoiceNumber = `INV-${Date.now()}-${booking._id.toString().slice(-6).toUpperCase()}`;
+
+    // Create invoice data
+    const invoiceData = {
+      invoiceNumber,
+      bookingId: booking._id,
+      customerName: booking.customerId?.name || 'Customer',
+      customerEmail: booking.customerId?.email || '',
+      serviceName: booking.serviceId?.name || 'Service',
+      serviceDescription: booking.serviceId?.description || '',
+      quantity: booking.quantity || 1,
+      unitPrice: booking.basePrice || 0,
+      totalPrice: booking.totalPrice || 0,
+      bookingDate: booking.bookingDate,
+      paymentDate: booking.paymentId?.completedAt || new Date(),
+      paymentMethod: booking.paymentId?.paymentMethod || 'GCash QR',
+      transactionId: booking.paymentId?.transactionId || '',
+      notes: booking.notes || '',
+      generatedAt: new Date()
+    };
+
+    // Store invoice data in booking (you could also create a separate Invoice model)
+    booking.invoiceNumber = invoiceNumber;
+    booking.invoiceData = invoiceData;
+    await booking.save();
+
+    console.log(`Invoice generated: ${invoiceNumber} for booking ${bookingId}`);
+
+    return {
+      success: true,
+      invoiceNumber,
+      invoiceData
+    };
+  } catch (error) {
+    console.error('Error generating invoice:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
 
 // Generate unique transaction ID
 const generateTransactionId = () => {
@@ -337,6 +481,17 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
         await service.save();
       }
 
+      // Generate invoice automatically
+      try {
+        const invoiceResult = await generateInvoice(booking._id);
+        if (invoiceResult.success) {
+          console.log(`Invoice ${invoiceResult.invoiceNumber} generated for booking ${booking._id}`);
+        }
+      } catch (invoiceError) {
+        console.error('Error generating invoice:', invoiceError);
+        // Don't fail booking confirmation if invoice generation fails
+      }
+  
       // Send confirmation notifications
       try {
         await sendTemplateNotification(payment.userId._id, 'BOOKING_CONFIRMED', {
@@ -347,7 +502,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
             amount: booking.totalPrice,
           }
         });
-
+  
         // Admin notification
         const User = require('../models/User');
         const adminUsers = await User.find({ role: 'admin' });
@@ -361,7 +516,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
             }
           });
         }
-
+  
         // Emit real-time events
         const io = global.io;
         if (io) {
@@ -375,7 +530,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
               status: 'confirmed',
             }
           });
-
+  
           io.to('admin').emit('new-confirmed-booking', {
             booking: {
               id: booking._id,
@@ -389,6 +544,15 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
         }
       } catch (notificationError) {
         console.error('Error sending booking confirmation notifications:', notificationError);
+      }
+  
+      // Auto-generate and send invoice
+      try {
+        const { handleBookingConfirmed } = require('./invoiceService');
+        await handleBookingConfirmed(booking._id);
+      } catch (invoiceError) {
+        console.error('Error in auto-invoice generation:', invoiceError);
+        // Don't fail the booking if invoice generation fails
       }
 
       return {
@@ -465,4 +629,5 @@ module.exports = {
   cancelPayment,
   generateTransactionId,
   generateReferenceNumber,
+  generateInvoice,
 };

@@ -254,6 +254,30 @@ const NOTIFICATION_TEMPLATES = {
     priority: 'low',
     channels: ['in-app'],
   },
+
+  BOOKING_REMINDER_24H: {
+    title: 'Booking Reminder - 24 Hours',
+    message: 'Your booking is scheduled for tomorrow. Please review the details.',
+    type: 'booking',
+    priority: 'medium',
+    channels: ['in-app', 'email', 'sms'],
+  },
+
+  BOOKING_REMINDER_1H: {
+    title: 'Booking Reminder - 1 Hour',
+    message: 'Your booking starts in 1 hour. Please be prepared.',
+    type: 'booking',
+    priority: 'high',
+    channels: ['in-app', 'email', 'sms'],
+  },
+
+  BOOKING_REMINDER_15M: {
+    title: 'Booking Reminder - 15 Minutes',
+    message: 'Your booking starts in 15 minutes. Please arrive on time.',
+    type: 'booking',
+    priority: 'high',
+    channels: ['in-app', 'sms'],
+  },
 };
 
 // Helper function to send notification using template
@@ -526,6 +550,68 @@ class AlertNotificationService {
 // Global alert service instance
 const alertService = new AlertNotificationService();
 
+// Send booking reminders for upcoming bookings
+const sendBookingReminders = async () => {
+  try {
+    const Booking = require('../models/Booking');
+    const now = new Date();
+
+    // Define reminder timeframes
+    const reminderTimes = [
+      { hours: 24, template: 'BOOKING_REMINDER_24H' },
+      { hours: 1, template: 'BOOKING_REMINDER_1H' },
+      { hours: 0.25, template: 'BOOKING_REMINDER_15M' } // 15 minutes
+    ];
+
+    for (const reminder of reminderTimes) {
+      const reminderTime = new Date(now.getTime() + reminder.hours * 60 * 60 * 1000);
+
+      // Find bookings that are confirmed and start within the reminder timeframe
+      const upcomingBookings = await Booking.find({
+        status: 'confirmed',
+        bookingDate: {
+          $gte: new Date(reminderTime.getTime() - 30 * 60 * 1000), // Within 30 minutes of target time
+          $lt: new Date(reminderTime.getTime() + 30 * 60 * 1000)   // Within 30 minutes of target time
+        }
+      }).populate('serviceId', 'name').populate('customerId', 'name email');
+
+      for (const booking of upcomingBookings) {
+        // Check if reminder was already sent (avoid duplicate reminders)
+        const existingReminder = await Notification.findOne({
+          userId: booking.customerId._id,
+          'metadata.bookingId': booking._id,
+          title: NOTIFICATION_TEMPLATES[reminder.template].title,
+          createdAt: { $gte: new Date(now.getTime() - 2 * 60 * 60 * 1000) } // Within last 2 hours
+        });
+
+        if (!existingReminder) {
+          try {
+            await sendTemplateNotification(booking.customerId._id, reminder.template, {
+              message: `Your booking for ${booking.serviceId.name} is scheduled for ${booking.bookingDate.toLocaleString()}.`,
+              metadata: {
+                bookingId: booking._id,
+                serviceId: booking.serviceId._id,
+                bookingDate: booking.bookingDate,
+                serviceName: booking.serviceId.name,
+                quantity: booking.quantity,
+                totalPrice: booking.totalPrice,
+              }
+            });
+
+            console.log(`Sent ${reminder.hours}h reminder for booking ${booking._id}`);
+          } catch (error) {
+            console.error(`Error sending ${reminder.hours}h reminder for booking ${booking._id}:`, error);
+          }
+        }
+      }
+    }
+
+    console.log('Booking reminders processed successfully');
+  } catch (error) {
+    console.error('Error processing booking reminders:', error);
+  }
+};
+
 // Periodic cleanup
 setInterval(() => {
   alertService.cleanupCache();
@@ -539,6 +625,7 @@ module.exports = {
   getUnreadCount,
   cleanupOldNotifications,
   sendTemplateNotification,
+  sendBookingReminders,
   NOTIFICATION_TEMPLATES,
   AlertNotificationService,
   alertService,

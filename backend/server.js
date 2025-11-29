@@ -22,6 +22,8 @@ const healthRoutes = require('./routes/healthRoutes');
 const { initializeEmailService } = require('./utils/emailService');
 const { processReservationQueue, cleanupExpiredReservations } = require('./utils/recommendationService');
 const { cleanupExpiredOTPs } = require('./utils/otpService');
+const { sendBookingReminders } = require('./utils/notificationService');
+const { autoCancelExpiredBookings } = require('./routes/bookingRoutes');
 const { errorHandler, requestLogger } = require('./middleware/errorHandler');
 const { monitoringMiddleware } = require('./utils/monitoring');
 
@@ -146,6 +148,121 @@ if (process.env.NODE_ENV !== 'test') {
       console.error('Error cleaning up expired OTPs:', error);
     }
   }, 60 * 60 * 1000); // 1 hour
+
+  // Send booking reminders every 15 minutes
+  setInterval(async () => {
+    try {
+      await sendBookingReminders();
+    } catch (error) {
+      console.error('Error sending booking reminders:', error);
+    }
+  }, 15 * 60 * 1000); // 15 minutes
+
+  // Auto-cancel expired pending bookings every hour
+  setInterval(async () => {
+    try {
+      const result = await autoCancelExpiredBookings();
+      if (result.cancelledCount > 0) {
+        console.log(`Auto-cancelled ${result.cancelledCount} expired bookings`);
+      }
+    } catch (error) {
+      console.error('Error auto-cancelling expired bookings:', error);
+    }
+  }, 60 * 60 * 1000); // 1 hour
+
+  // Send automated follow-up communications every 6 hours
+  setInterval(async () => {
+    try {
+      await sendAutomatedFollowUps();
+    } catch (error) {
+      console.error('Error sending automated follow-ups:', error);
+    }
+  }, 6 * 60 * 60 * 1000); // 6 hours
+
+  // Process overdue invoices and send reminders daily
+  setInterval(async () => {
+    try {
+      const { processOverdueInvoices } = require('./utils/invoiceService');
+      const processedCount = await processOverdueInvoices();
+      if (processedCount > 0) {
+        console.log(`Processed ${processedCount} overdue invoices`);
+      }
+    } catch (error) {
+      console.error('Error processing overdue invoices:', error);
+    }
+  }, 24 * 60 * 60 * 1000); // 24 hours
+}
+
+// Function to send automated follow-up communications
+async function sendAutomatedFollowUps() {
+  try {
+    const Booking = require('./models/Booking');
+    const { sendTemplateNotification } = require('./utils/notificationService');
+
+    const now = new Date();
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    // Send 3-day follow-up for completed bookings
+    const threeDayBookings = await Booking.find({
+      status: 'completed',
+      updatedAt: {
+        $gte: threeDaysAgo,
+        $lt: new Date(now.getTime() - 2.9 * 24 * 60 * 60 * 1000) // Avoid sending multiple times
+      }
+    }).populate('customerId', 'name email').populate('serviceId', 'name');
+
+    for (const booking of threeDayBookings) {
+      if (booking.customerId) {
+        try {
+          await sendTemplateNotification(booking.customerId._id, 'FOLLOW_UP_3_DAYS', {
+            message: `How was your experience with ${booking.serviceId?.name}? We'd love to hear your feedback!`,
+            metadata: {
+              bookingId: booking._id,
+              serviceId: booking.serviceId?._id,
+              serviceName: booking.serviceId?.name,
+              daysSinceCompletion: 3
+            }
+          });
+          console.log(`Sent 3-day follow-up for booking ${booking._id}`);
+        } catch (error) {
+          console.error(`Error sending 3-day follow-up for booking ${booking._id}:`, error);
+        }
+      }
+    }
+
+    // Send 7-day follow-up for completed bookings
+    const sevenDayBookings = await Booking.find({
+      status: 'completed',
+      updatedAt: {
+        $gte: sevenDaysAgo,
+        $lt: new Date(now.getTime() - 6.9 * 24 * 60 * 60 * 1000) // Avoid sending multiple times
+      }
+    }).populate('customerId', 'name email').populate('serviceId', 'name');
+
+    for (const booking of sevenDayBookings) {
+      if (booking.customerId) {
+        try {
+          await sendTemplateNotification(booking.customerId._id, 'FOLLOW_UP_7_DAYS', {
+            message: `Thank you for choosing TRIXTECH! Have you tried our other services?`,
+            metadata: {
+              bookingId: booking._id,
+              serviceId: booking.serviceId?._id,
+              serviceName: booking.serviceId?.name,
+              daysSinceCompletion: 7
+            }
+          });
+          console.log(`Sent 7-day follow-up for booking ${booking._id}`);
+        } catch (error) {
+          console.error(`Error sending 7-day follow-up for booking ${booking._id}:`, error);
+        }
+      }
+    }
+
+    console.log(`Follow-up communications sent: ${threeDayBookings.length} (3-day), ${sevenDayBookings.length} (7-day)`);
+  } catch (error) {
+    console.error('Error in sendAutomatedFollowUps:', error);
+  }
 }
 
 const PORT = process.env.PORT || 5000;

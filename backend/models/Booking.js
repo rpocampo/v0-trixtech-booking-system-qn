@@ -97,6 +97,17 @@ const bookingSchema = new mongoose.Schema(
       of: Number,
       default: {},
     },
+    // Payment and invoice related fields
+    paymentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Payment',
+    },
+    invoiceNumber: {
+      type: String,
+    },
+    invoiceData: {
+      type: mongoose.Schema.Types.Mixed, // Store complete invoice data
+    },
   },
   { timestamps: true }
 );

@@ -948,39 +948,6 @@ export default function AdminBookings() {
                       </h4>
 
                       <div className="space-y-4">
-                        {/* Number of Guests */}
-                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                          <div className="flex-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Number of Guests
-                            </label>
-                            <p className="text-xs text-gray-500">
-                              Current: {selectedBooking.quantity} guest{selectedBooking.quantity !== 1 ? 's' : ''}
-                            </p>
-                          </div>
-                          {isEditingBooking ? (
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="number"
-                                min="1"
-                                max="100"
-                                value={editFormData.quantity}
-                                onChange={(e) => setEditFormData(prev => ({
-                                  ...prev,
-                                  quantity: parseInt(e.target.value) || 1
-                                }))}
-                                className="input-field w-20 text-center"
-                              />
-                              <span className="text-sm text-gray-600">guests</span>
-                            </div>
-                          ) : (
-                            <div className="text-right">
-                              <span className="text-lg font-semibold text-[var(--primary)]">
-                                {selectedBooking.quantity}
-                              </span>
-                            </div>
-                          )}
-                        </div>
 
                         {/* Items/Equipment Quantities */}
                         {selectedBooking.serviceId.includedEquipment && selectedBooking.serviceId.includedEquipment.length > 0 && (

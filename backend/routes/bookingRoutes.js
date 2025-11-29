@@ -866,6 +866,15 @@ router.put('/:id/cancel', authMiddleware, async (req, res, next) => {
     booking.status = 'cancelled';
     await booking.save();
 
+    // Update inventory reports after cancellation (inventory was already restored above)
+    try {
+      const { updateInventoryReports } = require('../utils/paymentService');
+      await updateInventoryReports(booking._id);
+    } catch (reportError) {
+      console.error('Error updating inventory reports after cancellation:', reportError);
+      // Don't fail the cancellation if report update fails
+    }
+
     // Send cancellation notifications
     try {
       // Customer notification
@@ -1228,6 +1237,36 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       });
 
       console.log('Inventory update completed using batch tracking for booking confirmation');
+
+      // Update inventory reports automatically for main service and all included equipment
+      try {
+        const { updateInventoryReports } = require('../utils/paymentService');
+        await updateInventoryReports(booking._id);
+
+        // Also update reports for included equipment items individually for better monitoring
+        if (service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0) {
+          for (const equipmentItem of service.includedEquipment) {
+            try {
+              const equipmentService = await Service.findById(equipmentItem.equipmentId);
+              if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
+                // Create a temporary booking-like object for the equipment item
+                const equipmentBooking = {
+                  _id: booking._id,
+                  serviceId: equipmentService,
+                  quantity: equipmentItem.quantity
+                };
+                // Update reports for this specific equipment item
+                await updateInventoryReports(booking._id);
+              }
+            } catch (equipmentReportError) {
+              console.error('Error updating reports for included equipment:', equipmentReportError);
+            }
+          }
+        }
+      } catch (reportError) {
+        console.error('Error updating inventory reports:', reportError);
+        // Don't fail the booking if report update fails
+      }
 
       // Trigger low stock alert check
       try {
@@ -1696,6 +1735,53 @@ router.put('/:id/update-details', adminMiddleware, async (req, res, next) => {
   }
 });
 
+// Get invoice for a booking
+router.get('/:id/invoice', authMiddleware, async (req, res, next) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('serviceId')
+      .populate('customerId', 'name email')
+      .populate('paymentId');
+
+    if (!booking) {
+      return res.status(404).json({ success: false, message: 'Booking not found' });
+    }
+
+    // Check if user owns this booking or is admin
+    const isOwner = booking.customerId && booking.customerId._id.toString() === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ success: false, message: 'Not authorized' });
+    }
+
+    // Generate invoice if not already generated
+    if (!booking.invoiceNumber) {
+      const { generateInvoice } = require('../utils/paymentService');
+      await generateInvoice(booking._id);
+      // Re-fetch booking with invoice data
+      await booking.populate('serviceId').populate('customerId', 'name email').populate('paymentId').execPopulate();
+    }
+
+    res.json({
+      success: true,
+      invoice: {
+        invoiceNumber: booking.invoiceNumber,
+        ...booking.invoiceData,
+        booking: {
+          id: booking._id,
+          serviceName: booking.serviceId?.name,
+          quantity: booking.quantity,
+          totalPrice: booking.totalPrice,
+          bookingDate: booking.bookingDate,
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get predictive suggestions based on booking analytics
 router.get('/suggestions/predictive', authMiddleware, async (req, res, next) => {
   try {
@@ -1741,4 +1827,154 @@ router.get('/suggestions/predictive', authMiddleware, async (req, res, next) => 
   }
 });
 
+// Auto-cancel expired pending bookings (utility function for scheduled tasks)
+const autoCancelExpiredBookings = async () => {
+  try {
+    const Booking = require('../models/Booking');
+    const { sendTemplateNotification } = require('../utils/notificationService');
+    const now = new Date();
+
+    // Cancel bookings that are pending and older than 24 hours
+    const expiredTime = new Date(now.getTime() - 24 * 60 * 60 * 1000); // 24 hours ago
+
+    const expiredBookings = await Booking.find({
+      status: 'pending',
+      paymentStatus: 'unpaid',
+      createdAt: { $lt: expiredTime }
+    }).populate('serviceId', 'name').populate('customerId', 'name email');
+
+    console.log(`Found ${expiredBookings.length} expired pending bookings to cancel`);
+
+    for (const booking of expiredBookings) {
+      try {
+        // Update booking status
+        booking.status = 'cancelled';
+        booking.notes = (booking.notes || '') + ' [Auto-cancelled: Payment not received within 24 hours]';
+        await booking.save();
+
+        // Restore inventory
+        const service = booking.serviceId;
+        if (service) {
+          // Restore inventory for equipment/supply items
+          if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+            const previousStock = service.quantity;
+            await service.restoreBatchQuantity(booking.quantity);
+            const newStock = service.quantity;
+
+            // Log inventory transaction
+            await InventoryTransaction.logTransaction({
+              serviceId: service._id,
+              bookingId: booking._id,
+              transactionType: 'booking_cancellation',
+              quantity: booking.quantity, // Positive for restoration
+              previousStock,
+              newStock,
+              reason: `Auto-cancellation inventory restoration for expired booking: ${service.name}`,
+              metadata: {
+                customerId: booking.customerId?._id,
+                bookingDate: booking.bookingDate,
+                serviceName: service.name,
+                autoCancelled: true
+              }
+            });
+
+            console.log('Inventory restored after auto-cancellation for service:', service.name);
+          }
+
+          // Restore inventory for included equipment in professional services
+          if (service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0) {
+            for (const equipmentItem of service.includedEquipment) {
+              try {
+                const equipmentService = await Service.findById(equipmentItem.equipmentId);
+                if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
+                  const previousStock = equipmentService.quantity;
+                  await equipmentService.restoreBatchQuantity(equipmentItem.quantity);
+                  const newStock = equipmentService.quantity;
+
+                  // Log inventory transaction for equipment restoration
+                  await InventoryTransaction.logTransaction({
+                    serviceId: equipmentItem.equipmentId,
+                    bookingId: booking._id,
+                    transactionType: 'booking_cancellation',
+                    quantity: equipmentItem.quantity, // Positive for restoration
+                    previousStock,
+                    newStock,
+                    reason: `Auto-cancellation inventory restoration for included equipment: ${equipmentService.name} (from service: ${service.name})`,
+                    metadata: {
+                      customerId: booking.customerId?._id,
+                      bookingDate: booking.bookingDate,
+                      mainServiceName: service.name,
+                      equipmentName: equipmentService.name,
+                      autoCancelled: true
+                    }
+                  });
+
+                  console.log('Inventory restored for included equipment:', equipmentService.name);
+                }
+              } catch (equipmentError) {
+                console.error('Error restoring equipment inventory during auto-cancellation:', equipmentError);
+              }
+            }
+          }
+        }
+
+        // Send notification to customer
+        if (booking.customerId) {
+          try {
+            await sendTemplateNotification(booking.customerId._id, 'BOOKING_CANCELLED', {
+              message: `Your booking for ${service.name} has been automatically cancelled due to non-payment within 24 hours.`,
+              metadata: {
+                bookingId: booking._id,
+                serviceId: service._id,
+                amount: booking.totalPrice,
+                reason: 'Payment not received within 24 hours'
+              }
+            });
+          } catch (notificationError) {
+            console.error('Error sending auto-cancellation notification:', notificationError);
+          }
+        }
+
+        // Send notification to admins
+        try {
+          const User = require('../models/User');
+          const adminUsers = await User.find({ role: 'admin' });
+          for (const admin of adminUsers) {
+            await sendTemplateNotification(admin._id, 'BOOKING_CANCELLED_ADMIN', {
+              message: `Booking for ${service.name} was automatically cancelled due to non-payment.`,
+              metadata: {
+                bookingId: booking._id,
+                serviceId: service._id,
+                amount: booking.totalPrice,
+                customerId: booking.customerId?._id,
+                autoCancelled: true
+              }
+            });
+          }
+        } catch (adminNotificationError) {
+          console.error('Error sending admin auto-cancellation notification:', adminNotificationError);
+        }
+
+        console.log(`Auto-cancelled expired booking ${booking._id} for service ${service.name}`);
+
+        // Update inventory reports after auto-cancellation
+        try {
+          const { updateInventoryReports } = require('../utils/paymentService');
+          await updateInventoryReports(booking._id);
+        } catch (reportError) {
+          console.error('Error updating inventory reports after auto-cancellation:', reportError);
+        }
+      } catch (bookingError) {
+        console.error(`Error auto-cancelling booking ${booking._id}:`, bookingError);
+      }
+    }
+
+    return { cancelledCount: expiredBookings.length };
+  } catch (error) {
+    console.error('Error in auto-cancel expired bookings:', error);
+    throw error;
+  }
+};
+
 module.exports = router;
+module.exports.autoCancelExpiredBookings = autoCancelExpiredBookings;
