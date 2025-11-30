@@ -2,6 +2,19 @@
 
 A comprehensive enterprise-grade booking and reservation system built with Next.js 16, React 19, Node.js, Express, MongoDB, and Redis. Features 80+ advanced capabilities including AI-powered recommendations, automated business processes, real-time synchronization, comprehensive analytics, intelligent inventory management, GCash QR payments, receipt verification, delivery scheduling, and advanced notification systems.
 
+### What the System Does
+- **Customer Portal**: Browse services, make bookings, track payments, receive notifications
+- **Admin Dashboard**: Manage services, monitor bookings, handle inventory, view analytics
+- **Real-time Updates**: Live notifications and status updates via WebSocket
+- **Payment Processing**: Secure GCash QR code payments with receipt verification
+- **Advanced Inventory Management**: Track stock levels, prevent overbooking, low-stock alerts, batch management
+- **Smart Recommendations**: AI-powered service suggestions based on booking patterns and user preferences
+- **Package Management**: Bundled service offerings with dynamic pricing
+- **Delivery Management**: Scheduled delivery coordination and tracking
+- **Event Type Management**: Specialized configurations for different event categories
+- **Automated Business Processes**: Auto-rebooking, dynamic discounts, waitlist management, invoice processing
+- **Advanced Analytics**: Booking patterns, user preferences, revenue analytics, performance metrics
+
 ## Project Structure
 
 \`\`\`
@@ -30,7 +43,7 @@ trixtech/
 - ✅ **Comprehensive Booking Management** - Status tracking, modifications, cancellation policies, history
 - ✅ **Personalized Experience** - User preferences, booking history, favorites, custom recommendations
 - ✅ **Real-time Notifications** - Live updates, booking confirmations, reminders, email/SMS channels
-- ✅ **Payment Processing** - GCash QR payments, receipt verification, down payments, installment support
+- ✅ **Payment Processing** - GCash QR payments with receipt verification
 - ✅ **Mobile-First Design** - Responsive interface, touch-optimized, cross-device compatibility
 
 #### Admin Dashboard

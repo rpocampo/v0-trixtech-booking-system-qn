@@ -8,7 +8,7 @@ TRIXTECH is a comprehensive enterprise-grade booking and reservation system desi
 - **Customer Portal**: Browse services, make bookings, track payments, receive notifications
 - **Admin Dashboard**: Manage services, monitor bookings, handle inventory, view analytics
 - **Real-time Updates**: Live notifications and status updates via WebSocket
-- **Payment Processing**: Secure GCash QR code payments with down payments and installments
+- **Payment Processing**: Secure GCash QR code payments with receipt verification
 - **Advanced Inventory Management**: Track stock levels, prevent overbooking, low-stock alerts, batch management
 - **Smart Recommendations**: AI-powered service suggestions based on booking patterns and user preferences
 - **Package Management**: Bundled service offerings with dynamic pricing
@@ -83,7 +83,7 @@ The system follows a modern full-stack architecture with clear separation of con
 - **GCash QR integration** for secure payments
 - **Dynamic QR generation** with unique reference numbers
 - **Payment verification** and status tracking
-- **Partial payments** support (down payments and installments)
+- **Receipt verification** with OCR technology
 - **Invoice generation** with detailed billing
 - **Payment reminders** for overdue amounts
 

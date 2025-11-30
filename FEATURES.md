@@ -14,7 +14,7 @@
 #### 2. Sophisticated Booking System
 - **Flexible Booking Options** - Single services, packages, custom configurations, quantity selection
 - **Dynamic Pricing** - Time-based discounts, promotional pricing, personalized offers, automated discounts
-- **Payment Flexibility** - Full payment, down payments, installment plans, GCash QR integration
+- **Payment Flexibility** - Full payment, GCash QR integration with receipt verification
 - **Booking Management** - Status tracking, modifications, cancellation policies, history management
 - **Automated Reminders** - Booking confirmations, payment reminders, follow-up communications, email/SMS
 
@@ -28,7 +28,7 @@
 - **GCash QR Integration** - Dynamic QR code generation, secure payment processing
 - **Receipt Verification** - OCR technology for receipt scanning, automated verification
 - **Payment Tracking** - Transaction history, payment status monitoring, refund management
-- **Multi-payment Support** - Down payments, installments, full payments, payment scheduling
+- **Payment Tracking** - Transaction history, payment status monitoring, receipt verification
 
 ## Customer Features
 
