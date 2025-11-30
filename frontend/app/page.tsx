@@ -76,13 +76,13 @@ export default function Home() {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div className="animate-fade-in">
-            <h1 className="text-6xl lg:text-7xl font-black mb-8 leading-tight">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl xl:text-7xl font-black mb-6 sm:mb-8 leading-tight">
               Welcome to <span className="text-transparent bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text">TRIXTECH</span>
             </h1>
-            <p className="text-xl lg:text-2xl mb-12 max-w-3xl mx-auto leading-relaxed opacity-90">
+            <p className="text-lg sm:text-xl lg:text-2xl mb-8 sm:mb-12 max-w-3xl mx-auto leading-relaxed opacity-90 px-4">
               Your one-stop solution for events, supplies, and services. Book amazing services with ease and experience the future of event management.
             </p>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+            <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center px-4">
               {!isLoggedIn ? (
                 <>
                   <Link href="/register" className="bg-white/90 backdrop-blur-md text-[var(--primary)] px-10 py-4 rounded-3xl font-bold hover:bg-white hover:scale-105 transition-all duration-300 shadow-2xl hover:shadow-white/25 border border-white/20">
@@ -120,7 +120,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-12">
             {[
               {
                 icon: '⚡',

@@ -706,6 +706,30 @@ button, a, input, textarea, select {
   .btn-sm {
     @apply min-h-[40px] px-3 py-2;
   }
+
+  /* Improve touch targets for mobile */
+  button, a, input, textarea, select {
+    min-height: 44px;
+  }
+
+  /* Better spacing for mobile forms */
+  .input-field {
+    @apply text-base; /* Prevent zoom on iOS */
+  }
+
+  /* Improve modal spacing on mobile */
+  .modal-mobile {
+    @apply mx-2;
+  }
+
+  /* Better table spacing on mobile */
+  table {
+    font-size: 14px;
+  }
+
+  th, td {
+    padding: 8px 12px;
+  }
 }
 
 /* High Contrast Mode Support */

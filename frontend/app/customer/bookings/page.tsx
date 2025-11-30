@@ -223,14 +223,14 @@ export default function Bookings() {
       ) : (
         <div className="space-y-4">
           {bookings.map((booking) => (
-            <div key={booking._id} className="card p-6">
-              <div className="flex justify-between items-start mb-4">
+            <div key={booking._id} className="card p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-4">
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold">{booking.serviceId?.name || 'Unknown Service'}</h3>
+                  <h3 className="text-lg sm:text-xl font-semibold">{booking.serviceId?.name || 'Unknown Service'}</h3>
                   {booking.serviceId?.description && (
                     <p className="text-[var(--muted)] text-sm mt-1">{booking.serviceId.description}</p>
                   )}
-                  <div className="flex flex-wrap gap-4 mt-2">
+                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-4 mt-3">
                     <p className="text-[var(--muted)] text-sm">
                       📅 {new Date(booking.bookingDate).toLocaleString()}
                     </p>
@@ -264,15 +264,15 @@ export default function Bookings() {
                     </p>
                   </div>
                 </div>
-                <div className="text-right ml-4">
+                <div className="flex flex-col sm:flex-col sm:text-right items-start sm:items-end gap-2 sm:gap-0">
                   <p className="text-2xl font-bold text-[var(--primary)]">₱{booking.totalPrice}</p>
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold mt-2 ${getStatusColor(booking.status)}`}>
+                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(booking.status)}`}>
                     {booking.status}
                   </span>
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4 pt-4 border-t border-[var(--border)]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-[var(--border)]">
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-sm font-medium text-gray-600">Payment Type:</span>

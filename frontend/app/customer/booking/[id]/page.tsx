@@ -588,7 +588,7 @@ export default function BookingPage() {
   if (!service) return <div>Service not found</div>;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       <Button
         onClick={() => {
           // Clear saved booking data when going back
@@ -602,10 +602,10 @@ export default function BookingPage() {
         Back
       </Button>
 
-      <h1 className="text-3xl font-bold mb-2">{service.name}</h1>
-      <p className="text-[var(--muted)] mb-8">{service.description}</p>
+      <h1 className="text-2xl sm:text-3xl font-bold mb-2">{service.name}</h1>
+      <p className="text-[var(--muted)] mb-6 sm:mb-8 text-sm sm:text-base">{service.description}</p>
 
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid lg:grid-cols-2 gap-6 lg:gap-8">
         <div className="card p-6">
           <h2 className="text-xl font-semibold mb-4">Service Details</h2>
           <div className="space-y-3">
@@ -711,10 +711,10 @@ export default function BookingPage() {
 
                 {/* Extension Controls */}
                 {booking.extendRental && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg mb-3">
-                    <div className="grid grid-cols-2 gap-3">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-3">
+                    <div className="space-y-4">
                       <div>
-                        <label className="block text-xs font-medium text-blue-800 mb-1">
+                        <label className="block text-sm font-medium text-blue-800 mb-2">
                           Additional Days
                         </label>
                         <select
@@ -723,7 +723,7 @@ export default function BookingPage() {
                             ...booking,
                             extendedDays: parseInt(e.target.value)
                           })}
-                          className="input-field text-sm"
+                          className="input-field w-full"
                         >
                           {Array.from({ length: 30 }, (_, i) => i + 1).map(days => (
                             <option key={days} value={days}>{days} day{days !== 1 ? 's' : ''}</option>
@@ -731,7 +731,7 @@ export default function BookingPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-blue-800 mb-1">
+                        <label className="block text-sm font-medium text-blue-800 mb-2">
                           Additional Hours
                         </label>
                         <select
@@ -740,7 +740,7 @@ export default function BookingPage() {
                             ...booking,
                             extendedHours: parseInt(e.target.value)
                           })}
-                          className="input-field text-sm"
+                          className="input-field w-full"
                         >
                           <option value={0}>0 hours</option>
                           {Array.from({ length: 23 }, (_, i) => i + 1).map(hours => (
@@ -749,7 +749,7 @@ export default function BookingPage() {
                         </select>
                       </div>
                     </div>
-                    <p className="text-xs text-blue-600 mt-2">
+                    <p className="text-sm text-blue-600 mt-3">
                       Each rental lasts 1 day and the duration starts after the service or equipment is delivered.
                     </p>
                   </div>
@@ -1161,21 +1161,21 @@ export default function BookingPage() {
               {/* Time Selection */}
               <div className="mb-6">
                 <label className="block text-sm font-medium mb-2">Time</label>
-                <div className="flex gap-2 items-center">
+                <div className="grid grid-cols-3 gap-2 items-center">
                   <select
                     value={selectedHour}
                     onChange={(e) => setSelectedHour(parseInt(e.target.value))}
-                    className="input-field flex-1"
+                    className="input-field text-center"
                   >
                     {Array.from({ length: 12 }, (_, i) => i + 1).map(hour => (
                       <option key={hour} value={hour}>{hour.toString().padStart(2, '0')}</option>
                     ))}
                   </select>
-                  <span className="text-lg">:</span>
+                  <span className="text-lg text-center font-semibold">:</span>
                   <select
                     value={selectedMinute}
                     onChange={(e) => setSelectedMinute(parseInt(e.target.value))}
-                    className="input-field flex-1"
+                    className="input-field text-center"
                   >
                     {Array.from({ length: 60 }, (_, i) => i).map(minute => (
                       <option key={minute} value={minute}>{minute.toString().padStart(2, '0')}</option>
@@ -1184,12 +1184,14 @@ export default function BookingPage() {
                 </div>
 
                 {/* AM/PM Selection */}
-                <div className="flex gap-2 mt-3">
+                <div className="grid grid-cols-2 gap-2 mt-3">
                   <button
                     type="button"
                     onClick={() => setSelectedAmPm('AM')}
-                    className={`flex-1 py-2 px-4 rounded border ${
-                      selectedAmPm === 'AM' ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-300'
+                    className={`py-3 px-4 rounded-lg border-2 font-semibold transition-all ${
+                      selectedAmPm === 'AM'
+                        ? 'bg-blue-500 text-white border-blue-500 shadow-md'
+                        : 'border-gray-300 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
                     }`}
                   >
                     AM
@@ -1197,8 +1199,10 @@ export default function BookingPage() {
                   <button
                     type="button"
                     onClick={() => setSelectedAmPm('PM')}
-                    className={`flex-1 py-2 px-4 rounded border ${
-                      selectedAmPm === 'PM' ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-300'
+                    className={`py-3 px-4 rounded-lg border-2 font-semibold transition-all ${
+                      selectedAmPm === 'PM'
+                        ? 'bg-blue-500 text-white border-blue-500 shadow-md'
+                        : 'border-gray-300 text-gray-700 hover:border-blue-300 hover:bg-blue-50'
                     }`}
                   >
                     PM

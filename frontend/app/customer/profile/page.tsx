@@ -206,9 +206,9 @@ export default function Profile() {
   if (!user) return <div className="flex items-center justify-center min-h-screen"><div className="text-[var(--muted)]">No user data available</div></div>;
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <h1 className="text-4xl font-bold mb-2">My Profile</h1>
-      <p className="text-[var(--muted)] mb-8">Update your personal information</p>
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h1 className="text-2xl sm:text-4xl font-bold mb-2">My Profile</h1>
+      <p className="text-[var(--muted)] mb-6 sm:mb-8 text-sm sm:text-base">Update your personal information</p>
 
       <div className="card p-8">
         {message && (

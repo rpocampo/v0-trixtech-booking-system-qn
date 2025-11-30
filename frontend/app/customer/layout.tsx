@@ -332,7 +332,7 @@ export default function CustomerLayout({
       {/* Footer */}
       <footer className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white py-16 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-8">
             <div className="md:col-span-2">
               <h3 className="text-2xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent mb-4">
                 TRIXTECH

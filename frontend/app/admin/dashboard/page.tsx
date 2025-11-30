@@ -285,39 +285,75 @@ export default function AdminDashboard() {
             <span className="ml-3 text-[var(--muted)] text-lg">Loading recent bookings...</span>
           </div>
         ) : recentBookings.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-base">
-              <thead>
-                <tr className="border-b-2 border-[var(--border)]">
-                  <th className="text-left py-4 px-6 font-semibold text-[var(--muted)] text-lg">Service</th>
-                  <th className="text-left py-4 px-6 font-semibold text-[var(--muted)] text-lg">Customer</th>
-                  <th className="text-left py-4 px-6 font-semibold text-[var(--muted)] text-lg">Date & Time</th>
-                  <th className="text-left py-4 px-6 font-semibold text-[var(--muted)] text-lg">Status</th>
-                  <th className="text-right py-4 px-6 font-semibold text-[var(--muted)] text-lg">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentBookings.map((booking, index) => (
-                  <tr
-                    key={booking._id}
-                    className={`border-b border-[var(--border)] transition-all duration-200 cursor-pointer ${
-                      index % 2 === 0 ? 'bg-white hover:bg-blue-50' : 'bg-gray-50 hover:bg-blue-50'
-                    } hover:shadow-md`}
-                    onClick={() => {
-                      setSelectedBooking(booking);
-                      setShowBookingModal(true);
-                    }}
-                  >
-                    <td className="py-5 px-6 font-medium">{booking.serviceId?.name || 'Unknown Service'}</td>
-                    <td className="py-5 px-6">{booking.customerId?.name || 'Unknown Customer'}</td>
-                    <td className="py-5 px-6">
-                      <div className="text-base">
-                        <div className="font-medium">{new Date(booking.bookingDate).toLocaleDateString()}</div>
-                        <div className="text-[var(--muted)] text-sm">{new Date(booking.bookingDate).toLocaleTimeString()}</div>
-                      </div>
-                    </td>
-                    <td className="py-5 px-6">
-                      <span className={`badge text-sm px-3 py-1 ${
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-base">
+                <thead>
+                  <tr className="border-b-2 border-[var(--border)]">
+                    <th className="text-left py-4 px-6 font-semibold text-[var(--muted)] text-lg">Service</th>
+                    <th className="text-left py-4 px-6 font-semibold text-[var(--muted)] text-lg">Customer</th>
+                    <th className="text-left py-4 px-6 font-semibold text-[var(--muted)] text-lg">Date & Time</th>
+                    <th className="text-left py-4 px-6 font-semibold text-[var(--muted)] text-lg">Status</th>
+                    <th className="text-right py-4 px-6 font-semibold text-[var(--muted)] text-lg">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentBookings.map((booking, index) => (
+                    <tr
+                      key={booking._id}
+                      className={`border-b border-[var(--border)] transition-all duration-200 cursor-pointer ${
+                        index % 2 === 0 ? 'bg-white hover:bg-blue-50' : 'bg-gray-50 hover:bg-blue-50'
+                      } hover:shadow-md`}
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setShowBookingModal(true);
+                      }}
+                    >
+                      <td className="py-5 px-6 font-medium">{booking.serviceId?.name || 'Unknown Service'}</td>
+                      <td className="py-5 px-6">{booking.customerId?.name || 'Unknown Customer'}</td>
+                      <td className="py-5 px-6">
+                        <div className="text-base">
+                          <div className="font-medium">{new Date(booking.bookingDate).toLocaleDateString()}</div>
+                          <div className="text-[var(--muted)] text-sm">{new Date(booking.bookingDate).toLocaleTimeString()}</div>
+                        </div>
+                      </td>
+                      <td className="py-5 px-6">
+                        <span className={`badge text-sm px-3 py-1 ${
+                          booking.status === 'confirmed' ? 'badge-success' :
+                          booking.status === 'completed' ? 'badge-primary' :
+                          booking.status === 'pending' ? 'badge-info' :
+                          'badge-warning'
+                        }`}>
+                          {booking.status}
+                        </span>
+                      </td>
+                      <td className="py-5 px-6 text-right font-bold text-[var(--primary)] text-lg">₱{booking.totalPrice}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+              {recentBookings.map((booking, index) => (
+                <div
+                  key={booking._id}
+                  className="card p-4 cursor-pointer hover:shadow-lg transition-all duration-200"
+                  onClick={() => {
+                    setSelectedBooking(booking);
+                    setShowBookingModal(true);
+                  }}
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-lg truncate">{booking.serviceId?.name || 'Unknown Service'}</h3>
+                      <p className="text-[var(--muted)] text-sm truncate">{booking.customerId?.name || 'Unknown Customer'}</p>
+                    </div>
+                    <div className="text-right ml-4">
+                      <div className="font-bold text-[var(--primary)] text-xl">₱{booking.totalPrice}</div>
+                      <span className={`badge text-xs px-2 py-1 mt-1 ${
                         booking.status === 'confirmed' ? 'badge-success' :
                         booking.status === 'completed' ? 'badge-primary' :
                         booking.status === 'pending' ? 'badge-info' :
@@ -325,13 +361,23 @@ export default function AdminDashboard() {
                       }`}>
                         {booking.status}
                       </span>
-                    </td>
-                    <td className="py-5 px-6 text-right font-bold text-[var(--primary)] text-lg">₱{booking.totalPrice}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-[var(--muted)] space-y-1">
+                    <div className="flex justify-between">
+                      <span>Date:</span>
+                      <span className="font-medium">{new Date(booking.bookingDate).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Time:</span>
+                      <span className="font-medium">{new Date(booking.bookingDate).toLocaleTimeString()}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         ) : (
           <p className="text-[var(--muted)] text-center py-12 text-lg">No bookings yet</p>
         )}
@@ -340,7 +386,7 @@ export default function AdminDashboard() {
       {/* Booking Details Modal */}
       {showBookingModal && selectedBooking && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto mx-4">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-2xl font-bold text-[var(--foreground)]">Booking Details</h3>
