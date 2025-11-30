@@ -22,8 +22,8 @@ const updateInventoryReports = async (bookingId) => {
       servicesToUpdate.push(service);
     }
 
-    // Add included equipment items
-    if (service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0) {
+    // Add included equipment items for any service that has includedEquipment
+    if (service.includedEquipment && service.includedEquipment.length > 0) {
       for (const equipmentItem of service.includedEquipment) {
         try {
           const equipmentService = await require('../models/Service').findById(equipmentItem.equipmentId);
@@ -339,8 +339,8 @@ const cancelPayment = async (paymentId, reason = 'User cancelled') => {
         console.log('Inventory restored after payment cancellation for service:', service.name);
       }
 
-      // Restore inventory for included equipment in professional services
-      if (service && service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0) {
+      // Restore inventory for included equipment in any service that has includedEquipment
+      if (service && service.includedEquipment && service.includedEquipment.length > 0) {
         for (const equipmentItem of service.includedEquipment) {
           try {
             const equipmentService = await Service.findById(equipmentItem.equipmentId);
@@ -379,10 +379,25 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
       return { success: true, message: 'Payment already completed', payment };
     }
 
-    // Update payment status
+    // Update payment status - preserve receiptVerification data
     payment.status = 'completed';
     payment.completedAt = new Date();
-    payment.paymentData = { ...payment.paymentData, ...paymentData, verifiedAt: new Date() };
+
+    // Merge receiptVerification data - preserve existing data and merge with new data
+    const existingReceiptVerification = payment.paymentData.receiptVerification || {};
+    const newReceiptVerification = paymentData.receiptVerification || {};
+
+    payment.paymentData = {
+      ...payment.paymentData,
+      ...paymentData,
+      verifiedAt: new Date(),
+      // Merge existing and new receiptVerification data
+      receiptVerification: {
+        ...existingReceiptVerification,
+        ...newReceiptVerification
+      }
+    };
+
     await payment.save();
 
     // Check if this is a create-intent payment (has bookingIntent data)

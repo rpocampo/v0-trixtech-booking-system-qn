@@ -433,8 +433,8 @@ router.post('/', authMiddleware, async (req, res, next) => {
             }
           }
 
-          // Decrease inventory for included equipment in professional services
-          if (service.serviceType === 'service' && service.includedEquipment && service.includedEquipment.length > 0) {
+          // Decrease inventory for included equipment in any service that has includedEquipment
+          if (service.includedEquipment && service.includedEquipment.length > 0) {
             for (const equipmentItem of service.includedEquipment) {
               try {
                 const equipmentService = await Service.findById(equipmentItem.equipmentId);
@@ -443,7 +443,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
                   // Use batch tracking for inventory reduction (FIFO)
                   await equipmentService.reduceBatchQuantity(equipmentItem.quantity);
                   const newStock = equipmentService.quantity;
-     
+
                   // Log inventory transaction for included equipment
                   await InventoryTransaction.logTransaction({
                     serviceId: equipmentItem.equipmentId,
@@ -460,7 +460,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
                       equipmentName: equipmentService.name
                     }
                   });
-     
+
                   // Trigger low stock alert check for equipment
                   try {
                     await triggerLowStockCheck(equipmentItem.equipmentId);

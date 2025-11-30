@@ -317,18 +317,24 @@ router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next)
 
     console.log(`OCR verification result for payment ${payment._id}: ${verificationResult.success ? 'Success' : 'Failed'}`);
 
-    // Clean up the uploaded file
-    cleanupFile(req.file.path);
-
     if (!verificationResult.success) {
-      // Flag for manual review
+      // Clean up the uploaded file for failed OCR
+      cleanupFile(req.file.path);
+      // Flag for manual review - keep the image for admin review
+      const imageUrl = `/uploads/receipts/${path.basename(req.file.path)}`;
+
       payment.status = 'pending_review';
       payment.paymentData.receiptVerification = {
         attemptedAt: new Date(),
         error: verificationResult.error,
-        flaggedForReview: true
+        flaggedForReview: true,
+        uploadedImage: imageUrl, // Store image path for admin review
+        extractedData: verificationResult.extractedData
       };
       await payment.save();
+
+      // Don't clean up the file - keep it for admin review
+      console.log(`Receipt image saved for manual review: ${imageUrl}`);
 
       return res.status(400).json({
         success: false,
@@ -342,16 +348,48 @@ router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next)
 
     // Strict OCR validation - only accept perfectly valid receipts
     if (validation.isValid && validation.amountMatch) {
+      // Store the uploaded image path for admin viewing even after successful verification
+      const imageUrl = `/uploads/receipts/${path.basename(req.file.path)}`;
+
+      // First update payment with receipt verification data including image path
+      const Payment = require('../models/Payment');
+      let payment = await Payment.findOne({ referenceNumber });
+      if (payment) {
+        payment.paymentData.receiptVerification = {
+          attemptedAt: new Date(),
+          validation,
+          extractedData: verificationResult.extractedData,
+          uploadedImage: imageUrl, // Store image path for admin viewing
+          autoVerified: true,
+          verificationNotes: validation.issues.length > 0 ? validation.issues.join('; ') : 'All validations passed'
+        };
+        await payment.save();
+
+        console.log(`Payment updated with receipt verification data and uploadedImage: ${imageUrl}`);
+      }
+
       // Receipt passed all validations - complete payment
       const verifyResult = await verifyQRPayment(referenceNumber, {
         receiptVerified: true,
         autoConfirmed: true,
         extractedAmount: validation.extractedAmount,
         extractedReference: validation.extractedReference,
-        validationNotes: validation.issues.length > 0 ? validation.issues.join('; ') : 'All validations passed'
+        validationNotes: validation.issues.length > 0 ? validation.issues.join('; ') : 'All validations passed',
+        // Preserve the uploaded image that was just set
+        receiptVerification: {
+          ...payment.paymentData.receiptVerification,
+          uploadedImage: imageUrl
+        }
       });
 
       if (verifyResult.success) {
+        // Debug: Verify the payment still has the uploadedImage after verifyQRPayment
+        const finalPayment = await Payment.findOne({ referenceNumber });
+        console.log(`Final payment uploadedImage after verifyQRPayment: ${finalPayment?.paymentData?.receiptVerification?.uploadedImage}`);
+
+        // Don't clean up the file - keep it for admin viewing
+        console.log(`Receipt image saved for successful verification: ${imageUrl}`);
+
         return res.json({
           success: true,
           message: 'Payment verified successfully! Transaction completed.',
@@ -378,12 +416,29 @@ router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next)
         });
       }
     } else {
-      // Receipt validation failed - reject the upload
-      console.log('Receipt validation failed:', validation.issues);
+      // Receipt validation failed - flag for manual review instead of rejecting
+      console.log('Receipt validation failed, flagging for manual review:', validation.issues);
+
+      const imageUrl = `/uploads/receipts/${path.basename(req.file.path)}`;
+
+      // Flag for manual review
+      payment.status = 'pending_review';
+      payment.paymentData.receiptVerification = {
+        attemptedAt: new Date(),
+        validation,
+        extractedData: verificationResult.extractedData,
+        flaggedForReview: true,
+        uploadedImage: imageUrl, // Store image path for admin review
+        issues: validation.issues
+      };
+      await payment.save();
+
+      // Don't clean up the file - keep it for admin review
+      console.log(`Receipt image saved for manual review due to validation failure: ${imageUrl}`);
 
       return res.status(400).json({
         success: false,
-        message: 'Receipt validation failed. Please ensure you upload a valid GCash receipt with the correct amount.',
+        message: 'Receipt validation failed. Your payment has been flagged for manual review by our team.',
         validation,
         issues: validation.issues,
         extractedData: {
@@ -391,7 +446,7 @@ router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next)
           reference: validation.extractedReference,
           confidence: verificationResult.extractedData.confidence
         },
-        flaggedForReview: false
+        flaggedForReview: true
       });
     }
 
@@ -426,6 +481,12 @@ router.get('/all', authMiddleware, async (req, res) => {
     .populate('bookingId')
     .populate('userId', 'name email')
     .sort({ createdAt: -1 });
+
+    // Debug: Log payment data to see what's being returned
+    console.log('Payments being returned to admin:');
+    allPayments.forEach(payment => {
+      console.log(`Payment ${payment._id} (${payment.referenceNumber}): hasReceiptVerification=${!!payment.paymentData?.receiptVerification}, uploadedImage=${payment.paymentData?.receiptVerification?.uploadedImage}`);
+    });
 
     res.json({
       success: true,
@@ -517,7 +578,9 @@ router.post('/:paymentId/review', authMiddleware, async (req, res) => {
       // Approve the payment - complete it
       const verifyResult = await require('../utils/paymentService').verifyQRPayment(payment.referenceNumber, {
         manualApproval: true,
-        adminNotes: notes
+        adminNotes: notes,
+        // Preserve the uploaded image if it exists
+        receiptVerification: payment.paymentData.receiptVerification
       });
 
       if (verifyResult.success) {

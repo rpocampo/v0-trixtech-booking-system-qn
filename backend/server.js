@@ -56,8 +56,13 @@ app.use(express.json());
 app.use(requestLogger);
 app.use(monitoringMiddleware);
 
-// Serve static files from uploads directory
-app.use('/uploads', express.static('uploads'));
+// Serve static files from uploads directory with CORS
+app.use('/uploads', cors({
+  origin: 'http://localhost:3000',
+  methods: ['GET', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
+  credentials: true
+}), express.static('uploads'));
 
 // Routes
 app.use('/api/auth', authRoutes);
