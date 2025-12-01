@@ -527,6 +527,7 @@ export default function AdminServices() {
                   <option value="wedding">Wedding</option>
                   <option value="birthday">Birthday</option>
                   <option value="funeral">Funeral</option>
+                  <option value="graduation party">Graduation Party</option>
                 </select>
               </div>
 

@@ -120,6 +120,7 @@ export default function Register() {
       localStorage.setItem('token', registerData.token);
       localStorage.setItem('role', registerData.user.role);
       localStorage.setItem('userId', registerData.user.id);
+      localStorage.setItem('trixtech_user', JSON.stringify(registerData.user));
       router.push('/customer/dashboard');
 
     } catch (err) {

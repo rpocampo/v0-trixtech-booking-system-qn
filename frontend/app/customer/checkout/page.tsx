@@ -353,9 +353,8 @@ export default function CheckoutPage() {
         return;
       }
 
-      // Process all items in the cart
+      // Prepare booking intents for cart payment
       const bookingIntents = [];
-      let totalAmount = 0;
 
       for (const item of checkoutItems) {
         const scheduleData = scheduledItems[item.id];
@@ -364,55 +363,54 @@ export default function CheckoutPage() {
           throw new Error(`Please schedule a date for ${item.name}`);
         }
 
-        // Create booking intent for each item (payment-first approach)
-        const intentResponse = await fetch('http://localhost:5000/api/bookings/create-intent', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            serviceId: item.id,
-            quantity: item.quantity,
-            bookingDate: scheduleData.date,
-            notes: scheduleData.notes || '',
-            duration: item.duration || 1,
-            dailyRate: item.dailyRate || item.price,
-          }),
+        // Create booking intent data for cart payment
+        bookingIntents.push({
+          serviceId: item.id,
+          quantity: item.quantity,
+          bookingDate: scheduleData.date,
+          notes: scheduleData.notes || '',
+          duration: item.duration || 1,
+          dailyRate: item.dailyRate || item.price,
+          totalPrice: (item.dailyRate || item.price) * (item.duration || 1) * item.quantity,
         });
-
-        if (!intentResponse.ok) {
-          const errorData = await intentResponse.json();
-          throw new Error(`Failed to create booking intent for ${item.name}: ${errorData.message}`);
-        }
-
-        const data = await intentResponse.json();
-
-        if (data.success && data.bookingIntent) {
-          bookingIntents.push({
-            item,
-            intent: data.bookingIntent,
-            payment: data.payment
-          });
-          totalAmount += data.bookingIntent.totalPrice;
-        } else {
-          throw new Error(data.message || `Failed to create booking intent for ${item.name}`);
-        }
       }
 
-      // Use the first payment details for the combined checkout
-      const firstBooking = bookingIntents[0];
+      // Calculate total amount from booking intents
+      const totalAmount = bookingIntents.reduce((sum, intent) => sum + intent.totalPrice, 0);
 
-      // Store all booking intents and use combined total for payment
-      setCheckoutTotal(totalAmount);
-      setPaymentBooking(bookingIntents); // Store all intents
-      setQrPayment({
-        qrCode: firstBooking.payment.qrCode,
-        instructions: firstBooking.payment.instructions,
-        referenceNumber: firstBooking.payment.referenceNumber,
-        transactionId: firstBooking.payment.transactionId,
+      // Create cart payment with all booking intents
+      const paymentResponse = await fetch('http://localhost:5000/api/payments/create-cart-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          bookingIntents: bookingIntents,
+        }),
       });
-      setCurrentStep('payment-type');
+
+      if (!paymentResponse.ok) {
+        const errorData = await paymentResponse.json();
+        throw new Error(`Failed to create cart payment: ${errorData.message}`);
+      }
+
+      const paymentData = await paymentResponse.json();
+
+      if (paymentData.success) {
+        // Store payment details and booking intents
+        setCheckoutTotal(totalAmount);
+        setPaymentBooking(bookingIntents); // Store all intents
+        setQrPayment({
+          qrCode: paymentData.qrCode,
+          instructions: paymentData.instructions,
+          referenceNumber: paymentData.referenceNumber,
+          transactionId: paymentData.transactionId,
+        });
+        setCurrentStep('payment-type');
+      } else {
+        throw new Error(paymentData.message || 'Failed to create cart payment');
+      }
 
     } catch (error) {
       console.error('Checkout failed:', error);
@@ -671,43 +669,6 @@ export default function CheckoutPage() {
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Delivery date and time</h1>
             <p className="text-gray-600">Select delivery and pick-up dates for your services.</p>
 
-            {/* Common Delivery Date/Time Checkbox - Only show for 2+ items */}
-            {checkoutItems.length >= 2 && (
-              <div className="absolute top-0 right-0">
-                <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <input
-                    type="checkbox"
-                    id="common-delivery-time"
-                    checked={checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime)}
-                    onChange={(e) => {
-                      const isChecked = e.target.checked;
-                      if (isChecked) {
-                        // Group all items with common delivery time
-                        const firstItemId = checkoutItems[0].id;
-                        const commonDateTime = scheduledItems[firstItemId]?.date || new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
-
-                        checkoutItems.forEach(item => {
-                          handleSameDateTimeChange(item.id, true);
-                          handleScheduleUpdate(item.id, commonDateTime, scheduledItems[item.id]?.notes || 'Common delivery time');
-                        });
-                      } else {
-                        // Ungroup all items
-                        checkoutItems.forEach(item => {
-                          handleSameDateTimeChange(item.id, false);
-                        });
-                      }
-                    }}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                  />
-                  <label
-                    htmlFor="common-delivery-time"
-                    className="text-sm text-blue-800 font-medium cursor-pointer"
-                  >
-                    Use common delivery date/time for all items
-                  </label>
-                </div>
-              </div>
-            )}
           </div>
 
 

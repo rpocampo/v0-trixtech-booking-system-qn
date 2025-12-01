@@ -7,7 +7,7 @@ let emailServiceInitialized = false;
 let transporter = null;
 
 // Initialize email service
-const initializeEmailService = () => {
+const initializeEmailService = async () => {
   // Try SendGrid first (preferred for production)
   if (process.env.SENDGRID_API_KEY) {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -16,19 +16,49 @@ const initializeEmailService = () => {
     return true;
   }
 
-  // Fallback to Gmail SMTP for development/testing
+  // Fallback to SMTP for development/testing
   if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-    transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-      port: process.env.EMAIL_PORT || 587,
-      secure: false,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    });
+    // For development, try to create Ethereal test account if using test credentials
+    if (process.env.EMAIL_HOST === 'smtp.ethereal.email') {
+      try {
+        const testAccount = await nodemailer.createTestAccount();
+        transporter = nodemailer.createTransport({
+          host: 'smtp.ethereal.email',
+          port: 587,
+          secure: false,
+          auth: {
+            user: testAccount.user,
+            pass: testAccount.pass,
+          },
+        });
+        console.log('Ethereal test email service initialized');
+        console.log('📧 Test emails will be sent to:', testAccount.user);
+        console.log('🔗 View emails at:', nodemailer.getTestMessageUrl(testAccount));
+      } catch (error) {
+        console.log('Failed to create Ethereal account, falling back to configured SMTP');
+        transporter = nodemailer.createTransport({
+          host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+          port: parseInt(process.env.EMAIL_PORT) || 587,
+          secure: process.env.EMAIL_PORT == '465',
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASSWORD,
+          },
+        });
+      }
+    } else {
+      transporter = nodemailer.createTransport({
+        host: process.env.EMAIL_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.EMAIL_PORT) || 587,
+        secure: process.env.EMAIL_PORT == '465',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASSWORD,
+        },
+      });
+    }
     emailServiceInitialized = true;
-    console.log('Gmail SMTP email service initialized (development mode)');
+    console.log('SMTP email service initialized');
     return true;
   }
 
@@ -384,12 +414,8 @@ const sendPasswordResetEmail = async (email, userName, resetUrl) => {
 
 // Send OTP email for verification
 const sendOTPEmail = async (email, otp, purpose) => {
-  // In development mode, still send email if Gmail credentials are configured
-  if ((process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') && !process.env.EMAIL_USER) {
-    console.log(`🔑 DEVELOPMENT MODE: OTP for ${email} (${purpose}): ${otp}`);
-    console.log(`📧 This OTP would be sent via email in production (or configure EMAIL_USER for Gmail SMTP)`);
-    return { success: true, development: true };
-  }
+  // Always attempt to send emails, with fallback logging for development
+  console.log(`🔑 OTP for ${email} (${purpose}): ${otp}`);
 
   if (!emailServiceInitialized) {
     throw new Error('Email service not configured. Please check SENDGRID_API_KEY or EMAIL_USER/EMAIL_PASSWORD in .env file');
@@ -490,6 +516,13 @@ const sendOTPEmail = async (email, otp, purpose) => {
     recordFailure();
     console.error('Error sending OTP email after retries:', error);
 
+    // For development mode, log the OTP code instead of failing
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔑 DEVELOPMENT MODE: OTP for ${email} (${purpose}): ${otp}`);
+      console.log(`📧 Email sending failed due to network restrictions, using console logging instead`);
+      return { success: true, development: true };
+    }
+
     // Log failure for debugging
     try {
       const Notification = require('../models/Notification');
@@ -534,8 +567,55 @@ const sendSMSNotification = async (userId, notificationData) => {
   }
 };
 
+// Generic email sending function
+const sendEmail = async (to, subject, html, text = null) => {
+  if (!emailServiceInitialized) {
+    throw new Error('Email service not configured');
+  }
+
+  if (!checkCircuitBreaker()) {
+    throw new Error('Email service temporarily unavailable');
+  }
+
+  const mailOptions = {
+    from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
+    to,
+    subject,
+    html,
+    ...(text && { text }),
+  };
+
+  try {
+    await retryWithBackoff(async () => {
+      if (process.env.SENDGRID_API_KEY) {
+        // Use SendGrid
+        const msg = {
+          to,
+          from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
+          subject,
+          html,
+          ...(text && { text }),
+        };
+        await sgMail.send(msg);
+      } else {
+        // Use nodemailer (SMTP)
+        await transporter.sendMail(mailOptions);
+      }
+    });
+
+    recordSuccess();
+    console.log(`Email sent to ${to}: ${subject}`);
+    return { success: true };
+  } catch (error) {
+    recordFailure();
+    console.error('Error sending email after retries:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   initializeEmailService,
+  sendEmail,
   sendBookingConfirmation,
   sendCancellationEmail,
   sendAdminBookingNotification,

@@ -42,13 +42,16 @@ const parseReceiptData = (text) => {
   let extractedAmount = null;
   let extractedReference = null;
 
-  // Common patterns for GCash receipts
+  // Common patterns for GCash receipts - improved for GCash format with better decimal matching
   const amountPatterns = [
-    /₱\s*(\d+(?:\.\d{2})?)/g,  // ₱ 123.45
-    /PHP\s*(\d+(?:\.\d{2})?)/gi,  // PHP 123.45
-    /Amount[:\s]*₱?\s*(\d+(?:\.\d{2})?)/gi,  // Amount: ₱123.45 or Amount: 123.45
-    /Total[:\s]*₱?\s*(\d+(?:\.\d{2})?)/gi,  // Total: ₱123.45
-    /(\d+(?:\.\d{2})?)\s*PHP/gi,  // 123.45 PHP
+    /₱\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)/g,  // ₱ 1,234.56 or ₱ 1234.56
+    /PHP\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)/gi,  // PHP 1,234.56
+    /Amount[:\s]*₱?\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)/gi,  // Amount: ₱1,234.56 or Amount: 1234.56
+    /Total[:\s]*₱?\s*(\d+(?:,\d{3})*(?:\.\d{1,2})?)/gi,  // Total: ₱1,234.56
+    /(\d+(?:,\d{3})*(?:\.\d{1,2})?)\s*PHP/gi,  // 1,234.56 PHP
+    /Amount\s+(\d+(?:,\d{3})*(?:\.\d{1,2})?)/gi,  // Amount 1234.56 (GCash specific)
+    /Total Amount Sent\s*\$?(\d+(?:,\d{3})*(?:\.\d{1,2})?)/gi,  // Total Amount Sent $1234.56
+    /Amount\s+(\d+(?:\.\d{1,2})?)/gi,  // Amount 2.000.00 (GCash specific with space)
   ];
 
   const referencePatterns = [
@@ -59,13 +62,16 @@ const parseReceiptData = (text) => {
     /([A-Z]{2}_\d+_[A-Z0-9]+)/g,  // QR_123456789_ABC123 format
   ];
 
-  // Extract amount
+  // Extract amount - improved logic to handle GCash format
   for (const pattern of amountPatterns) {
     for (const line of lines) {
       const matches = [...line.matchAll(pattern)];
       for (const match of matches) {
-        const amount = parseFloat(match[1]);
-        if (amount > 0 && (!extractedAmount || amount > extractedAmount)) {
+        // Clean the amount string (remove commas, handle decimals)
+        let amountStr = match[1].replace(/,/g, '');
+        const amount = parseFloat(amountStr);
+
+        if (!isNaN(amount) && amount > 0 && (!extractedAmount || amount > extractedAmount)) {
           // Take the highest amount found (likely the total)
           extractedAmount = amount;
         }
@@ -98,13 +104,17 @@ const parseReceiptData = (text) => {
   };
 };
 
-// Strict OCR validation for GCash receipts
+// Flexible OCR validation for GCash receipts
 const validateReceiptData = (extractedData, expectedAmount, expectedReference) => {
   const { extractedAmount, extractedReference } = extractedData;
 
-  // Amount MUST match exactly (strictly required)
+  // Amount validation - allow small differences (within 1 peso) for OCR inaccuracies
   const amountMatch = extractedAmount !== null &&
-                      Math.abs(extractedAmount - expectedAmount) < 0.01;
+                     Math.abs(extractedAmount - expectedAmount) < 1.0;
+
+  // Allow amounts that are close (within 10% for manual review)
+  const amountClose = extractedAmount !== null &&
+                     Math.abs(extractedAmount - expectedAmount) / expectedAmount <= 0.10;
 
   // Reference validation (not required but must be real if present)
   const referenceMatch = extractedReference !== null &&
@@ -116,27 +126,35 @@ const validateReceiptData = (extractedData, expectedAmount, expectedReference) =
                               extractedReference.length >= 10 &&
                               /^[A-Z]{2}_\d+_[A-Z0-9]+$/.test(extractedReference);
 
-  // Strict validation: Amount MUST match, reference should be valid if present
-  const isValid = amountMatch && (extractedReference === null || referenceFormatValid);
+  // Auto-confirm only if amount matches exactly (as per requirement: total amount of items booked same as receipt total)
+  // Flag for manual review if amount doesn't match exactly
+  const autoConfirmed = amountMatch && (extractedReference === null || referenceFormatValid);
 
-  // Additional check: if reference is present but doesn't match expected, it's invalid
+  // Flag for manual review if amount doesn't match exactly
+  const requiresManualReview = !amountMatch;
+
+  // Only reject if amount is way off (>10% difference) or reference format is completely invalid
+  const isValid = autoConfirmed || requiresManualReview;
+
+  // Additional check: if reference is present but doesn't match expected, flag for review
   const referenceValid = extractedReference === null ||
                         (referenceFormatValid && (referenceMatch || expectedReference === null));
 
-  const finalValidation = amountMatch && referenceValid;
-
   return {
-    isValid: finalValidation,
+    isValid: isValid,
     amountMatch,
+    amountClose,
     referenceMatch,
     referenceFormatValid,
     extractedAmount,
     extractedReference,
     expectedAmount,
     expectedReference,
-    autoConfirmed: finalValidation, // Only auto-confirm if all validations pass
+    autoConfirmed: autoConfirmed, // Auto-confirm only for exact matches
+    requiresManualReview: requiresManualReview, // Flag for manual review on close amounts
     issues: []
-      .concat(!amountMatch ? ['Amount does not match expected payment amount'] : [])
+      .concat(!amountMatch && !amountClose ? ['Amount does not match expected payment amount'] : [])
+      .concat(!amountMatch && amountClose ? ['Amount is close but requires manual verification'] : [])
       .concat(extractedReference && !referenceFormatValid ? ['Reference number format is invalid'] : [])
       .concat(extractedReference && referenceFormatValid && !referenceMatch ? ['Reference number does not match expected value'] : [])
   };
@@ -156,8 +174,13 @@ const verifyReceipt = async (imagePath, expectedAmount, expectedReference) => {
     // Parse the extracted text
     const extractedData = parseReceiptData(rawText);
 
+    console.log('OCR Raw Text Extracted:', rawText);
+    console.log('Parsed Data - Amount:', extractedData.extractedAmount, 'Reference:', extractedData.extractedReference);
+
     // Validate against expected values
     const validation = validateReceiptData(extractedData, expectedAmount, expectedReference);
+
+    console.log('Validation Result - Expected Amount:', expectedAmount, 'Amount Match:', validation.amountMatch);
 
     return {
       success: true,

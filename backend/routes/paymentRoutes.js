@@ -52,6 +52,95 @@ const upload = multer({
   }
 });
 
+// Create QR code payment for entire cart (multiple items)
+router.post('/create-cart-payment', authMiddleware, async (req, res) => {
+  try {
+    const { bookingIntents } = req.body;
+
+    if (!bookingIntents || !Array.isArray(bookingIntents)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Booking intents are required'
+      });
+    }
+
+    // Calculate total amount from booking intents to ensure accuracy
+    const calculatedTotal = bookingIntents.reduce((sum, intent) => sum + (intent.totalPrice || 0), 0);
+
+    // Create a single payment record for the entire cart
+    const Payment = require('../models/Payment');
+    const { generateTransactionId, generateReferenceNumber } = require('../utils/paymentService');
+
+    const transactionId = generateTransactionId();
+    const referenceNumber = generateReferenceNumber();
+
+    const payment = new Payment({
+      bookingId: null, // Will be set when bookings are confirmed
+      userId: req.user.id,
+      amount: calculatedTotal,
+      paymentMethod: 'gcash_qr',
+      paymentProvider: 'gcash_qr',
+      transactionId,
+      referenceNumber,
+      status: 'pending',
+      paymentType: 'full',
+      isDownPayment: false,
+      isFinalPayment: true,
+      paymentData: {
+        createdAt: new Date(),
+        qrGenerated: true,
+        referenceNumber,
+        usesUserQR: false,
+        cartPayment: true,
+        bookingIntents: bookingIntents, // Store all booking intents
+        calculatedTotal: calculatedTotal // Store the calculated total for verification
+      }
+    });
+
+    await payment.save();
+
+    // Generate payment QR code data
+    const { generateQRCodeDataURL, generatePaymentInstructions } = require('../utils/qrCodeService');
+
+    const paymentDescription = `Cart Payment - ${transactionId}`;
+
+    const qrData = {
+      amount: calculatedTotal,
+      referenceNumber,
+      merchantName: 'TRIXTECH',
+      merchantId: 'TRIXTECH001',
+      description: paymentDescription,
+      paymentId: payment._id.toString(),
+      callbackUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/api/payments/verify-qr/${referenceNumber}`
+    };
+
+    const qrCode = await generateQRCodeDataURL(qrData);
+    const instructions = generatePaymentInstructions(qrData);
+
+    // Update payment with QR data
+    payment.paymentData.qrCode = qrCode;
+    payment.paymentData.instructions = instructions;
+    await payment.save();
+
+    res.status(200).json({
+      success: true,
+      qrCode,
+      instructions,
+      referenceNumber,
+      transactionId,
+      paymentId: payment._id,
+      message: 'Cart payment created successfully'
+    });
+
+  } catch (error) {
+    console.error('Error creating cart payment:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
 // Create QR code payment for booking
 router.post('/create-qr', authMiddleware, async (req, res) => {
   try {
@@ -242,7 +331,6 @@ router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next)
 }, async (req, res) => {
   try {
     const { referenceNumber } = req.params;
-    const { expectedAmount } = req.body;
 
     if (!req.file) {
       return res.status(400).json({
@@ -251,12 +339,7 @@ router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next)
       });
     }
 
-    if (!expectedAmount) {
-      return res.status(400).json({
-        success: false,
-        message: 'Expected amount is required'
-      });
-    }
+    // Expected amount will be taken from payment.amount
 
     // Find the payment by reference number
     const Payment = require('../models/Payment');
@@ -308,14 +391,16 @@ router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next)
     // Log receipt verification attempt
     console.log(`Receipt verification attempt for payment ${payment._id}, reference: ${referenceNumber}, user: ${req.user.id}`);
 
-    // Perform OCR verification
+    // Perform OCR verification using payment amount as expected amount
     const verificationResult = await verifyReceipt(
       req.file.path,
-      parseFloat(expectedAmount),
+      payment.amount,
       referenceNumber
     );
 
     console.log(`OCR verification result for payment ${payment._id}: ${verificationResult.success ? 'Success' : 'Failed'}`);
+    console.log(`Expected amount: ${payment.amount}, Extracted amount: ${verificationResult.validation?.extractedAmount}`);
+    console.log(`Amount match: ${verificationResult.validation?.amountMatch}`);
 
     if (!verificationResult.success) {
       // Clean up the uploaded file for failed OCR
@@ -438,7 +523,7 @@ router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next)
 
       return res.status(400).json({
         success: false,
-        message: 'Receipt validation failed. Your payment has been flagged for manual review by our team.',
+        message: 'Receipt validation failed. Your payment has been flagged for manual review. You will be notified once reviewed.',
         validation,
         issues: validation.issues,
         extractedData: {

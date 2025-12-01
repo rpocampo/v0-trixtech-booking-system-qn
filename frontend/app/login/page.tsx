@@ -44,6 +44,7 @@ export default function Login() {
       localStorage.setItem('token', data.token);
       localStorage.setItem('role', data.user.role);
       localStorage.setItem('userId', data.user.id);
+      localStorage.setItem('trixtech_user', JSON.stringify(data.user));
 
       if (data.user.role === 'admin') {
         router.push('/admin/dashboard');

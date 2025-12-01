@@ -1313,10 +1313,18 @@ const shouldAutoConfirmBooking = async (customerId, serviceId, totalPrice, booki
 // Confirm booking after successful payment
 router.post('/confirm', authMiddleware, async (req, res, next) => {
   try {
-    const { paymentReference, bookingIntent } = req.body;
+    const { paymentReference, bookingIntent, bookingIntents } = req.body;
 
-    if (!paymentReference || !bookingIntent) {
-      return res.status(400).json({ success: false, message: 'Missing payment reference or booking intent' });
+    if (!paymentReference) {
+      return res.status(400).json({ success: false, message: 'Missing payment reference' });
+    }
+
+    // Support both single booking and cart payments
+    const isCartPayment = bookingIntents && Array.isArray(bookingIntents);
+    const intentsToProcess = isCartPayment ? bookingIntents : [bookingIntent];
+
+    if (!isCartPayment && !bookingIntent) {
+      return res.status(400).json({ success: false, message: 'Missing booking intent' });
     }
 
     // Find the payment record (it should exist from create-intent)
@@ -1340,77 +1348,88 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     payment.completedAt = new Date();
     await payment.save();
 
-    // Double-check availability before creating booking
-    const service = await Service.findById(bookingIntent.serviceId);
-    if (!service) {
-      return res.status(404).json({ success: false, message: 'Service not found' });
-    }
-
-    const bookingDateObj = new Date(bookingIntent.bookingDate);
-    let isAvailable = true;
-
-    if (service.category === 'equipment') {
-      const existingBookings = await Booking.find({
-        serviceId: bookingIntent.serviceId,
-        bookingDate: {
-          $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
-          $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
-        },
-        status: 'confirmed',
-      });
-
-      const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
-      const availableQuantity = Math.max(0, service.quantity - totalBooked);
-
-      if (availableQuantity < bookingIntent.quantity) {
-        isAvailable = false;
+    // Double-check availability for all booking intents
+    for (const intent of intentsToProcess) {
+      const service = await Service.findById(intent.serviceId);
+      if (!service) {
+        return res.status(404).json({ success: false, message: `Service not found for ${intent.serviceId}` });
       }
-    } else {
-      const existingBooking = await Booking.findOne({
-        serviceId: bookingIntent.serviceId,
-        bookingDate: {
-          $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
-          $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
-        },
-        status: 'confirmed',
-      });
 
-      if (existingBooking) {
-        isAvailable = false;
+      const bookingDateObj = new Date(intent.bookingDate);
+      let isAvailable = true;
+
+      if (service.category === 'equipment') {
+        const existingBookings = await Booking.find({
+          serviceId: intent.serviceId,
+          bookingDate: {
+            $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+            $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
+          },
+          status: 'confirmed',
+        });
+
+        const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+        const availableQuantity = Math.max(0, service.quantity - totalBooked);
+
+        if (availableQuantity < intent.quantity) {
+          isAvailable = false;
+        }
+      } else {
+        const existingBooking = await Booking.findOne({
+          serviceId: intent.serviceId,
+          bookingDate: {
+            $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+            $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
+          },
+          status: 'confirmed',
+        });
+
+        if (existingBooking) {
+          isAvailable = false;
+        }
+      }
+
+      if (!isAvailable) {
+        return res.status(409).json({
+          success: false,
+          message: `Service ${service.name} is no longer available for the selected date and time.`
+        });
       }
     }
 
-    if (!isAvailable) {
-      return res.status(409).json({
-        success: false,
-        message: 'Service is no longer available for the selected date and time.'
-      });
-    }
+    // Create bookings for all intents
+    const createdBookings = [];
+    let allAutoConfirmed = true;
 
-    // Check if booking should be auto-confirmed
-    const shouldAutoConfirm = await shouldAutoConfirmBooking(
-      req.user.id,
-      bookingIntent.serviceId,
-      bookingIntent.totalPrice,
-      bookingIntent.bookingDate
-    );
+    for (const intent of intentsToProcess) {
+      // Check if booking should be auto-confirmed
+      const shouldAutoConfirm = await shouldAutoConfirmBooking(
+        req.user.id,
+        intent.serviceId,
+        intent.totalPrice,
+        intent.bookingDate
+      );
 
-    // Create the actual booking now that payment is confirmed
-    const bookingData = {
-      customerId: req.user.id,
-      serviceId: bookingIntent.serviceId,
-      quantity: bookingIntent.quantity,
-      bookingDate: new Date(bookingIntent.bookingDate),
-      totalPrice: bookingIntent.totalPrice,
-      status: shouldAutoConfirm ? 'confirmed' : 'pending_admin_review',
-      paymentStatus: 'paid',
-      paymentId: payment._id,
-      notes: bookingIntent.notes,
-      duration: bookingIntent.duration,
-      dailyRate: bookingIntent.dailyRate,
-      autoConfirmed: shouldAutoConfirm,
-      confirmationReason: shouldAutoConfirm ? 'Auto-confirmed based on low-risk criteria' : 'Requires admin review',
-    };
+      if (!shouldAutoConfirm) {
+        allAutoConfirmed = false;
+      }
+
+      // Create the actual booking now that payment is confirmed
+      const bookingData = {
+        customerId: req.user.id,
+        serviceId: intent.serviceId,
+        quantity: intent.quantity,
+        bookingDate: new Date(intent.bookingDate),
+        totalPrice: intent.totalPrice,
+        status: shouldAutoConfirm ? 'confirmed' : 'pending_admin_review',
+        paymentStatus: 'paid',
+        paymentId: payment._id,
+        notes: intent.notes,
+        duration: intent.duration,
+        dailyRate: intent.dailyRate,
+        autoConfirmed: shouldAutoConfirm,
+        confirmationReason: shouldAutoConfirm ? 'Auto-confirmed based on low-risk criteria' : 'Requires admin review',
+      };
 
     // Check if service requires delivery and set delivery fields
     const bookingService = await Service.findById(bookingIntent.serviceId);
@@ -1439,16 +1458,16 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     // Decrease inventory for equipment/supply items using batch tracking
     // Handle both direct equipment bookings and equipment category services
     const shouldDeductMainServiceInventory = (
-      service.serviceType === 'equipment' ||
-      service.serviceType === 'supply' ||
-      (service.category === 'equipment' && service.quantity !== undefined && service.quantity > 0)
+      bookingService.serviceType === 'equipment' ||
+      bookingService.serviceType === 'supply' ||
+      (bookingService.category === 'equipment' && bookingService.quantity !== undefined && bookingService.quantity > 0)
     );
 
     if (shouldDeductMainServiceInventory) {
-      const previousStock = service.quantity;
+      const previousStock = bookingService.quantity;
       // Use batch tracking for inventory reduction (FIFO)
-      await service.reduceBatchQuantity(bookingIntent.quantity);
-      const newStock = service.quantity;
+      await bookingService.reduceBatchQuantity(bookingIntent.quantity);
+      const newStock = bookingService.quantity;
 
       // Log inventory transaction
       await InventoryTransaction.logTransaction({
@@ -1458,13 +1477,13 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
         quantity: -bookingIntent.quantity, // Negative for deduction
         previousStock,
         newStock,
-        reason: `Booking confirmation deduction for service: ${service.name}`,
+        reason: `Booking confirmation deduction for service: ${bookingService.name}`,
         metadata: {
           customerId: req.user.id,
           bookingDate: new Date(bookingIntent.bookingDate),
-          serviceName: service.name,
-          serviceCategory: service.category,
-          serviceType: service.serviceType
+          serviceName: bookingService.name,
+          serviceCategory: bookingService.category,
+          serviceType: bookingService.serviceType
         }
       });
 
@@ -1489,8 +1508,8 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     }
 
     // Decrease inventory for included equipment in professional services
-    if (service.includedEquipment && service.includedEquipment.length > 0) {
-      for (const equipmentItem of service.includedEquipment) {
+    if (bookingService.includedEquipment && bookingService.includedEquipment.length > 0) {
+      for (const equipmentItem of bookingService.includedEquipment) {
         try {
           const equipmentService = await Service.findById(equipmentItem.equipmentId);
           if (equipmentService) {
@@ -1515,7 +1534,7 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
                 quantity: -equipmentItem.quantity, // Negative for deduction
                 previousStock,
                 newStock,
-                reason: `Booking deduction for included equipment: ${equipmentService.name} (from service: ${service.name})`,
+                reason: `Booking deduction for included equipment: ${equipmentService.name} (from service: ${bookingService.name})`,
                 metadata: {
                   customerId: req.user.id,
                   bookingDate: bookingDateTime,
@@ -1726,8 +1745,9 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
         ? '🎉 Booking automatically confirmed! Your reservation is ready.'
         : '📋 Booking received and pending admin review. You will be notified once confirmed.'
     });
-
-  } catch (error) {
+      }
+    
+    } catch (error) {
     console.error('Error confirming booking:', error);
     next(error);
   }

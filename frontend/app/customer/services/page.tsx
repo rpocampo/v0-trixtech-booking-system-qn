@@ -161,7 +161,9 @@ export default function Services() {
     if (selectedCategory === 'all') {
       setFilteredServices(services);
     } else {
-      setFilteredServices(services.filter(service => service.category === selectedCategory));
+      // Map frontend category names to backend category names
+      const backendCategory = selectedCategory === 'graduation' ? 'graduation party' : selectedCategory;
+      setFilteredServices(services.filter(service => service.category === backendCategory));
     }
   }, [services, selectedCategory]);
 
@@ -279,6 +281,7 @@ export default function Services() {
                   <option value="wedding">Wedding</option>
                   <option value="birthday">Birthday</option>
                   <option value="funeral">Funeral</option>
+                  <option value="graduation party">Graduation Party</option>
                 </select>
               </div>
 
@@ -357,7 +360,7 @@ export default function Services() {
         <>
           {/* Category Filter */}
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 px-4">
-            {['all', 'equipment', 'corporate', 'wedding', 'birthday', 'funeral'].map((category) => (
+            {['all', 'equipment', 'corporate', 'wedding', 'birthday', 'funeral', 'graduation'].map((category) => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}

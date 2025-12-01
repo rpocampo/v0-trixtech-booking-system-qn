@@ -1,16 +1,15 @@
 {
-  "timestamp": "2025-11-19T03:26:57.311Z",
+  "timestamp": "2025-12-01T02:48:44.765Z",
   "summary": {
-    "issues": 2,
-    "warnings": 0,
-    "status": "NEEDS_ATTENTION"
+    "issues": 0,
+    "warnings": 1,
+    "status": "HEALTHY"
   },
-  "issues": [
-    "Health check unreachable: fetch failed",
-    "Services endpoint unreachable: fetch failed"
+  "issues": [],
+  "warnings": [
+    "Large files detected: backend\\logs\\combined.log"
   ],
-  "warnings": [],
   "recommendations": [
-    "Review and fix critical issues immediately"
+    "Address warnings to improve system stability"
   ]
 }

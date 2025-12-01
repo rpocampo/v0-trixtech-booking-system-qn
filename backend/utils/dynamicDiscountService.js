@@ -461,7 +461,7 @@ class DynamicDiscountService {
 
       for (const booking of pendingBookings) {
         try {
-          const discountInfo = await this.calculateDynamicDiscount(
+          const discountInfo = await DynamicDiscountService.calculateDynamicDiscount(
             booking.serviceId._id,
             booking.bookingDate,
             booking.quantity,

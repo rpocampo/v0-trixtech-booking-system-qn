@@ -21,7 +21,8 @@ const serviceSchema = new mongoose.Schema(
         'corporate',
         'wedding',
         'birthday',
-        'funeral'
+        'funeral',
+        'graduation party'
       ],
       required: true,
     },
