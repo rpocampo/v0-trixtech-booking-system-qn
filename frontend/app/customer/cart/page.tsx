@@ -74,13 +74,6 @@ export default function CartPage() {
         return;
       }
 
-      // Check if cart has any non-equipment services
-      const hasServices = items.some(item => item.serviceType !== 'equipment');
-      if (!hasServices) {
-        setEquipmentRecommendations([]);
-        return;
-      }
-
       setLoadingRecommendations(true);
       try {
         const serviceIds = items.map(item => item.id).join(',');

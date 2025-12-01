@@ -317,7 +317,7 @@ export default function AdminServices() {
       description: service.description,
       category: service.category,
       serviceType: service.serviceType,
-      price: service.price,
+      price: parseFloat(service.price as any) || 0,
       duration: service.duration || 1,
       maxOrder: service.maxOrder || 1,
       includedItems: Array.isArray(service.includedItems)
@@ -538,8 +538,12 @@ export default function AdminServices() {
                 </label>
                 <input
                   type="number"
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                  value={formData.price || 0}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    const numValue = parseFloat(value);
+                    setFormData({ ...formData, price: isNaN(numValue) ? 0 : numValue });
+                  }}
                   className={`input-field ${errors.price ? 'border-red-300 focus:border-red-500' : ''}`}
                   min="0.01"
                   step="0.01"

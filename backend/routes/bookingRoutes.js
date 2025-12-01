@@ -150,12 +150,181 @@ router.get('/check-availability/:serviceId', authMiddleware, async (req, res, ne
 // Create booking (customers only)
 router.post('/', authMiddleware, async (req, res, next) => {
   try {
-    const { serviceId, quantity, bookingDate, notes, deliveryTime } = req.body;
+    const { serviceId, quantity, bookingDate, notes, deliveryTime, isPackage, packageId } = req.body;
 
     if (!serviceId || !bookingDate) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
+    // Handle package bookings
+    if (isPackage && packageId) {
+      const Package = require('../models/Package');
+      const pkg = await Package.findById(packageId);
+      if (!pkg) {
+        return res.status(404).json({ success: false, message: 'Package not found' });
+      }
+
+      // Create bookings for all included services in the package
+      const packageBookings = [];
+      let totalPackagePrice = pkg.totalPrice;
+
+      for (const inclusion of pkg.inclusions) {
+        const includedService = await Service.findById(inclusion.serviceId);
+        if (!includedService) {
+          return res.status(404).json({ success: false, message: `Included service ${inclusion.serviceId} not found` });
+        }
+
+        // Check availability for each included service
+        const bookingDateObj = new Date(bookingDate);
+        let isAvailable = true;
+
+        if (includedService.category === 'equipment') {
+          const existingBookings = await Booking.find({
+            serviceId: inclusion.serviceId,
+            bookingDate: {
+              $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+              $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
+            },
+            status: { $in: ['pending', 'confirmed'] },
+          });
+
+          const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+          if (totalBooked + inclusion.quantity > includedService.quantity) {
+            isAvailable = false;
+          }
+        } else {
+          const existingBooking = await Booking.findOne({
+            serviceId: inclusion.serviceId,
+            bookingDate: {
+              $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+              $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
+            },
+            status: { $in: ['pending', 'confirmed'] },
+          });
+
+          if (existingBooking) {
+            isAvailable = false;
+          }
+        }
+
+        if (!isAvailable) {
+          return res.status(409).json({
+            success: false,
+            message: `Service ${includedService.name} is not available for the selected date`
+          });
+        }
+
+        // Create booking for this included service
+        const serviceBookingData = {
+          customerId: req.user.id,
+          serviceId: inclusion.serviceId,
+          quantity: inclusion.quantity,
+          bookingDate: bookingDateObj,
+          totalPrice: 0, // Price is included in package total
+          basePrice: includedService.basePrice,
+          appliedMultiplier: 1.0,
+          daysBeforeCheckout: Math.max(0, Math.ceil((bookingDateObj.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))),
+          status: 'pending',
+          paymentStatus: 'unpaid',
+          paymentType: 'full',
+          amountPaid: 0,
+          remainingBalance: 0,
+          downPaymentPercentage: 30,
+          notes: `${notes || ''} [Package: ${pkg.name}]`.trim(),
+          isPackageBooking: true,
+          packageId: pkg._id,
+          packageName: pkg.name,
+        };
+
+        const serviceBooking = new Booking(serviceBookingData);
+        await serviceBooking.save();
+        packageBookings.push(serviceBooking);
+
+        // Deduct inventory for included service
+        if (includedService.serviceType === 'equipment' || includedService.serviceType === 'supply') {
+          const previousStock = includedService.quantity;
+          await includedService.reduceBatchQuantity(inclusion.quantity);
+          const newStock = includedService.quantity;
+
+          await InventoryTransaction.logTransaction({
+            serviceId: inclusion.serviceId,
+            bookingId: serviceBooking._id,
+            transactionType: 'booking_deduction',
+            quantity: -inclusion.quantity,
+            previousStock,
+            newStock,
+            reason: `Package booking deduction for service: ${includedService.name} (from package: ${pkg.name})`,
+            metadata: {
+              customerId: req.user.id,
+              bookingDate: bookingDateObj,
+              packageId: pkg._id,
+              packageName: pkg.name,
+            }
+          });
+        }
+      }
+
+      // Create main package booking record
+      const packageBookingData = {
+        customerId: req.user.id,
+        serviceId: null, // No specific service for package
+        quantity: 1,
+        bookingDate: new Date(bookingDate),
+        totalPrice: totalPackagePrice,
+        status: 'pending',
+        paymentStatus: 'unpaid',
+        paymentType: 'full',
+        amountPaid: 0,
+        remainingBalance: totalPackagePrice,
+        downPaymentPercentage: 30,
+        notes: notes || '',
+        isPackageBooking: true,
+        packageId: pkg._id,
+        packageName: pkg.name,
+        includedBookings: packageBookings.map(b => b._id),
+      };
+
+      const packageBooking = new Booking(packageBookingData);
+      await packageBooking.save();
+
+      // Update included bookings with reference to main package booking
+      for (const booking of packageBookings) {
+        booking.packageBookingId = packageBooking._id;
+        await booking.save();
+      }
+
+      // Send notifications
+      await sendTemplateNotification(req.user.id, 'BOOKING_PENDING', {
+        message: `Your package booking for ${pkg.name} has been created and is pending payment.`,
+        metadata: {
+          bookingId: packageBooking._id,
+          packageId: pkg._id,
+          amount: totalPackagePrice,
+        },
+      });
+
+      const adminUsers = await User.find({ role: 'admin' });
+      for (const admin of adminUsers) {
+        await sendTemplateNotification(admin._id, 'NEW_PENDING_BOOKING_ADMIN', {
+          message: `New package booking received from customer for ${pkg.name}.`,
+          metadata: {
+            bookingId: packageBooking._id,
+            packageId: pkg._id,
+            amount: totalPackagePrice,
+          },
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        booking: packageBooking,
+        packageBookings,
+        requiresPayment: true,
+        message: 'Package booking created. Please complete payment to confirm.'
+      });
+    }
+
+    // Handle individual service bookings (existing logic)
     const service = await Service.findById(serviceId);
     if (!service) {
       return res.status(404).json({ success: false, message: 'Service not found' });
@@ -2097,43 +2266,252 @@ router.get('/:id/invoice', authMiddleware, async (req, res, next) => {
   }
 });
 
-// Get predictive suggestions based on booking analytics
+// Function to generate realistic equipment quantities based on service type and equipment
+const generateRealisticEquipmentQuantity = (mainServiceCategory, equipmentName, equipmentType) => {
+  // Base quantities for different event types
+  const baseQuantities = {
+    wedding: {
+      chairs: { min: 50, max: 150, default: 100 },
+      tables: { min: 10, max: 30, default: 20 },
+      tablecloths: { min: 10, max: 30, default: 20 },
+      tents: { min: 2, max: 6, default: 4 },
+      lights: { min: 20, max: 50, default: 30 },
+      speakers: { min: 2, max: 4, default: 2 },
+      microphone: { min: 1, max: 3, default: 2 }
+    },
+    birthday: {
+      chairs: { min: 20, max: 50, default: 30 },
+      tables: { min: 5, max: 15, default: 8 },
+      tablecloths: { min: 5, max: 15, default: 8 },
+      tents: { min: 1, max: 3, default: 2 },
+      lights: { min: 10, max: 25, default: 15 },
+      speakers: { min: 1, max: 2, default: 1 },
+      microphone: { min: 1, max: 2, default: 1 }
+    },
+    corporate: {
+      chairs: { min: 30, max: 100, default: 50 },
+      tables: { min: 8, max: 25, default: 15 },
+      tablecloths: { min: 8, max: 25, default: 15 },
+      tents: { min: 1, max: 4, default: 2 },
+      lights: { min: 15, max: 40, default: 25 },
+      speakers: { min: 1, max: 3, default: 2 },
+      microphone: { min: 1, max: 2, default: 1 }
+    },
+    funeral: {
+      chairs: { min: 20, max: 60, default: 40 },
+      tents: { min: 1, max: 3, default: 2 },
+      speakers: { min: 1, max: 2, default: 1 },
+      microphone: { min: 1, max: 2, default: 1 }
+    },
+    party: {
+      chairs: { min: 25, max: 75, default: 40 },
+      tables: { min: 6, max: 18, default: 10 },
+      tablecloths: { min: 6, max: 18, default: 10 },
+      tents: { min: 1, max: 4, default: 2 },
+      lights: { min: 12, max: 30, default: 20 },
+      speakers: { min: 1, max: 3, default: 2 },
+      microphone: { min: 1, max: 2, default: 1 }
+    }
+  };
+
+  // Equipment name mappings
+  const equipmentMappings = {
+    'chair': 'chairs',
+    'table': 'tables',
+    'tablecloth': 'tablecloths',
+    'tent': 'tents',
+    'light': 'lights',
+    'lighting': 'lights',
+    'speaker': 'speakers',
+    'sound': 'speakers',
+    'microphone': 'microphone',
+    'mic': 'microphone'
+  };
+
+  // Find matching equipment type
+  const equipmentKey = Object.keys(equipmentMappings).find(key =>
+    equipmentName.toLowerCase().includes(key)
+  );
+
+  if (!equipmentKey) {
+    // Default quantity for unknown equipment
+    return Math.floor(Math.random() * 10) + 1;
+  }
+
+  const mappedType = equipmentMappings[equipmentKey];
+  const categoryData = baseQuantities[mainServiceCategory] || baseQuantities.party;
+
+  if (!categoryData[mappedType]) {
+    return Math.floor(Math.random() * 10) + 1;
+  }
+
+  const { min, max, default: defaultQty } = categoryData[mappedType];
+
+  // Add some randomization (±20% of default)
+  const variation = Math.floor(defaultQty * 0.2);
+  const minQty = Math.max(min, defaultQty - variation);
+  const maxQty = Math.min(max, defaultQty + variation);
+
+  return Math.floor(Math.random() * (maxQty - minQty + 1)) + minQty;
+};
+
+// Get predictive suggestions based on booking analytics - modified packages
 router.get('/suggestions/predictive', authMiddleware, async (req, res, next) => {
   try {
     const { category, serviceId } = req.query;
 
-    let suggestions = [];
+    let packages = [];
 
     if (serviceId) {
       // Get suggestions for a specific service
-      suggestions = await BookingAnalytics.getSuggestionsForService(serviceId);
-    } else if (category) {
-      // Get suggestions for a category
-      suggestions = await BookingAnalytics.getSuggestionsByCategory(category);
-    } else {
-      // Get general suggestions based on popular patterns
-      const categories = ['party', 'wedding', 'corporate', 'birthday', 'funeral'];
-      for (const cat of categories) {
-        const categorySuggestions = await BookingAnalytics.getSuggestionsByCategory(cat, 3);
-        suggestions.push(...categorySuggestions);
+      const suggestions = await BookingAnalytics.getSuggestionsForService(serviceId);
+      if (suggestions.length > 0) {
+        // Create a package with the main service and its equipment add-ons
+        const mainService = await Service.findById(serviceId);
+        if (mainService) {
+          const equipmentAddons = suggestions.filter(s => s.service.category === 'equipment').slice(0, 3);
+          if (equipmentAddons.length > 0) {
+            // Generate realistic quantities for each add-on
+            const addonsWithRealisticQuantities = equipmentAddons.map(addon => ({
+              ...addon,
+              averageQuantity: generateRealisticEquipmentQuantity(
+                mainService.category,
+                addon.service.name,
+                addon.service.serviceType
+              )
+            }));
+
+            packages.push({
+              mainService,
+              addons: addonsWithRealisticQuantities,
+              totalPrice: mainService.basePrice + addonsWithRealisticQuantities.reduce((sum, addon) => sum + (addon.service.basePrice * addon.averageQuantity), 0),
+              confidence: Math.max(...equipmentAddons.map(a => a.confidence)),
+              frequency: equipmentAddons.reduce((sum, addon) => sum + addon.frequency, 0)
+            });
+          }
+        }
       }
-      // Remove duplicates and sort by confidence
-      const seen = new Set();
-      suggestions = suggestions
-        .filter(suggestion => {
-          const id = suggestion.service._id.toString();
-          if (seen.has(id)) return false;
-          seen.add(id);
-          return true;
+    } else {
+      // Get general suggestions - find main services that have equipment add-ons
+      const categories = ['party', 'wedding', 'corporate', 'birthday', 'funeral'];
+
+      for (const cat of categories) {
+        const categorySuggestions = await BookingAnalytics.getSuggestionsByCategory(cat, 10);
+
+        // Group by main service and collect equipment add-ons
+        const mainServiceMap = new Map();
+
+        for (const suggestion of categorySuggestions) {
+          if (suggestion.service.category === 'equipment') {
+            // This is an equipment add-on, find which main service it belongs to
+            const analyticsRecord = await BookingAnalytics.findOne({
+              additionalServiceId: suggestion.service._id,
+              mainCategory: cat
+            }).populate('mainServiceId');
+
+            if (analyticsRecord && analyticsRecord.mainServiceId) {
+              const mainServiceId = analyticsRecord.mainServiceId._id.toString();
+
+              if (!mainServiceMap.has(mainServiceId)) {
+                mainServiceMap.set(mainServiceId, {
+                  mainService: analyticsRecord.mainServiceId,
+                  addons: []
+                });
+              }
+
+              mainServiceMap.get(mainServiceId).addons.push(suggestion);
+            }
+          }
+        }
+
+        // Convert to packages and filter those with equipment add-ons
+        for (const [mainServiceId, packageData] of mainServiceMap) {
+          if (packageData.addons.length > 0) {
+            // Generate realistic quantities for each add-on
+            const addonsWithRealisticQuantities = packageData.addons.slice(0, 3).map(addon => ({
+              ...addon,
+              averageQuantity: generateRealisticEquipmentQuantity(
+                packageData.mainService.category,
+                addon.service.name,
+                addon.service.serviceType
+              )
+            }));
+
+            const totalPrice = packageData.mainService.basePrice +
+              addonsWithRealisticQuantities.reduce((sum, addon) => sum + (addon.service.basePrice * addon.averageQuantity), 0);
+
+            packages.push({
+              mainService: packageData.mainService,
+              addons: addonsWithRealisticQuantities,
+              totalPrice,
+              confidence: Math.max(...packageData.addons.map(a => a.confidence)),
+              frequency: packageData.addons.reduce((sum, addon) => sum + addon.frequency, 0)
+            });
+          }
+        }
+      }
+
+      // Sort by confidence and frequency, then take top 3
+      packages = packages
+        .sort((a, b) => {
+          if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+          return b.frequency - a.frequency;
         })
-        .sort((a, b) => b.confidence - a.confidence)
-        .slice(0, 10);
+        .slice(0, 3);
+    }
+
+    // If we don't have enough packages, create some default ones
+    if (packages.length < 3) {
+      const defaultCategories = ['wedding', 'birthday', 'corporate'];
+      const Service = require('../models/Service');
+
+      for (const cat of defaultCategories) {
+        if (packages.length >= 3) break;
+
+        // Find a main service in this category
+        const mainService = await Service.findOne({
+          category: cat,
+          isAvailable: true,
+          serviceType: { $ne: 'equipment' }
+        }).sort({ basePrice: -1 }); // Get more expensive services first
+
+        if (mainService) {
+          // Find equipment that could be add-ons for this service
+          const equipmentAddons = await Service.find({
+            category: 'equipment',
+            isAvailable: true,
+            serviceType: 'equipment'
+          }).limit(3);
+
+          if (equipmentAddons.length > 0) {
+            const addons = equipmentAddons.map(equipment => ({
+              service: equipment,
+              confidence: 0.5, // Default confidence for fallback packages
+              frequency: 1,
+              averageQuantity: generateRealisticEquipmentQuantity(
+                mainService.category,
+                equipment.name,
+                equipment.serviceType
+              ),
+              reason: `Recommended equipment for ${cat} events`
+            }));
+
+            packages.push({
+              mainService,
+              addons,
+              totalPrice: mainService.basePrice + addons.reduce((sum, addon) => sum + (addon.service.basePrice * addon.averageQuantity), 0),
+              confidence: 0.5,
+              frequency: 1
+            });
+          }
+        }
+      }
     }
 
     res.json({
       success: true,
-      suggestions,
-      total: suggestions.length
+      suggestions: packages,
+      total: packages.length
     });
 
   } catch (error) {
@@ -3120,5 +3498,142 @@ const autoCancelExpiredBookings = async () => {
   }
 };
 
+// Helper function for creating package bookings (used by payment service)
+const createPackageBooking = async (userId, intent, paymentId) => {
+  try {
+    const Package = require('../models/Package');
+    const pkg = await Package.findById(intent.packageId);
+    if (!pkg) {
+      return { success: false, error: 'Package not found' };
+    }
+
+    // Create bookings for all included services in the package
+    const packageBookings = [];
+    let totalPackagePrice = pkg.totalPrice;
+
+    for (const inclusion of pkg.inclusions) {
+      const includedService = await Service.findById(inclusion.serviceId);
+      if (!includedService) {
+        return { success: false, error: `Included service ${inclusion.serviceId} not found` };
+      }
+
+      // Check availability for each included service
+      const bookingDateObj = new Date(intent.bookingDate);
+      let isAvailable = true;
+
+      if (includedService.category === 'equipment') {
+        const existingBookings = await Booking.find({
+          serviceId: inclusion.serviceId,
+          bookingDate: {
+            $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+            $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
+          },
+          status: { $in: ['pending', 'confirmed'] },
+        });
+
+        const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+        if (totalBooked + inclusion.quantity > includedService.quantity) {
+          isAvailable = false;
+        }
+      } else {
+        const existingBooking = await Booking.findOne({
+          serviceId: inclusion.serviceId,
+          bookingDate: {
+            $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+            $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
+          },
+          status: { $in: ['pending', 'confirmed'] },
+        });
+
+        if (existingBooking) {
+          isAvailable = false;
+        }
+      }
+
+      if (!isAvailable) {
+        return { success: false, error: `Service ${includedService.name} is not available for the selected date` };
+      }
+
+      // Create booking for this included service
+      const serviceBookingData = {
+        customerId: userId,
+        serviceId: inclusion.serviceId,
+        quantity: inclusion.quantity,
+        bookingDate: bookingDateObj,
+        totalPrice: 0, // Price is included in package total
+        basePrice: includedService.basePrice,
+        appliedMultiplier: 1.0,
+        daysBeforeCheckout: Math.max(0, Math.ceil((bookingDateObj.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))),
+        status: 'confirmed',
+        paymentStatus: 'paid',
+        paymentId: paymentId,
+        notes: `${intent.notes || ''} [Package: ${pkg.name}]`.trim(),
+        isPackageBooking: true,
+        packageId: pkg._id,
+        packageName: pkg.name,
+      };
+
+      const serviceBooking = new Booking(serviceBookingData);
+      await serviceBooking.save();
+      packageBookings.push(serviceBooking);
+
+      // Deduct inventory for included service
+      if (includedService.serviceType === 'equipment' || includedService.serviceType === 'supply') {
+        const previousStock = includedService.quantity;
+        await includedService.reduceBatchQuantity(inclusion.quantity);
+        const newStock = includedService.quantity;
+
+        await InventoryTransaction.logTransaction({
+          serviceId: inclusion.serviceId,
+          bookingId: serviceBooking._id,
+          transactionType: 'booking_deduction',
+          quantity: -inclusion.quantity,
+          previousStock,
+          newStock,
+          reason: `Package booking deduction for service: ${includedService.name} (from package: ${pkg.name})`,
+          metadata: {
+            customerId: userId,
+            bookingDate: bookingDateObj,
+            packageId: pkg._id,
+            packageName: pkg.name,
+          }
+        });
+      }
+    }
+
+    // Create main package booking record
+    const packageBookingData = {
+      customerId: userId,
+      serviceId: null, // No specific service for package
+      quantity: 1,
+      bookingDate: new Date(intent.bookingDate),
+      totalPrice: totalPackagePrice,
+      status: 'confirmed',
+      paymentStatus: 'paid',
+      paymentId: paymentId,
+      notes: intent.notes || '',
+      isPackageBooking: true,
+      packageId: pkg._id,
+      packageName: pkg.name,
+      includedBookings: packageBookings.map(b => b._id),
+    };
+
+    const packageBooking = new Booking(packageBookingData);
+    await packageBooking.save();
+
+    // Update included bookings with reference to main package booking
+    for (const booking of packageBookings) {
+      booking.packageBookingId = packageBooking._id;
+      await booking.save();
+    }
+
+    return { success: true, booking: packageBooking, packageBookings };
+  } catch (error) {
+    console.error('Error creating package booking:', error);
+    return { success: false, error: error.message };
+  }
+};
+
 module.exports = router;
 module.exports.autoCancelExpiredBookings = autoCancelExpiredBookings;
+module.exports.createPackageBooking = createPackageBooking;

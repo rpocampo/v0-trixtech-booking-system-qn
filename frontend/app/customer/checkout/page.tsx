@@ -363,16 +363,32 @@ export default function CheckoutPage() {
           throw new Error(`Please schedule a date for ${item.name}`);
         }
 
-        // Create booking intent data for cart payment
-        bookingIntents.push({
-          serviceId: item.id,
-          quantity: item.quantity,
-          bookingDate: scheduleData.date,
-          notes: scheduleData.notes || '',
-          duration: item.duration || 1,
-          dailyRate: item.dailyRate || item.price,
-          totalPrice: (item.dailyRate || item.price) * (item.duration || 1) * item.quantity,
-        });
+        // Handle packages differently
+        if (item.serviceType === 'package') {
+          // For packages, send package information
+          bookingIntents.push({
+            serviceId: item.id, // This will be the package ID
+            quantity: item.quantity,
+            bookingDate: scheduleData.date,
+            notes: scheduleData.notes || '',
+            duration: item.duration || 1,
+            dailyRate: item.dailyRate || item.price,
+            totalPrice: item.price * item.quantity, // Package price
+            isPackage: true,
+            packageId: item.id,
+          });
+        } else {
+          // Regular service booking
+          bookingIntents.push({
+            serviceId: item.id,
+            quantity: item.quantity,
+            bookingDate: scheduleData.date,
+            notes: scheduleData.notes || '',
+            duration: item.duration || 1,
+            dailyRate: item.dailyRate || item.price,
+            totalPrice: (item.dailyRate || item.price) * (item.duration || 1) * item.quantity,
+          });
+        }
       }
 
       // Calculate total amount from booking intents
@@ -829,6 +845,10 @@ export default function CheckoutPage() {
                         synchronizedItems.forEach(item => {
                           handleScheduleUpdate(item.id, selectedDate, scheduledItems[item.id]?.notes || '');
                         });
+
+                        // For synchronized bookings, pick-up is auto-calculated (24 hours after delivery)
+                        // No need to set pickupDate - it will be calculated in the display
+                        calculateNumberOfDays();
                       }}
                       required
                     />
@@ -853,70 +873,75 @@ export default function CheckoutPage() {
                       }}
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-blue-800 mb-2">
-                      Pick-up Date & Time {!scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate && <span className="text-red-500">*</span>}
-                    </label>
-                    <input
-                      type="datetime-local"
-                      className={`input-field ${
-                        !scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate
-                          ? 'border-red-300 focus:border-red-500'
-                          : 'border-green-300 focus:border-green-500'
-                      }`}
-                      min={(() => {
-                        const deliveryDate = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date;
-                        return deliveryDate ? new Date(new Date(deliveryDate).getTime() + 60 * 60 * 1000).toISOString().slice(0, 16) : new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
-                      })()}
-                      value={scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate || ''}
-                      onChange={(e) => {
-                        const pickupDate = e.target.value;
-                        // Update all synchronized items
-                        const synchronizedItems = checkoutItems.filter(item => scheduledItems[item.id]?.sameDateTime);
-                        synchronizedItems.forEach(item => {
-                          const deliveryDate = scheduledItems[item.id]?.date;
-                          setScheduledItems(prev => ({
-                            ...prev,
-                            [item.id]: {
-                              ...prev[item.id],
-                              pickupDate,
-                              pickupNotes: prev[item.id]?.pickupNotes || ''
-                            }
-                          }));
-                          // Auto-calculate duration for this item
-                          calculateItemDuration(item.id, deliveryDate, pickupDate);
-                        });
-                        calculateNumberOfDays();
-                      }}
-                      required
-                    />
-                    {!scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate && (
-                      <p className="text-xs text-red-600 mt-1">Please select a pick-up date and time</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-blue-800 mb-2">Pick-up Notes (Optional)</label>
-                    <textarea
-                      className="input-field resize-none"
-                      rows={3}
-                      placeholder="Any special pick-up instructions for all synchronized items..."
-                      value={scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupNotes || ''}
-                      onChange={(e) => {
-                        const pickupNotes = e.target.value;
-                        // Update all synchronized items
-                        const synchronizedItems = checkoutItems.filter(item => scheduledItems[item.id]?.sameDateTime);
-                        synchronizedItems.forEach(item => {
-                          setScheduledItems(prev => ({
-                            ...prev,
-                            [item.id]: {
-                              ...prev[item.id],
-                              pickupNotes
-                            }
-                          }));
-                        });
-                      }}
-                    />
-                  </div>
+                  {/* Pick-up Date & Time - Only show when extending rental duration */}
+                  {scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.extendDuration && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-blue-800 mb-2">
+                          Pick-up Date & Time {!scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate && <span className="text-red-500">*</span>}
+                        </label>
+                        <input
+                          type="datetime-local"
+                          className={`input-field ${
+                            !scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate
+                              ? 'border-red-300 focus:border-red-500'
+                              : 'border-green-300 focus:border-green-500'
+                          }`}
+                          min={(() => {
+                            const deliveryDate = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date;
+                            return deliveryDate ? new Date(new Date(deliveryDate).getTime() + 60 * 60 * 1000).toISOString().slice(0, 16) : new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
+                          })()}
+                          value={scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate || ''}
+                          onChange={(e) => {
+                            const pickupDate = e.target.value;
+                            // Update all synchronized items
+                            const synchronizedItems = checkoutItems.filter(item => scheduledItems[item.id]?.sameDateTime);
+                            synchronizedItems.forEach(item => {
+                              const deliveryDate = scheduledItems[item.id]?.date;
+                              setScheduledItems(prev => ({
+                                ...prev,
+                                [item.id]: {
+                                  ...prev[item.id],
+                                  pickupDate,
+                                  pickupNotes: prev[item.id]?.pickupNotes || ''
+                                }
+                              }));
+                              // Auto-calculate duration for this item
+                              calculateItemDuration(item.id, deliveryDate, pickupDate);
+                            });
+                            calculateNumberOfDays();
+                          }}
+                          required
+                        />
+                        {!scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate && (
+                          <p className="text-xs text-red-600 mt-1">Please select a pick-up date and time</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-blue-800 mb-2">Pick-up Notes (Optional)</label>
+                        <textarea
+                          className="input-field resize-none"
+                          rows={3}
+                          placeholder="Any special pick-up instructions for all synchronized items..."
+                          value={scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupNotes || ''}
+                          onChange={(e) => {
+                            const pickupNotes = e.target.value;
+                            // Update all synchronized items
+                            const synchronizedItems = checkoutItems.filter(item => scheduledItems[item.id]?.sameDateTime);
+                            synchronizedItems.forEach(item => {
+                              setScheduledItems(prev => ({
+                                ...prev,
+                                [item.id]: {
+                                  ...prev[item.id],
+                                  pickupNotes
+                                }
+                              }));
+                            });
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Confirmation Messages */}
@@ -931,7 +956,11 @@ export default function CheckoutPage() {
                     <div className="flex items-center gap-2 text-blue-800 bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <span className="text-sm">📅</span>
                       <span className="text-sm font-medium">
-                        Pick-up scheduled for: {new Date(scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].pickupDate!).toLocaleString()}
+                        Pick-up scheduled for: {(() => {
+                          const deliveryDate = new Date(scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].date);
+                          const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
+                          return pickupDate.toLocaleString();
+                        })()}
                       </span>
                     </div>
                   </div>
@@ -1438,9 +1467,11 @@ export default function CheckoutPage() {
                   <div>
                     <span className="text-sm text-blue-700">Pick-up:</span>
                     <p className="font-medium text-blue-900">
-                      {scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate
-                        ? new Date(scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].pickupDate!).toLocaleString()
-                        : 'Not set'}
+                      {scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date ? (() => {
+                        const deliveryDate = new Date(scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].date);
+                        const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
+                        return pickupDate.toLocaleString();
+                      })() : 'Not set'}
                     </p>
                   </div>
                 </div>

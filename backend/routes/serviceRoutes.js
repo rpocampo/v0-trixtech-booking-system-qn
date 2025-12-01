@@ -361,7 +361,7 @@ router.put('/:id', adminMiddleware, upload.fields([
           message: 'Service price must be a valid positive number'
         });
       }
-      updateData.price = parsedPrice;
+      updateData.basePrice = parsedPrice;
     }
 
     if (priceType !== undefined) {
@@ -452,7 +452,11 @@ router.put('/:id', adminMiddleware, upload.fields([
       });
     }
 
-    res.json({ success: true, service });
+    // Ensure price is properly set from basePrice for the response
+    const serviceObj = service.toObject();
+    serviceObj.price = service.basePrice || 0;
+
+    res.json({ success: true, service: serviceObj });
   } catch (error) {
     next(error);
   }

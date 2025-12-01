@@ -32,9 +32,17 @@ interface PredictiveSuggestion {
   reasons: string[];
 }
 
+interface PackageSuggestion {
+  mainService: Service;
+  addons: PredictiveSuggestion[];
+  totalPrice: number;
+  confidence: number;
+  frequency: number;
+}
+
 export default function SuggestionsPage() {
   const router = useRouter();
-  const [predictiveSuggestions, setPredictiveSuggestions] = useState<PredictiveSuggestion[]>([]);
+  const [packageSuggestions, setPackageSuggestions] = useState<PackageSuggestion[]>([]);
   const [loadingPredictive, setLoadingPredictive] = useState(true);
   const [predictiveFilters, setPredictiveFilters] = useState({
     category: '',
@@ -62,7 +70,7 @@ export default function SuggestionsPage() {
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          setPredictiveSuggestions(data.suggestions || []);
+          setPackageSuggestions(data.suggestions || []);
         }
       }
     } catch (error) {
@@ -73,9 +81,9 @@ export default function SuggestionsPage() {
   };
 
 
-  const filteredPredictiveSuggestions = predictiveSuggestions.filter(suggestion => {
-    const service = suggestion.service;
-    const price = service.basePrice;
+  const filteredPackageSuggestions = packageSuggestions.filter(pkg => {
+    const service = pkg.mainService;
+    const price = pkg.totalPrice;
 
     if (predictiveFilters.category && service.category !== predictiveFilters.category) return false;
     if (predictiveFilters.priceRange && price) {
@@ -85,7 +93,7 @@ export default function SuggestionsPage() {
     }
     if (predictiveFilters.minConfidence) {
       const minConf = parseFloat(predictiveFilters.minConfidence);
-      if (suggestion.confidence < minConf) return false;
+      if (pkg.confidence < minConf) return false;
     }
     return true;
   });
@@ -127,17 +135,17 @@ export default function SuggestionsPage() {
       </div>
 
 
-      {/* Predictive Analytics Suggestions */}
-      {predictiveSuggestions.length > 0 && (
+      {/* Package Suggestions */}
+      {packageSuggestions.length > 0 && (
         <div className="card p-6">
           <div className="flex items-center gap-2 text-purple-800 mb-6">
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
             </svg>
-            <h2 className="text-2xl font-bold">📊 Modified Bookings from Other Customers</h2>
+            <h2 className="text-2xl font-bold">📦 Modified Packages from Other Customers</h2>
           </div>
           <p className="text-gray-600 mb-6">
-            Services that other customers frequently added to their bookings
+            Complete packages with equipment add-ons that other customers frequently booked together
           </p>
 
           {/* Filters for Predictive Suggestions */}
@@ -194,118 +202,125 @@ export default function SuggestionsPage() {
                 Clear Filters
               </button>
               <span className="text-sm text-gray-600 self-center">
-                Showing {filteredPredictiveSuggestions.length} of {predictiveSuggestions.length} suggestions
+                Showing {filteredPackageSuggestions.length} of {packageSuggestions.length} packages
               </span>
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPredictiveSuggestions.map((suggestion, index) => (
-              <div key={suggestion.service._id} className="border border-purple-200 rounded-lg p-4 bg-purple-50 hover:bg-purple-100 transition-colors">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{getCategoryIcon(suggestion.service.category)}</span>
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      suggestion.confidence >= 0.8 ? 'bg-green-100 text-green-800' :
-                      suggestion.confidence >= 0.6 ? 'bg-blue-100 text-blue-800' :
+          <div className="grid md:grid-cols-1 lg:grid-cols-1 gap-6">
+            {filteredPackageSuggestions.map((pkg, index) => (
+              <div key={pkg.mainService._id} className="border border-purple-200 rounded-lg p-6 bg-gradient-to-r from-purple-50 to-indigo-50 hover:from-purple-100 hover:to-indigo-100 transition-all duration-300 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{getCategoryIcon(pkg.mainService.category)}</span>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-800">{pkg.mainService.name} Package</h3>
+                      <p className="text-sm text-gray-600 capitalize">{pkg.mainService.category.replace('-', ' ')} • Modified Package</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                      pkg.confidence >= 0.8 ? 'bg-green-100 text-green-800' :
+                      pkg.confidence >= 0.6 ? 'bg-blue-100 text-blue-800' :
                       'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {suggestion.confidence >= 0.8 ? 'Highly Recommended' :
-                       suggestion.confidence >= 0.6 ? 'Recommended' : 'Suggested'}
+                      {pkg.confidence >= 0.8 ? 'Highly Recommended' :
+                       pkg.confidence >= 0.6 ? 'Recommended' : 'Suggested'}
                     </span>
+                    <p className="text-xs text-gray-500 mt-1">Package #{index + 1}</p>
                   </div>
-                  <span className="text-xs text-gray-500">#{index + 1}</span>
                 </div>
 
-                <div className="space-y-3">
-                  <div>
-                    <h4 className="font-semibold text-gray-800 text-sm">{suggestion.service.name}</h4>
-                    <p className="text-xs text-gray-600 capitalize">{suggestion.service.category.replace('-', ' ')}</p>
-                  </div>
-
-                  <p className="text-xs text-gray-700 line-clamp-2">{suggestion.service.description}</p>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-purple-600">₱{suggestion.service.basePrice.toFixed(2)}</span>
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      suggestion.service.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {suggestion.service.isAvailable ? 'Available' : 'Unavailable'}
-                    </span>
-                  </div>
-
-                  {/* Service Details */}
-                  <div className="bg-gray-50 border border-gray-200 rounded p-2 space-y-1">
-                    {suggestion.service.quantity && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-600">Stock:</span>
-                        <span className="font-medium">{suggestion.service.quantity} available</span>
-                      </div>
-                    )}
-                    {suggestion.service.leadTime && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-600">Lead Time:</span>
-                        <span className="font-medium">{suggestion.service.leadTime} hours</span>
-                      </div>
-                    )}
-                    {suggestion.service.minOrder && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-600">Min Order:</span>
-                        <span className="font-medium">{suggestion.service.minOrder}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Features */}
-                  {suggestion.service.features && suggestion.service.features.length > 0 && (
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-gray-700">Features:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {suggestion.service.features.slice(0, 2).map((feature, idx) => (
-                          <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
-                            {feature}
-                          </span>
-                        ))}
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Main Service */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-semibold text-purple-700">🏠 Main Service:</span>
+                    </div>
+                    <div className="bg-white border border-purple-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-gray-800">{pkg.mainService.name}</h4>
+                      <p className="text-sm text-gray-600 mt-1">{pkg.mainService.description}</p>
+                      <div className="flex items-center justify-between mt-3">
+                        <span className="text-lg font-bold text-purple-600">₱{pkg.mainService.basePrice.toFixed(2)}</span>
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          pkg.mainService.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {pkg.mainService.isAvailable ? 'Available' : 'Unavailable'}
+                        </span>
                       </div>
                     </div>
-                  )}
+                  </div>
 
-                  <div className="bg-white border border-purple-200 rounded p-2">
-                    <div className="flex items-start gap-2">
-                      <span className="text-purple-600 mt-0.5">📊</span>
-                      <div>
-                        <p className="text-xs font-medium text-purple-800">Why suggested:</p>
-                        <p className="text-xs text-purple-700">
-                          Added by {suggestion.frequency} customer{suggestion.frequency > 1 ? 's' : ''} to similar bookings
-                        </p>
-                        <p className="text-xs text-purple-600 mt-1">
-                          Avg. quantity: {suggestion.averageQuantity.toFixed(1)}
-                        </p>
-                        {suggestion.reasons && suggestion.reasons.length > 0 && (
-                          <p className="text-xs text-purple-600 mt-1">
-                            {suggestion.reasons[0]}
+                  {/* Equipment Add-ons */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-semibold text-indigo-700">🎪 Equipment Add-ons:</span>
+                      <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
+                        {pkg.addons.length} items
+                      </span>
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {pkg.addons.map((addon, addonIndex) => (
+                        <div key={addon.service._id} className="bg-white border border-indigo-200 rounded p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <h5 className="font-medium text-gray-800 text-sm">{addon.service.name}</h5>
+                              <p className="text-xs text-gray-600">Qty: {addon.averageQuantity.toFixed(1)} • ₱{(addon.service.basePrice * addon.averageQuantity).toFixed(2)}</p>
+                            </div>
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              addon.service.isAvailable ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {addon.service.isAvailable ? '✓' : '✗'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Package Total and Analytics */}
+                <div className="mt-6 pt-4 border-t border-purple-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <span className="text-2xl font-bold text-purple-700">Package Total: ₱{pkg.totalPrice.toFixed(2)}</span>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Main service: ₱{pkg.mainService.basePrice.toFixed(2)} +
+                        Add-ons: ₱{(pkg.totalPrice - pkg.mainService.basePrice).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="bg-white border border-purple-200 rounded p-3">
+                      <div className="flex items-start gap-2">
+                        <span className="text-purple-600 mt-0.5">📊</span>
+                        <div>
+                          <p className="text-xs font-medium text-purple-800">Package Analytics:</p>
+                          <p className="text-xs text-purple-700">
+                            Booked together by {pkg.frequency} customer{pkg.frequency > 1 ? 's' : ''}
                           </p>
-                        )}
+                          <p className="text-xs text-purple-600 mt-1">
+                            Confidence: {(pkg.confidence * 100).toFixed(0)}%
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <Link
-                      href={`/customer/services/${suggestion.service._id}`}
-                      className="flex-1 btn-secondary text-xs py-1.5 text-center"
+                      href={`/customer/services/${pkg.mainService._id}`}
+                      className="flex-1 btn-secondary text-sm py-2 text-center"
                     >
-                      View Details
+                      View Main Service
                     </Link>
-                    {suggestion.service.isAvailable && (
+                    {pkg.mainService.isAvailable && (
                       <button
                         onClick={() => {
-                          // Add to cart logic
-                          alert(`Added ${suggestion.service.name} to cart!`);
+                          // Add package to cart logic
+                          alert(`Added ${pkg.mainService.name} Package to cart with ${pkg.addons.length} equipment add-ons!`);
                         }}
-                        className="flex-1 btn-primary text-xs py-1.5"
+                        className="flex-1 btn-primary text-sm py-2"
                       >
-                        Add to Cart
+                        Add Package to Cart
                       </button>
                     )}
                   </div>

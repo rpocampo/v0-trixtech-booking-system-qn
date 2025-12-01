@@ -400,7 +400,264 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
 
     await payment.save();
 
-    // Check if this is a create-intent payment (has bookingIntent data)
+    // Check if this is a cart payment with bookingIntents
+    if (payment.bookingId === null && payment.paymentData && payment.paymentData.cartPayment && payment.paymentData.bookingIntents) {
+      // This is a cart payment - create bookings for all intents
+      const bookingIntents = payment.paymentData.bookingIntents;
+      const Booking = require('../models/Booking');
+      const Service = require('../models/Service');
+      const Package = require('../models/Package');
+
+      const createdBookings = [];
+      let totalBookingsCreated = 0;
+
+      for (const intent of bookingIntents) {
+        try {
+          let service, packageBooking = null;
+
+          // Handle package bookings
+          if (intent.isPackage && intent.packageId) {
+            const pkg = await Package.findById(intent.packageId);
+            if (!pkg) {
+              console.error(`Package not found: ${intent.packageId}`);
+              continue;
+            }
+
+            // Create package booking using the booking route logic
+            const packageResult = await require('../routes/bookingRoutes').createPackageBooking(payment.userId._id, intent, payment._id);
+            if (packageResult.success) {
+              createdBookings.push(packageResult.booking);
+              totalBookingsCreated++;
+              continue;
+            } else {
+              console.error(`Failed to create package booking: ${packageResult.error}`);
+              continue;
+            }
+          }
+
+          // Handle individual service bookings
+          service = await Service.findById(intent.serviceId);
+          if (!service) {
+            console.error(`Service not found: ${intent.serviceId}`);
+            continue;
+          }
+
+          const bookingDateObj = new Date(intent.bookingDate);
+
+          // Double-check availability before creating booking
+          let isAvailable = true;
+
+          if (service.category === 'equipment') {
+            const existingBookings = await Booking.find({
+              serviceId: intent.serviceId,
+              bookingDate: {
+                $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+                $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
+              },
+              status: 'confirmed',
+              paymentStatus: { $in: ['partial', 'paid'] },
+            });
+
+            const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+            const availableQuantity = Math.max(0, service.quantity - totalBooked);
+
+            if (availableQuantity < intent.quantity) {
+              isAvailable = false;
+            }
+          } else {
+            const existingBooking = await Booking.findOne({
+              serviceId: intent.serviceId,
+              bookingDate: {
+                $gte: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate()),
+                $lt: new Date(bookingDateObj.getFullYear(), bookingDateObj.getMonth(), bookingDateObj.getDate() + 1)
+              },
+              status: 'confirmed',
+              paymentStatus: { $in: ['partial', 'paid'] },
+            });
+
+            if (existingBooking) {
+              isAvailable = false;
+            }
+          }
+
+          if (!isAvailable) {
+            console.error(`Service ${service.name} is no longer available for booking intent`);
+            continue;
+          }
+
+          // Calculate dynamic price
+          const daysBeforeCheckout = Math.max(0, Math.ceil((bookingDateObj.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)));
+          const calculatedPrice = service.calculatePrice(daysBeforeCheckout);
+          const appliedMultiplier = service.basePrice > 0 ? calculatedPrice / service.basePrice : 1.0;
+
+          // Create the booking
+          const booking = new Booking({
+            customerId: payment.userId,
+            serviceId: intent.serviceId,
+            quantity: intent.quantity,
+            bookingDate: bookingDateObj,
+            basePrice: service.basePrice,
+            appliedMultiplier,
+            daysBeforeCheckout,
+            totalPrice: intent.totalPrice,
+            status: 'confirmed',
+            paymentStatus: 'paid',
+            paymentId: payment._id,
+            notes: intent.notes || '',
+            requiresDelivery: service.deliveryRequired || false,
+          });
+
+          await booking.save();
+          await booking.populate('serviceId');
+          await booking.populate('customerId', 'name email');
+
+          createdBookings.push(booking);
+          totalBookingsCreated++;
+
+          // Decrease inventory for equipment/supply items
+          if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
+            const previousStock = service.quantity;
+            await service.reduceBatchQuantity(intent.quantity);
+            const newStock = service.quantity;
+
+            // Log inventory transaction
+            const InventoryTransaction = require('../models/InventoryTransaction');
+            await InventoryTransaction.logTransaction({
+              serviceId: intent.serviceId,
+              bookingId: booking._id,
+              transactionType: 'booking_deduction',
+              quantity: -intent.quantity,
+              previousStock,
+              newStock,
+              reason: `Cart payment booking deduction for service: ${service.name}`,
+              metadata: {
+                customerId: payment.userId._id,
+                bookingDate: bookingDateObj,
+                paymentId: payment._id,
+              }
+            });
+          }
+
+          // Decrease inventory for included equipment
+          if (service.includedEquipment && service.includedEquipment.length > 0) {
+            for (const equipmentItem of service.includedEquipment) {
+              try {
+                const equipmentService = await Service.findById(equipmentItem.equipmentId);
+                if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
+                  const previousStock = equipmentService.quantity;
+                  await equipmentService.reduceBatchQuantity(equipmentItem.quantity);
+                  const newStock = equipmentService.quantity;
+
+                  const InventoryTransaction = require('../models/InventoryTransaction');
+                  await InventoryTransaction.logTransaction({
+                    serviceId: equipmentItem.equipmentId,
+                    bookingId: booking._id,
+                    transactionType: 'booking_deduction',
+                    quantity: -equipmentItem.quantity,
+                    previousStock,
+                    newStock,
+                    reason: `Cart payment included equipment deduction: ${equipmentService.name}`,
+                    metadata: {
+                      customerId: payment.userId._id,
+                      bookingDate: bookingDateObj,
+                      mainServiceId: intent.serviceId,
+                      paymentId: payment._id,
+                    }
+                  });
+                }
+              } catch (equipmentError) {
+                console.error('Error deducting included equipment inventory:', equipmentError);
+              }
+            }
+          }
+
+          // Generate invoice for this booking
+          try {
+            const invoiceResult = await generateInvoice(booking._id);
+            if (invoiceResult.success) {
+              console.log(`Invoice ${invoiceResult.invoiceNumber} generated for cart booking ${booking._id}`);
+            }
+          } catch (invoiceError) {
+            console.error('Error generating invoice for cart booking:', invoiceError);
+          }
+
+        } catch (intentError) {
+          console.error(`Error processing booking intent:`, intentError);
+          continue;
+        }
+      }
+
+      if (createdBookings.length === 0) {
+        return { success: false, error: 'No bookings could be created from the cart payment' };
+      }
+
+      // Send confirmation notifications for all bookings
+      try {
+        const totalAmount = createdBookings.reduce((sum, booking) => sum + booking.totalPrice, 0);
+
+        await sendTemplateNotification(payment.userId._id, 'BOOKING_CONFIRMED', {
+          message: `Your cart booking has been confirmed! ${createdBookings.length} item(s) booked for a total of ₱${totalAmount.toFixed(2)}`,
+          metadata: {
+            bookingIds: createdBookings.map(b => b._id),
+            totalAmount,
+            itemCount: createdBookings.length,
+          }
+        });
+
+        // Admin notification
+        const User = require('../models/User');
+        const adminUsers = await User.find({ role: 'admin' });
+        for (const admin of adminUsers) {
+          await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
+            message: `New cart booking confirmed: ${createdBookings.length} item(s) for ₱${totalAmount.toFixed(2)}`,
+            metadata: {
+              bookingIds: createdBookings.map(b => b._id),
+              totalAmount,
+              itemCount: createdBookings.length,
+            }
+          });
+        }
+
+        // Emit real-time events
+        const io = global.io;
+        if (io) {
+          io.to(`user_${payment.userId._id}`).emit('cart-booking-confirmed', {
+            bookings: createdBookings.map(booking => ({
+              id: booking._id,
+              serviceName: booking.serviceId?.name || 'Service',
+              quantity: booking.quantity,
+              date: booking.bookingDate,
+              totalPrice: booking.totalPrice,
+              status: 'confirmed',
+            })),
+            totalAmount,
+          });
+
+          io.to('admin').emit('new-cart-booking', {
+            bookings: createdBookings.map(booking => ({
+              id: booking._id,
+              serviceName: booking.serviceId?.name || 'Service',
+              quantity: booking.quantity,
+              date: booking.bookingDate,
+              totalPrice: booking.totalPrice,
+              status: 'confirmed',
+            })),
+            totalAmount,
+          });
+        }
+      } catch (notificationError) {
+        console.error('Error sending cart booking confirmation notifications:', notificationError);
+      }
+
+      return {
+        success: true,
+        payment,
+        bookings: createdBookings,
+        message: `Cart payment verified and ${createdBookings.length} booking(s) confirmed`
+      };
+    }
+
+    // Check if this is a create-intent payment (has bookingIntent data) - legacy single booking
     if (payment.bookingId === null && payment.paymentData && payment.paymentData.bookingIntent) {
       // This is a create-intent payment - create the booking now
       const bookingIntent = payment.paymentData.bookingIntent;
@@ -464,7 +721,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
         } catch (notificationError) {
           console.error('Error sending payment failed notification:', notificationError);
         }
-  
+
         return { success: false, error: 'Service is no longer available for the selected date and time.' };
       }
 
@@ -506,7 +763,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
         console.error('Error generating invoice:', invoiceError);
         // Don't fail booking confirmation if invoice generation fails
       }
-  
+
       // Send confirmation notifications
       try {
         await sendTemplateNotification(payment.userId._id, 'BOOKING_CONFIRMED', {
@@ -517,7 +774,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
             amount: booking.totalPrice,
           }
         });
-  
+
         // Admin notification
         const User = require('../models/User');
         const adminUsers = await User.find({ role: 'admin' });
@@ -531,7 +788,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
             }
           });
         }
-  
+
         // Emit real-time events
         const io = global.io;
         if (io) {
@@ -545,7 +802,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
               status: 'confirmed',
             }
           });
-  
+
           io.to('admin').emit('new-confirmed-booking', {
             booking: {
               id: booking._id,
@@ -560,7 +817,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
       } catch (notificationError) {
         console.error('Error sending booking confirmation notifications:', notificationError);
       }
-  
+
       // Auto-generate and send invoice
       try {
         const { handleBookingConfirmed } = require('./invoiceService');
