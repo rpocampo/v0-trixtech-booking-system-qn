@@ -2420,11 +2420,44 @@ const generateRealisticEquipmentQuantity = (mainServiceCategory, equipmentName, 
 // Get predictive suggestions based on booking analytics - modified packages
 router.get('/suggestions/predictive', authMiddleware, async (req, res, next) => {
   try {
-    const { category, serviceId } = req.query;
+    const { category, serviceId, refresh } = req.query;
 
     let packages = [];
 
-    if (serviceId) {
+    if (serviceId && refresh === 'true') {
+      // Refresh add-ons for a specific service only
+      const mainService = await Service.findById(serviceId);
+      if (mainService) {
+        // Find equipment that could be add-ons for this service
+        const equipmentAddons = await Service.find({
+          category: 'equipment',
+          isAvailable: true,
+          serviceType: 'equipment'
+        }).limit(3);
+
+        if (equipmentAddons.length > 0) {
+          const addons = equipmentAddons.map(equipment => ({
+            service: equipment,
+            confidence: 0.5, // Default confidence for refresh
+            frequency: 1,
+            averageQuantity: generateRealisticEquipmentQuantity(
+              mainService.category,
+              equipment.name,
+              equipment.serviceType
+            ),
+            reason: `Refreshed equipment for ${mainService.category} events`
+          }));
+
+          packages.push({
+            mainService,
+            addons,
+            totalPrice: mainService.basePrice + addons.reduce((sum, addon) => sum + (addon.service.basePrice * addon.averageQuantity), 0),
+            confidence: 0.5,
+            frequency: 1
+          });
+        }
+      }
+    } else if (serviceId) {
       // Get suggestions for a specific service
       const suggestions = await BookingAnalytics.getSuggestionsForService(serviceId);
       if (suggestions.length > 0) {

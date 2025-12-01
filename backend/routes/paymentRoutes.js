@@ -408,15 +408,22 @@ router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next)
       // Flag for manual review - keep the image for admin review
       const imageUrl = `/uploads/receipts/${path.basename(req.file.path)}`;
 
-      payment.status = 'pending_review';
-      payment.paymentData.receiptVerification = {
-        attemptedAt: new Date(),
-        error: verificationResult.error,
-        flaggedForReview: true,
-        uploadedImage: imageUrl, // Store image path for admin review
-        extractedData: verificationResult.extractedData
-      };
-      await payment.save();
+      await Payment.findOneAndUpdate(
+        { _id: payment._id },
+        {
+          status: 'pending_review',
+          paymentData: {
+            ...payment.paymentData,
+            receiptVerification: {
+              attemptedAt: new Date(),
+              error: verificationResult.error,
+              flaggedForReview: true,
+              uploadedImage: imageUrl, // Store image path for admin review
+              extractedData: verificationResult.extractedData
+            }
+          }
+        }
+      );
 
       // Don't clean up the file - keep it for admin review
       console.log(`Receipt image saved for manual review: ${imageUrl}`);
@@ -436,22 +443,24 @@ router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next)
       // Store the uploaded image path for admin viewing even after successful verification
       const imageUrl = `/uploads/receipts/${path.basename(req.file.path)}`;
 
-      // First update payment with receipt verification data including image path
-      const Payment = require('../models/Payment');
-      let payment = await Payment.findOne({ referenceNumber });
-      if (payment) {
-        payment.paymentData.receiptVerification = {
-          attemptedAt: new Date(),
-          validation,
-          extractedData: verificationResult.extractedData,
-          uploadedImage: imageUrl, // Store image path for admin viewing
-          autoVerified: true,
-          verificationNotes: validation.issues.length > 0 ? validation.issues.join('; ') : 'All validations passed'
-        };
-        await payment.save();
+      // Update payment with receipt verification data including image path
+      await Payment.findOneAndUpdate(
+        { referenceNumber },
+        {
+          $set: {
+            'paymentData.receiptVerification': {
+              attemptedAt: new Date(),
+              validation,
+              extractedData: verificationResult.extractedData,
+              uploadedImage: imageUrl, // Store image path for admin viewing
+              autoVerified: true,
+              verificationNotes: validation.issues.length > 0 ? validation.issues.join('; ') : 'All validations passed'
+            }
+          }
+        }
+      );
 
-        console.log(`Payment updated with receipt verification data and uploadedImage: ${imageUrl}`);
-      }
+      console.log(`Payment updated with receipt verification data and uploadedImage: ${imageUrl}`);
 
       // Receipt passed all validations - complete payment
       const verifyResult = await verifyQRPayment(referenceNumber, {
@@ -501,38 +510,106 @@ router.post('/verify-receipt/:referenceNumber', authMiddleware, (req, res, next)
         });
       }
     } else {
-      // Receipt validation failed - flag for manual review instead of rejecting
-      console.log('Receipt validation failed, flagging for manual review:', validation.issues);
+      // Check if the main issue is amount mismatch - auto-decline for amount issues
+      if (!validation.amountMatch) {
+        // Auto-decline for amount mismatch - no manual review needed
+        console.log('Receipt validation failed due to amount mismatch - auto-declining payment');
 
-      const imageUrl = `/uploads/receipts/${path.basename(req.file.path)}`;
+        // Store the uploaded image path for admin viewing even for auto-declined payments
+        const imageUrl = `/uploads/receipts/${path.basename(req.file.path)}`;
 
-      // Flag for manual review
-      payment.status = 'pending_review';
-      payment.paymentData.receiptVerification = {
-        attemptedAt: new Date(),
-        validation,
-        extractedData: verificationResult.extractedData,
-        flaggedForReview: true,
-        uploadedImage: imageUrl, // Store image path for admin review
-        issues: validation.issues
-      };
-      await payment.save();
+        // Use findOneAndUpdate to ensure the update is atomic
+        await Payment.findOneAndUpdate(
+          { _id: payment._id },
+          {
+            status: 'failed',
+            failureReason: 'Amount mismatch - payment automatically declined',
+            paymentData: {
+              ...payment.paymentData,
+              receiptVerification: {
+                attemptedAt: new Date(),
+                validation,
+                extractedData: verificationResult.extractedData,
+                autoDeclined: true,
+                issues: validation.issues,
+                uploadedImage: imageUrl // Store image path for admin review
+              }
+            }
+          }
+        );
 
-      // Don't clean up the file - keep it for admin review
-      console.log(`Receipt image saved for manual review due to validation failure: ${imageUrl}`);
+        // Don't clean up the file - keep it for admin review
+        console.log(`Receipt image saved for auto-declined payment: ${imageUrl}`);
 
-      return res.status(400).json({
-        success: false,
-        message: 'Receipt validation failed. Your payment has been flagged for manual review. You will be notified once reviewed.',
-        validation,
-        issues: validation.issues,
-        extractedData: {
-          amount: validation.extractedAmount,
-          reference: validation.extractedReference,
-          confidence: verificationResult.extractedData.confidence
-        },
-        flaggedForReview: true
-      });
+        // Send notification to user
+        try {
+          await require('../utils/notificationService').sendTemplateNotification(
+            payment.userId._id,
+            'PAYMENT_FAILED',
+            {
+              message: `Your payment was declined due to amount mismatch. Expected: ₱${payment.amount}, Received: ₱${validation.extractedAmount}. Please try again with the correct amount.`,
+              metadata: {
+                bookingId: payment.bookingId?._id,
+                amount: payment.amount,
+                receivedAmount: validation.extractedAmount,
+                reason: 'Amount mismatch - auto-declined'
+              }
+            }
+          );
+        } catch (notificationError) {
+          console.error('Error sending auto-decline notification:', notificationError);
+        }
+
+        return res.status(400).json({
+          success: false,
+          message: '⚠️ Payment Incorrect The payment amount is either exceeding the required total or insufficient. For assistance, please contact 09127607860.',
+          validation,
+          issues: validation.issues,
+          autoDeclined: true,
+          expectedAmount: payment.amount,
+          receivedAmount: validation.extractedAmount
+        });
+      } else {
+        // Other validation issues - flag for manual review
+        console.log('Receipt validation failed, flagging for manual review:', validation.issues);
+
+        const imageUrl = `/uploads/receipts/${path.basename(req.file.path)}`;
+
+        // Flag for manual review
+        await Payment.findOneAndUpdate(
+          { _id: payment._id },
+          {
+            status: 'pending_review',
+            paymentData: {
+              ...payment.paymentData,
+              receiptVerification: {
+                attemptedAt: new Date(),
+                validation,
+                extractedData: verificationResult.extractedData,
+                flaggedForReview: true,
+                uploadedImage: imageUrl, // Store image path for admin review
+                issues: validation.issues
+              }
+            }
+          }
+        );
+
+        // Don't clean up the file - keep it for admin review
+        console.log(`Receipt image saved for manual review due to validation failure: ${imageUrl}`);
+
+        return res.status(400).json({
+          success: false,
+          message: 'Receipt validation failed. Your payment has been flagged for manual review. You will be notified once reviewed.',
+          validation,
+          issues: validation.issues,
+          extractedData: {
+            amount: validation.extractedAmount,
+            reference: validation.extractedReference,
+            confidence: verificationResult.extractedData.confidence
+          },
+          flaggedForReview: true
+        });
+      }
     }
 
   } catch (error) {

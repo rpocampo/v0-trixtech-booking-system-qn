@@ -1092,7 +1092,7 @@ export default function AdminBookings() {
                         Need help managing this booking? Contact the customer support team for assistance.
                       </div>
                       <div className="text-sm text-[var(--primary)] font-medium">
-                        📞 Support: (02) 123-4567 | ✉️ support@trixtech.com
+                        📞 Support: (+63) 912-760-7860| ✉️ trixtech011@gmail.com
                       </div>
                     </div>
                   </div>

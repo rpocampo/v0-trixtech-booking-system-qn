@@ -52,6 +52,7 @@ function PaymentProcessContent() {
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
   const [receiptError, setReceiptError] = useState('');
+  const [autoDeclined, setAutoDeclined] = useState(false);
 
   useEffect(() => {
     if (bookingId && amountParam && paymentTypeParam) {
@@ -547,10 +548,36 @@ function PaymentProcessContent() {
                             router.push('/customer/bookings?payment=success');
                           }, 2000);
                         } else {
+                          console.log('Receipt verification response:', data); // Debug log
+                          console.log('Response status:', response.status); // Debug log
+                          console.log('Data autoDeclined:', data.autoDeclined); // Debug log
+
                           if (data.flaggedForReview) {
                             setReceiptError('Receipt verification failed. Your payment has been flagged for manual review by our team. You will be notified once verified.');
+                          } else if (data.autoDeclined === true) {
+                            // Auto-decline detected from backend response
+                            console.log('Auto-decline detected from backend flag, setting autoDeclined to true'); // Debug log
+                            setAutoDeclined(true);
+                            setReceiptError(data.message || 'Payment automatically declined due to amount mismatch.');
+                            // Auto-redirect to dashboard after showing the error for a few seconds
+                            setTimeout(() => {
+                              console.log('Auto-redirecting to dashboard'); // Debug log
+                              router.push('/customer/dashboard');
+                            }, 3000); // Give time to read the note
                           } else {
-                            setReceiptError(data.message || 'Receipt verification failed');
+                            const errorMessage = data.message || 'Receipt verification failed';
+                            setReceiptError(errorMessage);
+                            console.log('Error message:', errorMessage); // Debug log
+
+                            // Fallback: Check if this is an auto-decline due to amount mismatch
+                            if (errorMessage.includes('Payment Incorrect') && errorMessage.includes('09127607860')) {
+                              console.log('Fallback auto-decline detected from message content'); // Debug log
+                              setAutoDeclined(true);
+                              // Auto-redirect to dashboard after showing the error for a few seconds
+                              setTimeout(() => {
+                                router.push('/customer/dashboard');
+                              }, 3000); // Give time to read the note
+                            }
                           }
                         }
                       } catch (error) {
@@ -576,41 +603,35 @@ function PaymentProcessContent() {
               </div>
             )}
 
-            {/* Payment Status */}
-            <div className="mt-4 text-center">
-              {paymentStatus === 'pending' && !showReceiptUpload && (
-                <div className="space-y-3">
-                  <div className="inline-flex items-center text-blue-600">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                    Preparing payment...
+            {/* Payment Status - Completely removed during auto-decline */}
+            {!autoDeclined && (
+              <div className="mt-4 text-center">
+                {paymentStatus === 'pending' && !showReceiptUpload && (
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center text-blue-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                      Preparing payment...
+                    </div>
                   </div>
-                </div>
-              )}
-              {paymentStatus === 'pending' && showReceiptUpload && (
-                <div className="inline-flex items-center text-blue-600">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Waiting for receipt upload and verification...
-                </div>
-              )}
-              {paymentStatus === 'completed' && (
-                <div className="inline-flex items-center text-green-600">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Payment completed! Redirecting...
-                </div>
-              )}
-              {paymentStatus === 'failed' && (
-                <div className="inline-flex items-center text-red-600">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  Payment failed. Please try again.
-                </div>
-              )}
-            </div>
+                )}
+                {paymentStatus === 'completed' && (
+                  <div className="inline-flex items-center text-green-600">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Payment completed! Redirecting...
+                  </div>
+                )}
+                {paymentStatus === 'failed' && (
+                  <div className="inline-flex items-center text-red-600">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Payment failed. Please try again.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

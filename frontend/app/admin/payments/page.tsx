@@ -247,21 +247,21 @@ export default function AdminPaymentsPage() {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => {
-                        // Debug: Log the specific payment data
-                        console.log('View Image clicked for payment:', {
-                          paymentId: payment._id,
-                          referenceNumber: payment.referenceNumber,
-                          paymentData: payment.paymentData,
-                          receiptVerification: payment.paymentData?.receiptVerification,
-                          uploadedImage: payment.paymentData?.receiptVerification?.uploadedImage
-                        });
+                    {payment.paymentData?.receiptVerification?.uploadedImage && (
+                      <button
+                        onClick={() => {
+                          // Debug: Log the specific payment data
+                          console.log('View Image clicked for payment:', {
+                            paymentId: payment._id,
+                            referenceNumber: payment.referenceNumber,
+                            paymentData: payment.paymentData,
+                            receiptVerification: payment.paymentData?.receiptVerification,
+                            uploadedImage: payment.paymentData?.receiptVerification?.uploadedImage
+                          });
 
-                        // Check for uploaded image in receipt verification data
-                        const uploadedImage = payment.paymentData?.receiptVerification?.uploadedImage;
+                          // Check for uploaded image in receipt verification data
+                          const uploadedImage = payment.paymentData?.receiptVerification?.uploadedImage;
 
-                        if (uploadedImage) {
                           const fullImageUrl = `http://localhost:5000${uploadedImage}?t=${Date.now()}`;
                           console.log('Opening modal with image URL:', fullImageUrl);
 
@@ -329,24 +329,13 @@ export default function AdminPaymentsPage() {
                             error: false,
                             loadTimeout: timeout
                           });
-                        } else {
-                          console.log('No uploaded image found for payment:', payment._id);
-                          // For payments without uploaded images, show a text message
-                          setImageModal({
-                            open: true,
-                            imageUrl: '', // Empty image URL for text-only display
-                            title: `Payment ₱${payment.amount.toFixed(2)} - ${payment.referenceNumber} (No Receipt Uploaded)`,
-                            zoom: 1,
-                            loading: false,
-                            error: false
-                          });
-                        }
-                      }}
-                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium text-sm"
-                      title="View customer's uploaded receipt image"
-                    >
-                      📷 View Image
-                    </button>
+                        }}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-medium text-sm"
+                        title="View customer's uploaded receipt image"
+                      >
+                        📷 View Image
+                      </button>
+                    )}
                     {isPendingReview && (
                       <button
                         onClick={() => setSelectedPayment(payment)}
@@ -556,7 +545,7 @@ export default function AdminPaymentsPage() {
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
                     <p className="text-gray-600">Loading image...</p>
                   </div>
-                ) : imageModal.imageUrl && !imageModal.error ? (
+                ) : !imageModal.error ? (
                   <div className="bg-white rounded-lg shadow p-4 max-w-xl">
                     <img
                       src={imageModal.imageUrl}
@@ -585,14 +574,9 @@ export default function AdminPaymentsPage() {
                 ) : (
                   <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center max-w-md">
                     <div className="text-6xl mb-4">📄</div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                      {imageModal.imageUrl ? 'Image Unavailable' : 'No Receipt Image'}
-                    </h3>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Image Unavailable</h3>
                     <p className="text-gray-600 text-sm">
-                      {imageModal.imageUrl
-                        ? 'The receipt image could not be loaded. The payment was verified successfully.'
-                        : 'The customer did not upload a payment receipt image for this transaction. The payment was processed without receipt verification.'
-                      }
+                      The receipt image could not be loaded. The payment was verified successfully.
                     </p>
                   </div>
                 )}

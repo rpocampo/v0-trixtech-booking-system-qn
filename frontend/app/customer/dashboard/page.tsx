@@ -384,7 +384,7 @@ export default function CustomerDashboard() {
                   <div className="text-right flex flex-col items-end gap-2">
                     <p className="font-semibold text-blue-600">₱{schedule.totalPrice}</p>
                     <button
-                      onClick={() => router.push(`/customer/booking/${schedule.id}`)}
+                      onClick={() => router.push('/customer/bookings')}
                       className="text-indigo-600 hover:underline text-sm"
                     >
                       View Details
@@ -399,10 +399,6 @@ export default function CustomerDashboard() {
         )}
       </div>
 
-      {/* Personalized Recommendations */}
-      <div className="card-elevated p-6 animate-fade-in" style={{ animationDelay: '900ms' }}>
-        <PersonalizedRecommendations limit={6} />
-      </div>
     </div>
   );
 }

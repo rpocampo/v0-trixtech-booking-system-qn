@@ -147,6 +147,15 @@ export default function CheckoutPage() {
     localStorage.setItem('cartScheduledItems', JSON.stringify(scheduledItems));
   }, [scheduledItems]);
 
+  // Auto-redirect to dashboard when payment incorrect error is shown
+  useEffect(() => {
+    if (receiptError && receiptError.includes('Payment Incorrect') && receiptError.includes('09127607860')) {
+      setTimeout(() => {
+        router.push('/customer/dashboard');
+      }, 3000); // Give time to read the note
+    }
+  }, [receiptError, router]);
+
   const validateStock = async () => {
     setIsValidatingStock(true);
     try {
@@ -1903,29 +1912,21 @@ export default function CheckoutPage() {
                     Payment failed. Please try again.
                   </div>
                 )}
-                {paymentStatus === 'unpaid' && !receiptUploading && (
-                  <div className="space-y-3">
-                    <div className="inline-flex items-center text-yellow-600">
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Waiting for receipt upload...
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
 
           {/* Action Buttons */}
           <div className="flex gap-4 justify-center flex-wrap">
-            <button
-              onClick={() => setCurrentStep('confirm')}
-              className="btn-secondary"
-              disabled={creatingPayment || paymentStatus === 'paid'}
-            >
-              ← Back to Confirm
-            </button>
+            {!(receiptError && receiptError.includes('Payment Incorrect') && receiptError.includes('09127607860')) && (
+              <button
+                onClick={() => setCurrentStep('confirm')}
+                className="btn-secondary"
+                disabled={creatingPayment || paymentStatus === 'paid'}
+              >
+                ← Back to Confirm
+              </button>
+            )}
             {paymentError && (
               <button
                 onClick={() => {

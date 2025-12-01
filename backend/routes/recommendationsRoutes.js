@@ -12,15 +12,63 @@ router.get('/personalized', authMiddleware, async (req, res, next) => {
     const { limit = 6 } = req.query;
 
     const preferences = await UserPreferences.findOne({ userId: req.user.id });
-    if (!preferences) {
-      return res.json({
-        success: true,
-        recommendations: [],
-        message: 'No preferences found. Start booking to get personalized recommendations!'
-      });
+
+    let recommendations = [];
+
+    if (preferences) {
+      recommendations = await preferences.getPersonalizedRecommendations(parseInt(limit));
     }
 
-    const recommendations = await preferences.getPersonalizedRecommendations(parseInt(limit));
+    // If no personalized recommendations, show popular services
+    if (recommendations.length === 0) {
+      const popularServices = await Service.find({
+        isAvailable: true,
+        isPopular: true
+      })
+      .limit(parseInt(limit))
+      .sort({ basePrice: 1 }); // Show lower-priced popular services first
+
+      recommendations = popularServices.map(service => ({
+        item: {
+          _id: service._id,
+          name: service.name,
+          description: service.description,
+          shortDescription: service.description?.substring(0, 100) + (service.description?.length > 100 ? '...' : ''),
+          category: service.category,
+          basePrice: service.basePrice,
+          image: service.image,
+          isPopular: service.isPopular
+        },
+        type: 'service',
+        score: 0.5,
+        reason: 'Popular service - great choice for events!'
+      }));
+
+      // If still no recommendations, show any available services
+      if (recommendations.length === 0) {
+        const anyServices = await Service.find({
+          isAvailable: true
+        })
+        .limit(parseInt(limit))
+        .sort({ createdAt: -1 }); // Show newest services first
+
+        recommendations = anyServices.map(service => ({
+          item: {
+            _id: service._id,
+            name: service.name,
+            description: service.description,
+            shortDescription: service.description?.substring(0, 100) + (service.description?.length > 100 ? '...' : ''),
+            category: service.category,
+            basePrice: service.basePrice,
+            image: service.image,
+            isPopular: service.isPopular
+          },
+          type: 'service',
+          score: 0.3,
+          reason: 'New service - check it out!'
+        }));
+      }
+    }
 
     res.json({
       success: true,

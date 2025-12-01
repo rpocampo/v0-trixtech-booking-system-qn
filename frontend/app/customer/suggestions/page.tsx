@@ -81,6 +81,37 @@ export default function SuggestionsPage() {
     }
   };
 
+  const refreshPackageAddons = async (mainServiceId: string, packageIndex: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await fetch(`http://localhost:5000/api/bookings/suggestions/predictive?serviceId=${mainServiceId}&refresh=true`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.suggestions && data.suggestions.length > 0) {
+          // Update only the add-ons for this specific package
+          setPackageSuggestions(prev => {
+            const updated = [...prev];
+            if (updated[packageIndex]) {
+              updated[packageIndex] = {
+                ...updated[packageIndex],
+                addons: data.suggestions[0].addons || [],
+                totalPrice: data.suggestions[0].totalPrice || updated[packageIndex].totalPrice
+              };
+            }
+            return updated;
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error refreshing package add-ons:', error);
+    }
+  };
+
 
   const filteredPackageSuggestions = packageSuggestions.filter(pkg => {
     const service = pkg.mainService;
@@ -281,6 +312,14 @@ export default function SuggestionsPage() {
                       <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded">
                         {pkg.addons.length} items
                       </span>
+                      <button
+                        onClick={() => refreshPackageAddons(pkg.mainService._id, index)}
+                        disabled={loadingPredictive}
+                        className="text-xs bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Refresh equipment add-ons for this suggestion"
+                      >
+                        🔄 Refresh
+                      </button>
                     </div>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {pkg.addons.map((addon, addonIndex) => (

@@ -87,6 +87,7 @@ export default function BookingPage() {
   const [currentBookingIntent, setCurrentBookingIntent] = useState<any>(savedData?.currentBookingIntent || null);
   const [showBookingSummary, setShowBookingSummary] = useState(savedData?.showBookingSummary || false);
   const [bookingSummaryData, setBookingSummaryData] = useState<any>(savedData?.bookingSummaryData || null);
+  const [showTimeConfirmation, setShowTimeConfirmation] = useState(false);
 
   // Save booking data to localStorage whenever it changes
   useEffect(() => {
@@ -308,13 +309,18 @@ export default function BookingPage() {
     const isoString = dateTime.toISOString();
     setBooking({ ...booking, bookingDate: isoString });
     setDateTimeConfirmed(true);
-    setShowDateTimePicker(false);
     setError('');
+    setShowTimeConfirmation(true);
 
-    // Scroll to notes section
+    // Show success message before closing
     setTimeout(() => {
-      document.getElementById('notes-section')?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
+      setShowTimeConfirmation(false);
+      setShowDateTimePicker(false);
+      // Scroll to notes section after modal closes
+      setTimeout(() => {
+        document.getElementById('notes-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
+    }, 2000); // Keep modal open for 2 seconds to show confirmation
   };
 
   const createQRPayment = async (bookingId: string, amount: number, token: string) => {
@@ -1143,7 +1149,7 @@ export default function BookingPage() {
       {/* Date Time Picker Modal */}
       {showDateTimePicker && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
             <div className="p-6">
               <h3 className="text-lg font-semibold mb-4">Select Date & Time</h3>
 
@@ -1285,11 +1291,27 @@ export default function BookingPage() {
                   type="button"
                   onClick={() => setShowDateTimePicker(false)}
                   className="flex-1 btn-secondary"
+                  disabled={showTimeConfirmation}
                 >
                   Cancel
                 </button>
               </div>
             </div>
+
+            {/* Time Confirmation Overlay */}
+            {showTimeConfirmation && (
+              <div className="absolute inset-0 bg-green-500 bg-opacity-95 flex items-center justify-center rounded-lg">
+                <div className="text-center text-white">
+                  <div className="w-16 h-16 bg-white bg-opacity-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">Date & Time Confirmed!</h3>
+                  <p className="text-green-100">Your booking schedule has been set successfully.</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
