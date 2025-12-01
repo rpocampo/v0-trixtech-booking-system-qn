@@ -852,15 +852,77 @@ router.post('/', authMiddleware, async (req, res, next) => {
 router.get('/delivery-schedules', authMiddleware, async (req, res, next) => {
   try {
     const { date } = req.query;
-    const { getDeliverySchedules } = require('../utils/deliveryService');
 
-    // Get all delivery schedules for the date
-    const allSchedules = await getDeliverySchedules(date ? new Date(date) : null);
+    let query = {
+      customerId: req.user.id,
+      status: 'confirmed',
+      paymentStatus: { $in: ['partial', 'paid'] }
+    };
 
-    // Filter to only show customer's own bookings
-    const customerSchedules = allSchedules.filter(schedule =>
-      schedule.customerEmail === req.user.email
-    );
+    if (date) {
+      const queryDate = new Date(date);
+      const startOfDay = new Date(queryDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(queryDate);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      query.bookingDate = {
+        $gte: startOfDay,
+        $lt: endOfDay
+      };
+    }
+
+    // Find all confirmed/paid bookings for the date
+    const allBookings = await Booking.find(query)
+      .populate('serviceId', 'name category serviceType requiresDelivery')
+      .populate('customerId', 'name email phone')
+      .sort({ bookingDate: 1 });
+
+    // Filter for services that require delivery
+    const deliveryBookings = allBookings.filter(booking => {
+      const service = booking.serviceId;
+      if (!service) return false;
+
+      const deliveryCategories = ['equipment', 'furniture', 'lighting', 'sound-system', 'tents-canopies', 'linens-tableware'];
+      const deliveryServiceTypes = ['equipment', 'supply'];
+
+      return deliveryCategories.includes(service.category) ||
+             deliveryServiceTypes.includes(service.serviceType) ||
+             service.requiresDelivery === true ||
+             booking.requiresDelivery === true;
+    });
+
+    // Convert delivery bookings to schedule format
+    const customerSchedules = deliveryBookings.map(booking => {
+      // Use explicit delivery time if available, otherwise calculate (booking date + 1 day)
+      let deliveryDate;
+      if (booking.deliveryStartTime) {
+        deliveryDate = new Date(booking.deliveryStartTime);
+      } else {
+        deliveryDate = new Date(booking.bookingDate);
+        deliveryDate.setDate(deliveryDate.getDate() + 1);
+      }
+
+      const endTime = booking.deliveryEndTime
+        ? new Date(booking.deliveryEndTime)
+        : new Date(deliveryDate.getTime() + 60 * 60 * 1000); // 1 hour duration
+
+      return {
+        id: booking._id,
+        serviceName: booking.serviceId?.name || 'Unknown Service',
+        serviceCategory: booking.serviceId?.category || 'Unknown',
+        customerName: booking.customerId?.name || 'Unknown Customer',
+        customerEmail: booking.customerId?.email || '',
+        customerPhone: booking.customerId?.phone || '',
+        startTime: deliveryDate,
+        endTime: endTime,
+        duration: booking.deliveryDuration || 60,
+        status: booking.status,
+        quantity: booking.quantity,
+        totalPrice: booking.totalPrice,
+        notes: booking.notes
+      };
+    });
 
     res.json({
       success: true,

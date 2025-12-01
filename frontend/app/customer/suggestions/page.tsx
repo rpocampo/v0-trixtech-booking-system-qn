@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useCart } from '../../../components/CartContext';
 
 interface Service {
   _id: string;
@@ -42,12 +43,12 @@ interface PackageSuggestion {
 
 export default function SuggestionsPage() {
   const router = useRouter();
+  const { addToCart } = useCart();
   const [packageSuggestions, setPackageSuggestions] = useState<PackageSuggestion[]>([]);
   const [loadingPredictive, setLoadingPredictive] = useState(true);
   const [predictiveFilters, setPredictiveFilters] = useState({
     category: '',
     priceRange: '',
-    minConfidence: '',
   });
 
   useEffect(() => {
@@ -91,10 +92,6 @@ export default function SuggestionsPage() {
       if (predictiveFilters.priceRange === 'medium' && (price <= 1000 || price > 5000)) return false;
       if (predictiveFilters.priceRange === 'high' && price <= 5000) return false;
     }
-    if (predictiveFilters.minConfidence) {
-      const minConf = parseFloat(predictiveFilters.minConfidence);
-      if (pkg.confidence < minConf) return false;
-    }
     return true;
   });
 
@@ -115,6 +112,45 @@ export default function SuggestionsPage() {
     }
   };
 
+  const addPackageToCart = (pkg: PackageSuggestion) => {
+    try {
+      // Add main service to cart
+      addToCart({
+        id: pkg.mainService._id,
+        name: pkg.mainService.name,
+        price: pkg.mainService.basePrice,
+        serviceType: pkg.mainService.serviceType,
+        category: pkg.mainService.category,
+        image: pkg.mainService.image,
+        isAvailable: pkg.mainService.isAvailable,
+        availableQuantity: pkg.mainService.quantity,
+      });
+
+      // Add each equipment add-on to cart
+      pkg.addons.forEach(addon => {
+        if (addon.service.isAvailable) {
+          addToCart({
+            id: addon.service._id,
+            name: addon.service.name,
+            price: addon.service.basePrice,
+            quantity: Math.max(1, Math.round(addon.averageQuantity)), // Use average quantity, minimum 1
+            serviceType: addon.service.serviceType,
+            category: addon.service.category,
+            image: addon.service.image,
+            isAvailable: addon.service.isAvailable,
+            availableQuantity: addon.service.quantity,
+          });
+        }
+      });
+
+      // Show success message
+      alert(`✅ Added "${pkg.mainService.name} Package" to cart with ${pkg.addons.length} equipment add-ons!`);
+    } catch (error) {
+      console.error('Error adding package to cart:', error);
+      alert('Failed to add package to cart. Please try again.');
+    }
+  };
+
   if (loadingPredictive) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -130,7 +166,7 @@ export default function SuggestionsPage() {
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">📊 Modified Bookings</h1>
+        <h1 className="text-4xl font-bold text-gray-800 mb-2">📊 Booking Suggestions</h1>
         <p className="text-gray-600 text-lg">See what other customers added to their bookings</p>
       </div>
 
@@ -142,7 +178,7 @@ export default function SuggestionsPage() {
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
             </svg>
-            <h2 className="text-2xl font-bold">📦 Modified Packages from Other Customers</h2>
+            <h2 className="text-2xl font-bold">📦 Booking Suggestions from Other Customers</h2>
           </div>
           <p className="text-gray-600 mb-6">
             Complete packages with equipment add-ons that other customers frequently booked together
@@ -151,7 +187,7 @@ export default function SuggestionsPage() {
           {/* Filters for Predictive Suggestions */}
           <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
             <h3 className="text-lg font-semibold text-purple-800 mb-4">Filter Suggestions</h3>
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Category</label>
                 <select
@@ -180,23 +216,10 @@ export default function SuggestionsPage() {
                   <option value="high">₱5,001+</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Min Confidence</label>
-                <select
-                  value={predictiveFilters.minConfidence}
-                  onChange={(e) => setPredictiveFilters({ ...predictiveFilters, minConfidence: e.target.value })}
-                  className="input-field"
-                >
-                  <option value="">Any Confidence</option>
-                  <option value="0.8">High (80%+)</option>
-                  <option value="0.6">Medium (60%+)</option>
-                  <option value="0.4">Low (40%+)</option>
-                </select>
-              </div>
             </div>
             <div className="mt-4 flex gap-2">
               <button
-                onClick={() => setPredictiveFilters({ category: '', priceRange: '', minConfidence: '' })}
+                onClick={() => setPredictiveFilters({ category: '', priceRange: '' })}
                 className="btn-secondary"
               >
                 Clear Filters
@@ -314,10 +337,7 @@ export default function SuggestionsPage() {
                     </Link>
                     {pkg.mainService.isAvailable && (
                       <button
-                        onClick={() => {
-                          // Add package to cart logic
-                          alert(`Added ${pkg.mainService.name} Package to cart with ${pkg.addons.length} equipment add-ons!`);
-                        }}
+                        onClick={() => addPackageToCart(pkg)}
                         className="flex-1 btn-primary text-sm py-2"
                       >
                         Add Package to Cart
