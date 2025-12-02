@@ -198,13 +198,13 @@ export default function CartPage() {
   if (items.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center max-w-md">
-          <div className="text-8xl mb-6 opacity-50">🛒</div>
-          <h1 className="text-3xl font-bold text-[var(--foreground)] mb-4">Your Cart is Empty</h1>
-          <p className="text-[var(--muted)] mb-8">
+        <div className="text-center max-w-md w-full">
+          <div className="text-6xl sm:text-8xl mb-6 opacity-50">🛒</div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)] mb-4">Your Cart is Empty</h1>
+          <p className="text-[var(--muted)] mb-8 text-sm sm:text-base">
             Add some services to your cart to get started with your booking.
           </p>
-          <Link href="/customer/services" className="btn-primary">
+          <Link href="/customer/services" className="btn-primary w-full sm:w-auto">
             Browse Services
           </Link>
         </div>
@@ -213,7 +213,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6">
       {/* Real-time Stock Update Indicator */}
       {lastStockUpdate && (
         <div className="fixed top-4 right-4 z-50 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg animate-slide-in flex items-center gap-2">
@@ -223,29 +223,29 @@ export default function CartPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-4xl font-bold text-[var(--foreground)] mb-2">Shopping Cart</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-[var(--foreground)] mb-2">Shopping Cart</h1>
           <p className="text-[var(--muted)]">
             {totalItems} {totalItems === 1 ? 'item' : 'items'} in your cart
           </p>
         </div>
         <button
           onClick={handleClearCart}
-          className="btn-secondary text-red-600 hover:text-red-700 hover:bg-red-50"
+          className="btn-secondary text-red-600 hover:text-red-700 hover:bg-red-50 self-start sm:self-auto"
         >
           Clear Cart
         </button>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
           {items.map((item) => (
-            <div key={item.id} className="card p-6">
-              <div className="flex items-center gap-4">
+            <div key={item.id} className="card p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 {/* Item Image */}
-                <div className="w-20 h-20 rounded-lg bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 flex items-center justify-center text-2xl">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 flex items-center justify-center text-xl sm:text-2xl self-center sm:self-auto">
                   {item.image ? (
                     <img
                       src={item.image.startsWith('/uploads/') ? `http://localhost:5000${item.image}` : item.image}
@@ -266,7 +266,7 @@ export default function CartPage() {
                 </div>
 
                 {/* Item Details */}
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <h3 className="text-xl font-semibold text-[var(--foreground)] mb-1">
                     {item.name}
                   </h3>
@@ -294,53 +294,58 @@ export default function CartPage() {
                     )}
                   </p>
 
-                  {/* Quantity Controls */}
+                  {/* Quantity Display/Controls */}
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                        className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-semibold"
-                        disabled={item.quantity <= 1}
-                      >
-                        -
-                      </button>
-                      <input
-                        type="number"
-                        min="1"
-                        max={item.maxOrder || 999}
-                        value={item.quantity}
-                        onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
-                        className="w-16 text-center border rounded px-2 py-1"
-                      />
-                      <button
-                        onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                        className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-semibold"
-                        disabled={item.maxOrder ? item.quantity >= item.maxOrder : false}
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    {item.maxOrder && (
-                      <span className="text-xs text-[var(--muted)]">
-                        Max: {item.maxOrder}
-                      </span>
+                    {(item.serviceType === 'equipment' || item.serviceType === 'supply') ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
+                          className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-semibold"
+                          disabled={item.quantity <= 1}
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          max={item.maxOrder || 999}
+                          value={item.quantity}
+                          onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
+                          className="w-16 text-center border rounded px-2 py-1"
+                        />
+                        <button
+                          onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
+                          className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-semibold"
+                          disabled={item.maxOrder ? item.quantity >= item.maxOrder : false}
+                        >
+                          +
+                        </button>
+                        {item.maxOrder && (
+                          <span className="text-xs text-[var(--muted)]">
+                            Max: {item.maxOrder}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-[var(--muted)]">Qty: {item.quantity}</span>
+                      </div>
                     )}
                   </div>
 
                 </div>
 
                 {/* Price and Actions */}
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-[var(--primary)] mb-2">
+                <div className="flex flex-col sm:items-end gap-2 sm:gap-0">
+                  <div className="text-xl sm:text-2xl font-bold text-[var(--primary)]">
                     ₱{isNaN(item.price) ? '0.00' : (item.price * item.quantity).toFixed(2)}
                   </div>
-                  <div className="text-sm text-[var(--muted)] mb-4">
+                  <div className="text-xs sm:text-sm text-[var(--muted)]">
                     ₱{isNaN(item.price) ? '0.00' : item.price.toFixed(2)} each
                   </div>
                   <button
                     onClick={() => handleRemoveItem(item.id)}
-                    className="text-red-600 hover:text-red-700 text-sm underline"
+                    className="text-red-600 hover:text-red-700 text-sm underline self-start sm:self-end mt-2"
                   >
                     Remove
                   </button>
@@ -351,8 +356,8 @@ export default function CartPage() {
         </div>
 
         {/* Cart Summary */}
-        <div className="lg:col-span-1">
-          <div className="card p-6 sticky top-6">
+        <div className="lg:col-span-1 order-first lg:order-last">
+          <div className="card p-4 sm:p-6 sticky top-6">
             <h2 className="text-2xl font-bold text-[var(--foreground)] mb-6">Cart Summary</h2>
 
             {/* Stock Validation Errors */}
@@ -454,7 +459,7 @@ export default function CartPage() {
               </div>
             ) : (
               <>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {(showAllRecommendations ? equipmentRecommendations : equipmentRecommendations.slice(0, 4)).map((rec) => (
                     <div key={rec._id} className="border border-[var(--border)] rounded-lg p-4 hover:shadow-md transition-shadow">
                       {/* Equipment Image */}

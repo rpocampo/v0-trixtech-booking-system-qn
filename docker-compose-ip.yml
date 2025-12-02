@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: trixtech-mongodb-ip
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: trixtech2024!
+      MONGO_INITDB_DATABASE: trixtech_prod
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./mongodb/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - trixtech-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # TRIXTECH Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: trixtech-backend-ip
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - ./backend/.env.production
+    ports:
+      - "5000:5000"
+    volumes:
+      - uploads:/app/uploads
+      - logs:/app/logs
+    networks:
+      - trixtech-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+
+  # TRIXTECH Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: trixtech-frontend-ip
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=http://YOUR_SERVER_IP
+      - NEXT_PUBLIC_SOCKET_URL=http://YOUR_SERVER_IP
+    env_file:
+      - ./frontend/.env.production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+      - mongodb
+    networks:
+      - trixtech-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+
+  # Nginx Reverse Proxy (IP-based)
+  nginx:
+    image: nginx:alpine
+    container_name: trixtech-nginx-ip
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx-ip.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - trixtech-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+volumes:
+  uploads:
+  logs:
+  mongodb_data:
+  mongodb_config:
+
+networks:
+  trixtech-network:
+    driver: bridge

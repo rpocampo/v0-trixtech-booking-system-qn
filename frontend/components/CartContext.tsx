@@ -73,15 +73,20 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       const existingItem = currentItems.find(item => item.id === newItem.id);
 
       if (existingItem) {
-        // Update quantity of existing item
+        // For services, don't increase quantity - keep at 1
+        if (existingItem.serviceType === 'service') {
+          return currentItems; // No change
+        }
+        // Update quantity of existing equipment/supply item
         return currentItems.map(item =>
           item.id === newItem.id
             ? { ...item, quantity: Math.min(item.quantity + quantity, item.maxOrder || item.quantity + quantity) }
             : item
         );
       } else {
-        // Add new item
-        return [...currentItems, { ...newItem, quantity }];
+        // For services, always add with quantity 1
+        const finalQuantity = newItem.serviceType === 'service' ? 1 : quantity;
+        return [...currentItems, { ...newItem, quantity: finalQuantity }];
       }
     });
   };
@@ -97,11 +102,17 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
     }
 
     setItems(currentItems =>
-      currentItems.map(item =>
-        item.id === id
-          ? { ...item, quantity: Math.min(quantity, item.maxOrder || quantity) }
-          : item
-      )
+      currentItems.map(item => {
+        if (item.id === id) {
+          // For services, quantity is always 1
+          if (item.serviceType === 'service') {
+            return { ...item, quantity: 1 };
+          }
+          // For equipment/supply, allow quantity changes within limits
+          return { ...item, quantity: Math.min(quantity, item.maxOrder || quantity) };
+        }
+        return item;
+      })
     );
   };
 

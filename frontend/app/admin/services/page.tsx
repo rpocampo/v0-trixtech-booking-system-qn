@@ -531,6 +531,51 @@ export default function AdminServices() {
                 </select>
               </div>
 
+              {/* Location - Auto-detected for equipment */}
+              {(formData.serviceType === 'equipment' || formData.serviceType === 'supply') && (
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    Location (Auto-detected)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={(() => {
+                        // Simulate the auto-detection logic from backend
+                        const name = formData.name ? formData.name.toLowerCase() : '';
+                        const category = formData.category ? formData.category.toLowerCase() : '';
+
+                        const outdoorKeywords = [
+                          'tent', 'canopy', 'awning', 'outdoor', 'garden', 'patio', 'lawn',
+                          'barbecue', 'bbq', 'grill', 'fire pit', 'fireplace', 'outdoor furniture'
+                        ];
+
+                        const indoorKeywords = [
+                          'indoor', 'interior', 'house', 'home', 'room', 'hall', 'theater',
+                          'auditorium', 'conference room', 'meeting room', 'classroom',
+                          'kitchen', 'dining room', 'living room', 'bedroom', 'bathroom',
+                          'office', 'workspace', 'desk', 'chair', 'table', 'sofa', 'couch'
+                        ];
+
+                        if (outdoorKeywords.some(keyword => name.includes(keyword) || category.includes(keyword))) {
+                          return 'outdoor';
+                        } else if (indoorKeywords.some(keyword => name.includes(keyword) || category.includes(keyword))) {
+                          return 'indoor';
+                        } else {
+                          return 'both';
+                        }
+                      })()}
+                      readOnly
+                      className="input-field bg-gray-50 cursor-not-allowed"
+                    />
+                    <span className="text-xs text-blue-600">🤖 Auto-detected</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Location is automatically determined based on equipment name and category
+                  </p>
+                </div>
+              )}
+
               {/* Price */}
               <div>
                 <label className="block text-sm font-medium mb-2 text-gray-700">
@@ -769,10 +814,13 @@ export default function AdminServices() {
               <div className="flex-1">
                 <h3 className="text-xl font-semibold">{service.name}</h3>
                 <p className="text-[var(--muted)] text-sm mt-1">{service.description}</p>
-                <div className="flex gap-6 mt-4 text-sm">
+                <div className="flex flex-wrap gap-6 mt-4 text-sm">
                   <span>Category: <span className="font-semibold capitalize">{service.category}</span></span>
                   <span>Duration: <span className="font-semibold">{service.duration || 1} day{service.duration !== 1 ? 's' : ''}</span></span>
                   <span>Price: <span className="font-semibold text-[var(--primary)]">₱{service.price}</span></span>
+                  {(service.serviceType === 'equipment' || service.serviceType === 'supply') && service.location && (
+                    <span>Location: <span className="font-semibold capitalize">{service.location === 'both' ? 'indoor/outdoor' : service.location}</span></span>
+                  )}
                   {service.serviceType === 'service' && (
                     <span>Max Guests: <span className="font-semibold">{service.maxOrder || 1}</span></span>
                   )}

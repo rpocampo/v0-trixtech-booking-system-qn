@@ -16,9 +16,9 @@ This guide provides optimized deployment instructions for the TRIXTECH booking s
 ### 📋 Required Accounts & Services
 - [ ] Hostinger KVM1 VPS account
 - [ ] Domain name (pointed to VPS IP)
-- [ ] MongoDB Atlas account (free tier)
-- [ ] Gmail account (for SMTP)
+- [ ] Gmail account (for SMTP - already configured)
 - [ ] SSH access to VPS
+- [ ] **MongoDB runs locally on KVM1 (no external account needed)**
 
 ## 🚀 Quick Deployment
 
@@ -67,14 +67,14 @@ chmod +x deploy-kvm1.sh
 
 **Backend Configuration (`backend/.env`):**
 ```bash
-# Database (MongoDB Atlas)
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/trixtech_prod
+# Database (Local MongoDB)
+MONGODB_URI=mongodb://trixtech_user:trixtech2024!@mongodb:27017/trixtech_prod?authSource=trixtech_prod
 
 # Security
 JWT_SECRET=your-32-character-super-secret-key-here
 
-# Email
-EMAIL_USER=your-email@gmail.com
+# Email (already configured)
+EMAIL_USER=trixtech011@gmail.com
 EMAIL_PASSWORD=your-app-password
 ADMIN_EMAIL=admin@yourdomain.com
 
@@ -110,12 +110,17 @@ sudo crontab -e
 
 ### Step 5: Database Setup
 
-**MongoDB Atlas (Free Tier):**
-1. Create account at [mongodb.com](https://mongodb.com)
-2. Create free cluster
-3. Create database user
-4. Whitelist your VPS IP: `0.0.0.0/0`
-5. Get connection string and update `MONGODB_URI`
+**Local MongoDB (Runs on KVM1):**
+- ✅ **MongoDB automatically starts** with your deployment
+- ✅ **Database initialized** with collections and indexes
+- ✅ **Credentials configured** in environment variables
+- ✅ **Data persistence** through Docker volumes
+
+**Database Details:**
+- **Database**: `trixtech_prod`
+- **Username**: `trixtech_user`
+- **Password**: `trixtech2024!`
+- **Connection**: `mongodb://trixtech_user:trixtech2024!@mongodb:27017/trixtech_prod`
 
 ### Step 6: Email Configuration
 
@@ -130,17 +135,21 @@ sudo crontab -e
 - **Backend**: Limited to 512MB RAM
 - **Frontend**: Limited to 512MB RAM
 - **Nginx**: Limited to 128MB RAM
-- **Total**: ~1.2GB RAM usage (leaves ~2.8GB for system)
+- **MongoDB**: Limited to 256MB RAM
+- **Total**: ~1.4GB RAM usage (leaves ~2.6GB for system)
 
 ### CPU Management
 - **Backend**: 0.5 CPU cores max
 - **Frontend**: 0.5 CPU cores max
 - **Nginx**: 0.2 CPU cores max
+- **MongoDB**: 0.3 CPU cores max
 
 ### Database Optimization
-- Connection pool: 20 max (reduced from 100)
-- Heartbeat frequency: 10s (reduced from 5s)
-- Uses MongoDB Atlas (no local DB overhead)
+- Local MongoDB with optimized settings
+- Connection pool: 20 max (KVM1 optimized)
+- Automatic indexing on startup
+- Data persistence through Docker volumes
+- Health checks and auto-restart
 
 ## 📊 Monitoring & Maintenance
 
@@ -189,11 +198,17 @@ docker-compose -f docker-compose.kvm1.yml restart
 
 **Database Connection Issues:**
 ```bash
-# Test connection
-docker exec trixtech-backend-kvm1 mongo mongodb://mongodb:27017/trixtech_prod
+# Check MongoDB container status
+docker-compose -f docker-compose.kvm1.yml ps mongodb
 
-# Check MongoDB Atlas status
-# Ensure IP whitelist includes your VPS IP
+# Test MongoDB connection
+docker-compose -f docker-compose.kvm1.yml exec mongodb mongosh --eval "db.adminCommand('ping')"
+
+# Check MongoDB logs
+docker-compose -f docker-compose.kvm1.yml logs mongodb
+
+# Restart MongoDB if needed
+docker-compose -f docker-compose.kvm1.yml restart mongodb
 ```
 
 **SSL Certificate Issues:**
@@ -236,6 +251,33 @@ sudo netstat -tlnp | grep :443
 - Implement CDN for static assets
 - Use database read replicas if needed
 
+## ⚡ Post-Purchase Quick Setup
+
+After purchasing Hostinger KVM1, follow these steps to get your TRIXTECH system running immediately:
+
+### Immediate Actions (Do These First)
+- [ ] **Get VPS Details**: Note your VPS IP address and SSH credentials from Hostinger
+- [ ] **Connect via SSH**: `ssh root@your-vps-ip`
+- [ ] **Update System**: `sudo apt update && sudo apt upgrade -y`
+- [ ] **Install Docker**: Follow Step 1 in Quick Deployment above
+- [ ] **Clone Repository**: `git clone https://github.com/your-username/trixtech-booking-system.git`
+- [ ] **Navigate to Project**: `cd trixtech-booking-system`
+- [ ] **Run Deployment**: `chmod +x deploy-kvm1.sh && ./deploy-kvm1.sh`
+
+### Configuration Required (Before Going Live)
+- [ ] **Update Domain**: Replace `yourdomain.com` in nginx.conf and environment files
+- [ ] **Setup MongoDB Atlas**: Create account, cluster, and update MONGODB_URI
+- [ ] **Configure Email**: Update Gmail SMTP settings in backend/.env
+- [ ] **Generate JWT Secret**: Create secure 32-character secret for JWT_SECRET
+- [ ] **Point Domain**: Update DNS A records to point to VPS IP
+- [ ] **SSL Certificate**: Run Certbot to get free SSL certificate
+
+### Verification Steps
+- [ ] **Test HTTP Access**: Visit `http://your-vps-ip` to see the application
+- [ ] **Check API Health**: Verify `http://your-vps-ip/api/health` returns "healthy"
+- [ ] **Database Connection**: Ensure MongoDB Atlas connection works
+- [ ] **Email Testing**: Send a test email to verify SMTP configuration
+
 ## 🎯 Success Checklist
 
 - [ ] Application accessible at `https://yourdomain.com`
@@ -243,8 +285,10 @@ sudo netstat -tlnp | grep :443
 - [ ] User registration and login functional
 - [ ] Email notifications working
 - [ ] SSL certificate valid
+- [ ] Local MongoDB running and accessible
 - [ ] Database connections stable
 - [ ] Resource usage within KVM1 limits
+- [ ] Data persistence confirmed (MongoDB volumes)
 
 ## 📞 Support
 

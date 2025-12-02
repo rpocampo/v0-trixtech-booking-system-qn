@@ -410,7 +410,7 @@ export default function BookingPage() {
         console.log('Booking confirmed successfully');
         // Clear saved booking data on successful completion
         localStorage.removeItem(`booking_page_${serviceId}`);
-        router.push('/customer/bookings?payment=success');
+        router.push('/customer/bookings');
       } else {
         setError('Failed to confirm booking. Please contact support.');
       }
@@ -938,7 +938,7 @@ export default function BookingPage() {
                           if (response.ok) {
                             setPaymentStatus('completed');
                             setTimeout(() => {
-                              router.push('/customer/bookings?payment=success');
+                              router.push('/customer/bookings');
                             }, 2000);
                           } else {
                             setPaymentStatus('failed');

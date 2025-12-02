@@ -51,7 +51,6 @@ export default function AdminPaymentsPage() {
     open: boolean;
     imageUrl: string;
     title: string;
-    zoom: number;
     loading: boolean;
     error: boolean;
     loadTimeout?: NodeJS.Timeout;
@@ -59,7 +58,6 @@ export default function AdminPaymentsPage() {
     open: false,
     imageUrl: '',
     title: '',
-    zoom: 1,
     loading: false,
     error: false
   });
@@ -294,7 +292,6 @@ export default function AdminPaymentsPage() {
                                 open: true,
                                 imageUrl: fullImageUrl,
                                 title: `Receipt for ₱${payment.amount.toFixed(2)} - ${payment.referenceNumber}`,
-                                zoom: 1,
                                 loading: false,
                                 error: false
                               });
@@ -309,7 +306,6 @@ export default function AdminPaymentsPage() {
                                 open: true,
                                 imageUrl: fullImageUrl,
                                 title: `Receipt for ₱${payment.amount.toFixed(2)} - ${payment.referenceNumber}`,
-                                zoom: 1,
                                 loading: false,
                                 error: true
                               });
@@ -324,7 +320,6 @@ export default function AdminPaymentsPage() {
                             open: true,
                             imageUrl: fullImageUrl,
                             title: `Receipt for ₱${payment.amount.toFixed(2)} - ${payment.referenceNumber}`,
-                            zoom: 1,
                             loading: true,
                             error: false,
                             loadTimeout: timeout
@@ -476,27 +471,6 @@ export default function AdminPaymentsPage() {
                 <div className="flex items-center gap-3">
                   {imageModal.imageUrl && !imageModal.error && (
                     <>
-                      {/* Zoom Controls */}
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setImageModal(prev => ({ ...prev, zoom: Math.max(0.25, prev.zoom - 0.25) }))}
-                          className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm font-medium"
-                          title="Zoom Out"
-                        >
-                          🔍-
-                        </button>
-                        <span className="text-sm text-gray-600 min-w-[60px] text-center">
-                          {Math.round(imageModal.zoom * 100)}%
-                        </span>
-                        <button
-                          onClick={() => setImageModal(prev => ({ ...prev, zoom: Math.min(3, prev.zoom + 0.25) }))}
-                          className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm font-medium"
-                          title="Zoom In"
-                        >
-                          🔍+
-                        </button>
-                      </div>
-
                       {/* Download Button */}
                       <button
                         onClick={() => {
@@ -526,7 +500,6 @@ export default function AdminPaymentsPage() {
                         open: false,
                         imageUrl: '',
                         title: '',
-                        zoom: 1,
                         loading: false,
                         error: false
                       });
@@ -550,7 +523,7 @@ export default function AdminPaymentsPage() {
                     <img
                       src={imageModal.imageUrl}
                       alt="Receipt Image"
-                      className="w-full rounded-lg"
+                      className="max-w-full max-h-[70vh] w-auto h-auto object-contain rounded-lg"
                       onLoad={() => {
                         console.log('Image loaded successfully:', imageModal.imageUrl);
                         setImageModal(prev => {

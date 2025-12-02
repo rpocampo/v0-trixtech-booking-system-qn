@@ -175,7 +175,7 @@ export default function ServiceDetailPage() {
               {service.location && (
                 <div className="flex justify-between">
                   <span className="text-[var(--muted)]">Location:</span>
-                  <span className="font-semibold capitalize">{service.location}</span>
+                  <span className="font-semibold capitalize">{service.location === 'both' ? 'indoor/outdoor' : service.location}</span>
                 </div>
               )}
 

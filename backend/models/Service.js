@@ -198,6 +198,69 @@ const serviceSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Pre-save middleware to automatically detect location for equipment
+serviceSchema.pre('save', function(next) {
+  // Only auto-detect for equipment and supply types
+  if (this.serviceType === 'equipment' || this.serviceType === 'supply') {
+    // Skip if location is already explicitly set and not 'both'
+    if (this.location && this.location !== 'both') {
+      return next();
+    }
+
+    const name = this.name ? this.name.toLowerCase() : '';
+    const category = this.category ? this.category.toLowerCase() : '';
+
+    // Equipment that is typically outdoor-only
+    const outdoorKeywords = [
+      'tent', 'canopy', 'awning', 'outdoor', 'garden', 'patio', 'lawn',
+      'barbecue', 'bbq', 'grill', 'fire pit', 'fireplace', 'outdoor furniture',
+      'deck', 'porch', 'terrace', 'balcony', 'pool', 'spa', 'jacuzzi',
+      'hot tub', 'outdoor lighting', 'string lights', 'lantern', 'torch'
+    ];
+
+    // Equipment that is typically indoor-only
+    const indoorKeywords = [
+      'indoor', 'interior', 'house', 'home', 'room', 'hall', 'theater',
+      'auditorium', 'conference room', 'meeting room', 'classroom',
+      'kitchen', 'dining room', 'living room', 'bedroom', 'bathroom',
+      'office', 'workspace', 'desk', 'chair', 'table', 'sofa', 'couch'
+    ];
+
+    // Check for outdoor keywords
+    const isOutdoor = outdoorKeywords.some(keyword =>
+      name.includes(keyword) || category.includes(keyword)
+    );
+
+    // Check for indoor keywords
+    const isIndoor = indoorKeywords.some(keyword =>
+      name.includes(keyword) || category.includes(keyword)
+    );
+
+    // Specific equipment types that are outdoor-only
+    const outdoorEquipmentTypes = [
+      'tents-canopies', 'outdoor-furniture', 'barbecue-grills',
+      'outdoor-lighting', 'pools-spas', 'gardening-tools'
+    ];
+
+    // Specific equipment types that are indoor-only
+    const indoorEquipmentTypes = [
+      'indoor-furniture', 'kitchen-equipment', 'office-equipment',
+      'audio-visual', 'stage-lighting', 'sound-systems'
+    ];
+
+    if (outdoorEquipmentTypes.includes(category) || isOutdoor) {
+      this.location = 'outdoor';
+    } else if (indoorEquipmentTypes.includes(category) || isIndoor) {
+      this.location = 'indoor';
+    } else {
+      // Default to 'both' for equipment that can be used in either location
+      this.location = 'both';
+    }
+  }
+
+  next();
+});
+
 // Add instance method to calculate price based on days before checkout
 serviceSchema.methods.calculatePrice = function(daysBeforeCheckout = 0) {
   // Ensure basePrice is valid

@@ -492,10 +492,10 @@ export default function CheckoutPage() {
 
       if (response.ok && data.success) {
         setPaymentStatus('paid');
-        // Clear cart and redirect to success page
+        // Clear cart and redirect to customer bookings page
         setTimeout(() => {
           clearCart();
-          router.push('/customer/bookings?payment=success');
+          router.push('/customer/bookings');
         }, 2000);
       } else {
         if (data.flaggedForReview) {

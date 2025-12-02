@@ -219,7 +219,7 @@ export default function Services() {
   if (loading) return <div>Loading services...</div>;
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in px-4 sm:px-6 lg:px-8">
       {/* Real-time Update Indicator */}
       {updating && (
         <div className="fixed top-4 right-4 z-50 bg-[var(--primary)] text-white px-4 py-2 rounded-lg shadow-lg animate-slide-in flex items-center gap-2">
@@ -381,7 +381,7 @@ export default function Services() {
               {filteredServices.map((service, index) => (
                 <div
                   key={service._id}
-                  className="service-card group animate-fade-in w-full min-h-[350px] min-w-[280px]"
+                  className="service-card group animate-fade-in w-full min-h-[300px] sm:min-h-[350px]"
                   style={{ animationDelay: `${index * 100}ms` }}
                 >
                 {/* Service Image */}
@@ -483,7 +483,7 @@ export default function Services() {
                           <span>📍</span>
                           <span className="truncate">Location</span>
                         </span>
-                        <span className="font-semibold text-[var(--foreground)] flex-shrink-0 ml-2 capitalize">{service.location}</span>
+                        <span className="font-semibold text-[var(--foreground)] flex-shrink-0 ml-2 capitalize">{service.location === 'both' ? 'indoor/outdoor' : service.location}</span>
                       </div>
                     )}
                   </div>
@@ -499,16 +499,16 @@ export default function Services() {
                     {isInCart(service._id) ? (
                       <div className="flex flex-col md:flex-row gap-3 flex-1">
                         <button
-                          onClick={() => handleAddToCart(service)}
-                          className="btn-secondary flex-1 text-center text-green-600 border-green-200 hover:bg-green-50 text-sm py-3 sm:py-4"
+                          disabled
+                          className="btn-secondary flex-1 text-center text-green-600 border-green-200 opacity-60 cursor-not-allowed text-sm py-3 sm:py-4"
                         >
-                          + Add More
+                          ✓ In Cart
                         </button>
                         <Link
                           href="/customer/cart"
                           className="btn-primary flex-1 text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300 text-sm py-3 sm:py-4"
                         >
-                          View Cart ({getItemQuantity(service._id)})
+                          View Cart
                         </Link>
                       </div>
                     ) : (
@@ -625,7 +625,7 @@ export default function Services() {
                       {selectedService.location && (
                         <div className="flex justify-between">
                           <span className="text-[var(--muted)]">Location:</span>
-                          <span className="font-medium capitalize">{selectedService.location}</span>
+                          <span className="font-medium capitalize">{selectedService.location === 'both' ? 'indoor/outdoor' : selectedService.location}</span>
                         </div>
                       )}
                       {selectedService.serviceType === 'service' && (

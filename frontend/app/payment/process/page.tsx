@@ -545,7 +545,7 @@ function PaymentProcessContent() {
                           setPaymentStatus('completed');
                           clearCart();
                           setTimeout(() => {
-                            router.push('/customer/bookings?payment=success');
+                            router.push('/customer/bookings');
                           }, 2000);
                         } else {
                           console.log('Receipt verification response:', data); // Debug log
