@@ -228,9 +228,9 @@ const createQRPayment = async (bookingId, amount, userId, paymentType = 'full') 
       ],
       amount,
       reference: referenceNumber,
-      merchant: 'MI**I M.',
+      merchant: 'G** A** P.',
       note: `Click the QR code to open GCash with ₱${amount.toFixed(2)} pre-filled, or scan it manually. Include "${referenceNumber}" in the message/notes field for faster processing.`,
-      qrData: '00020101021127830012com.p2pqrpay0111GXCHPHM2XXX02089996440303152170200000006560417DWQM4TK3JDO83CHRX5204601653036085802PH5908MI**I M.6008Caloocan6104123463045192' // The actual GCash QR data
+      qrData: '00020101021127830012com.p2pqrpay0111GXCHPHM2XXX02089996440303152170200000006560417DWQM4TK3JDNWJXZR45204601653036085802PH5910G** A** P.6007NASUGBU610412346304CDAA' // The actual GCash QR data
     };
 
     // Update payment with QR data

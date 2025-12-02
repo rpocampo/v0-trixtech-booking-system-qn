@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # TRIXTECH Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: trixtech-backend-kvm1
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - ./backend/.env.production
+    ports:
+      - "5000:5000"
+    volumes:
+      - uploads:/app/uploads
+      - logs:/app/logs
+    networks:
+      - trixtech-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+
+  # TRIXTECH Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: trixtech-frontend-kvm1
+    restart: unless-stopped
+    environment:
+      - NEXT_PUBLIC_API_URL=https://api.yourdomain.com
+      - NEXT_PUBLIC_SOCKET_URL=https://api.yourdomain.com
+    env_file:
+      - ./frontend/.env.production
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - trixtech-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: trixtech-nginx-kvm1
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - trixtech-network
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+volumes:
+  uploads:
+  logs:
+
+networks:
+  trixtech-network:
+    driver: bridge

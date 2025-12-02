@@ -100,7 +100,7 @@ router.post('/create-cart-payment', authMiddleware, async (req, res) => {
     await payment.save();
 
     // Generate payment QR code data
-    const { generateQRCodeDataURL, generatePaymentInstructions } = require('../utils/qrCodeService');
+    const { generateQRCodeDataURL, generatePaymentInstructions, generateGCashBrandingImage } = require('../utils/qrCodeService');
 
     const paymentDescription = `Cart Payment - ${transactionId}`;
 
@@ -115,6 +115,7 @@ router.post('/create-cart-payment', authMiddleware, async (req, res) => {
     };
 
     const qrCode = await generateQRCodeDataURL(qrData);
+    const brandingImage = await generateGCashBrandingImage();
     const instructions = generatePaymentInstructions(qrData);
 
     // Update payment with QR data
@@ -125,6 +126,7 @@ router.post('/create-cart-payment', authMiddleware, async (req, res) => {
     res.status(200).json({
       success: true,
       qrCode,
+      brandingImage,
       instructions,
       referenceNumber,
       transactionId,

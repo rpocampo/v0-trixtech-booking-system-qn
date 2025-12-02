@@ -54,6 +54,7 @@ export default function CheckoutPage() {
   const [paymentType, setPaymentType] = useState<'full'>('full');
   const [qrPayment, setQrPayment] = useState<{
     qrCode: string;
+    brandingImage: string;
     instructions: any;
     referenceNumber: string;
     transactionId: string;
@@ -428,6 +429,7 @@ export default function CheckoutPage() {
         setPaymentBooking(bookingIntents); // Store all intents
         setQrPayment({
           qrCode: paymentData.qrCode,
+          brandingImage: paymentData.brandingImage,
           instructions: paymentData.instructions,
           referenceNumber: paymentData.referenceNumber,
           transactionId: paymentData.transactionId,
@@ -1748,42 +1750,71 @@ export default function CheckoutPage() {
                 </div>
 
                 <div className="flex justify-center mb-6">
-                  <div className="bg-white p-4 rounded-lg border-2 border-gray-200 relative">
-                    {qrPayment.qrCode ? (
+                  <div className="bg-white p-4 rounded-lg border-2 border-gray-200 relative space-y-4">
+                    {/* Brand Name Section - Above QR Code */}
+                    <div className="flex justify-center">
                       <img
-                        src={qrPayment.qrCode}
-                        alt="GCash QR Code"
-                        className="w-64 h-64"
+                        src="/brandname.jpg"
+                        alt="Brand Name"
+                        className="h-8 max-w-full object-contain"
                         onError={(e) => {
-                          console.error('QR code failed to load, src:', qrPayment.qrCode);
+                          console.error('Brand name image failed to load');
                           e.currentTarget.style.display = 'none';
-                          // Show error message instead
-                          const errorDiv = document.createElement('div');
-                          errorDiv.className = 'w-64 h-64 flex items-center justify-center bg-red-50 border-2 border-red-200 rounded-lg';
-                          errorDiv.innerHTML = `
-                            <div class="text-center text-red-600">
-                              <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                              </svg>
-                              <p class="text-sm font-medium">QR Code Failed to Load</p>
-                              <button onclick="window.location.reload()" class="mt-2 text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">
-                                Retry
-                              </button>
-                            </div>
-                          `;
-                          e.currentTarget.parentNode?.replaceChild(errorDiv, e.currentTarget);
                         }}
                       />
-                    ) : (
-                      <div className="w-64 h-64 flex items-center justify-center bg-gray-100 border-2 border-gray-300 rounded-lg">
-                        <div className="text-center text-gray-500">
-                          <svg className="w-12 h-12 mx-auto mb-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
-                          <p className="text-sm">Loading QR Code...</p>
+                    </div>
+
+                    {/* QR Code Section */}
+                    <div className="flex justify-center">
+                      {qrPayment.qrCode ? (
+                        <img
+                          src={qrPayment.qrCode}
+                          alt="GCash QR Code"
+                          className="w-64 h-64"
+                          onError={(e) => {
+                            console.error('QR code failed to load, src:', qrPayment.qrCode);
+                            e.currentTarget.style.display = 'none';
+                            // Show error message instead
+                            const errorDiv = document.createElement('div');
+                            errorDiv.className = 'w-64 h-64 flex items-center justify-center bg-red-50 border-2 border-red-200 rounded-lg';
+                            errorDiv.innerHTML = `
+                              <div class="text-center text-red-600">
+                                <svg class="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <p class="text-sm font-medium">QR Code Failed to Load</p>
+                                <button onclick="window.location.reload()" class="mt-2 text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded">
+                                  Retry
+                                </button>
+                              </div>
+                            `;
+                            e.currentTarget.parentNode?.replaceChild(errorDiv, e.currentTarget);
+                          }}
+                        />
+                      ) : (
+                        <div className="w-64 h-64 flex items-center justify-center bg-gray-100 border-2 border-gray-300 rounded-lg">
+                          <div className="text-center text-gray-500">
+                            <svg className="w-12 h-12 mx-auto mb-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <p className="text-sm">Loading QR Code...</p>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+
+                    {/* GCash Name Section - Below QR Code */}
+                    <div className="flex justify-center">
+                      <img
+                        src="/gcashname.jpg"
+                        alt="GCash Name"
+                        className="h-8 max-w-full object-contain"
+                        onError={(e) => {
+                          console.error('GCash name image failed to load');
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
 
