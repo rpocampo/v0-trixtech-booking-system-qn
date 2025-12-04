@@ -528,53 +528,39 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-4">
       {/* Progress Steps */}
-      <div className="mb-8">
-        <div className="flex items-center justify-center space-x-4">
-          <div className={`flex items-center space-x-2 ${currentStep === 'review' ? 'text-indigo-600' : currentStep === 'schedule' || currentStep === 'confirm' || currentStep === 'payment' ? 'text-green-600' : 'text-gray-400'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${currentStep === 'review' ? 'bg-indigo-600 text-white' : currentStep === 'schedule' || currentStep === 'confirm' || currentStep === 'payment' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
+      <div className="mb-4">
+        <div className="flex items-center justify-center space-x-2">
+          <div className={`flex items-center space-x-1 ${currentStep === 'review' ? 'text-indigo-600' : currentStep === 'schedule' || currentStep === 'confirm' || currentStep === 'payment' ? 'text-green-600' : 'text-gray-400'}`}>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep === 'review' ? 'bg-indigo-600 text-white' : currentStep === 'schedule' || currentStep === 'confirm' || currentStep === 'payment' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
               1
             </div>
-            <span className="font-medium">Review Cart</span>
+            <span className="font-medium text-xs">Review</span>
           </div>
-          <div className={`w-16 h-0.5 ${currentStep === 'schedule' || currentStep === 'confirm' || currentStep === 'payment' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
-          <div className={`flex items-center space-x-2 ${currentStep === 'schedule' ? 'text-indigo-600' : currentStep === 'confirm' || currentStep === 'payment' ? 'text-green-600' : 'text-gray-400'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${currentStep === 'schedule' ? 'bg-indigo-600 text-white' : currentStep === 'confirm' || currentStep === 'payment' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
+          <div className={`w-8 h-0.5 ${currentStep === 'schedule' || currentStep === 'confirm' || currentStep === 'payment' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
+          <div className={`flex items-center space-x-1 ${currentStep === 'schedule' ? 'text-indigo-600' : currentStep === 'confirm' || currentStep === 'payment' ? 'text-green-600' : 'text-gray-400'}`}>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep === 'schedule' ? 'bg-indigo-600 text-white' : currentStep === 'confirm' || currentStep === 'payment' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
               2
             </div>
-            <span className="font-medium">Delivery date and time</span>
+            <span className="font-medium text-xs">Schedule</span>
           </div>
-          <div className={`w-16 h-0.5 ${currentStep === 'confirm' || currentStep === 'payment' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
-          <div className={`flex items-center space-x-2 ${currentStep === 'confirm' ? 'text-indigo-600' : currentStep === 'payment-type' || currentStep === 'payment' ? 'text-green-600' : 'text-gray-400'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${currentStep === 'confirm' ? 'bg-indigo-600 text-white' : currentStep === 'payment-type' || currentStep === 'payment' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
+          <div className={`w-8 h-0.5 ${currentStep === 'confirm' || currentStep === 'payment' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
+          <div className={`flex items-center space-x-1 ${currentStep === 'confirm' || currentStep === 'payment-type' || currentStep === 'payment' ? 'text-indigo-600' : 'text-gray-400'}`}>
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep === 'confirm' || currentStep === 'payment-type' || currentStep === 'payment' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
               3
             </div>
-            <span className="font-medium">Confirm Booking</span>
-          </div>
-          <div className={`w-16 h-0.5 ${currentStep === 'payment-type' || currentStep === 'payment' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
-          <div className={`flex items-center space-x-2 ${currentStep === 'payment-type' ? 'text-indigo-600' : currentStep === 'payment' ? 'text-green-600' : 'text-gray-400'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${currentStep === 'payment-type' ? 'bg-indigo-600 text-white' : currentStep === 'payment' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
-              4
-            </div>
-            <span className="font-medium">Payment Options</span>
-          </div>
-          <div className={`w-16 h-0.5 ${currentStep === 'payment' ? 'bg-green-600' : 'bg-gray-200'}`}></div>
-          <div className={`flex items-center space-x-2 ${currentStep === 'payment' ? 'text-indigo-600' : 'text-gray-400'}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${currentStep === 'payment' ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-600'}`}>
-              5
-            </div>
-            <span className="font-medium">Process Payment</span>
+            <span className="font-medium text-xs">Confirm & Pay</span>
           </div>
         </div>
       </div>
 
       {/* Step Content */}
       {currentStep === 'review' && (
-        <div className="space-y-6">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Review Your Cart</h1>
-            <p className="text-gray-600">Please review all items before proceeding to schedule your services.</p>
+        <div className="space-y-4">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-gray-800 mb-1">Review Your Reservation</h1>
+            <p className="text-gray-600 text-sm">Please review all items before proceeding to schedule your equipments.</p>
           </div>
 
           {/* Stock Validation Issues */}
@@ -618,11 +604,11 @@ export default function CheckoutPage() {
           )}
 
           {/* Cart Items */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             {checkoutItems.map((item) => (
-              <div key={item.id} className="card p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-2xl">
+              <div key={item.id} className="card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-lg">
                     {item.image ? (
                       <img
                         src={item.image.startsWith('/uploads/') ? `http://localhost:5000${item.image}` : item.image}
@@ -642,14 +628,14 @@ export default function CheckoutPage() {
                     )}
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-800">{item.name}</h3>
-                    <p className="text-sm text-gray-600 capitalize">{item.category.replace('-', ' ')} • {item.serviceType}</p>
-                    <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
+                    <h3 className="text-base font-semibold text-gray-800">{item.name}</h3>
+                    <p className="text-xs text-gray-600 capitalize">{item.category.replace('-', ' ')} • {item.serviceType}</p>
+                    <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-xl font-bold text-indigo-600">₱{(item.price * item.quantity).toFixed(2)}</div>
-                    <div className="text-sm text-gray-500">
-                      ₱{(item.dailyRate || item.price).toFixed(2)}/day × {item.duration || 1} day{item.duration !== 1 ? 's' : ''}
+                    <div className="text-lg font-bold text-indigo-600">₱{(item.price * item.quantity).toFixed(2)}</div>
+                    <div className="text-xs text-gray-500">
+                      ₱{(item.dailyRate || item.price).toFixed(2)}/day × {item.duration || 1}d
                     </div>
                   </div>
                 </div>
@@ -658,15 +644,15 @@ export default function CheckoutPage() {
           </div>
 
           {/* Cart Summary */}
-          <div className="card p-6">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">Cart Summary</h2>
+          <div className="card p-4">
+            <h2 className="text-lg font-bold text-gray-800 mb-3">Cart Summary</h2>
             <div className="space-y-2">
-              <div className="flex justify-between">
+              <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Items ({totalItems}):</span>
                 <span className="font-semibold">₱{totalPrice.toFixed(2)}</span>
               </div>
               <div className="border-t pt-2">
-                <div className="flex justify-between text-lg font-bold">
+                <div className="flex justify-between text-base font-bold">
                   <span>Total:</span>
                   <span className="text-indigo-600">₱{totalPrice.toFixed(2)}</span>
                 </div>
@@ -684,7 +670,7 @@ export default function CheckoutPage() {
               disabled={stockValidationIssues.length > 0 || isValidatingStock || !addressComplete}
               className="btn-primary"
             >
-              {isValidatingStock ? 'Validating...' : !addressComplete ? 'Complete Address to Continue' : 'Proceed to Schedule →'}
+              {isValidatingStock ? 'Validating...' : !addressComplete ? 'Complete Address to Continue' : 'Proceed to Date Selection →'}
             </button>
           </div>
         </div>
@@ -1422,8 +1408,8 @@ export default function CheckoutPage() {
       {currentStep === 'confirm' && (
         <div className="space-y-6">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Confirm Your Booking</h1>
-            <p className="text-gray-600">Please review all details before confirming your booking.</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Confirm Your Reservation</h1>
+            <p className="text-gray-600">Please review all details before confirming your reservation.</p>
           </div>
 
           {/* Final Summary */}
@@ -1683,89 +1669,46 @@ export default function CheckoutPage() {
             <p className="text-gray-600">Secure payment powered by GCash</p>
           </div>
 
-          {/* Payment Error */}
+          {/* Payment Error - Compact */}
           {paymentError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex-shrink-0 bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
               <div className="flex items-center">
-                <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-red-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-red-800">{paymentError}</span>
+                <span className="text-red-800 text-sm">{paymentError}</span>
               </div>
             </div>
           )}
 
-          {/* Checkout Summary */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-800 mb-3">Payment Summary</h3>
-            <div className="space-y-2 text-sm">
-              {checkoutItems.map((item, index) => {
-                const schedule = scheduledItems[item.id];
-                return (
-                  <div key={item.id} className="flex justify-between py-1">
-                    <span className="text-gray-600">
-                      {item.name} {item.quantity > 1 ? `(${item.quantity}x)` : ''}
-                      {schedule?.date && (
-                        <span className="text-xs text-gray-500 block">
-                          {new Date(schedule.date).toLocaleDateString()}
-                        </span>
-                      )}
-                    </span>
-                    <span className="font-medium">₱{(item.price * item.quantity).toFixed(2)}</span>
-                    <div className="text-xs text-gray-500">
-                      ₱{(item.dailyRate || item.price).toFixed(2)}/day × {item.duration || 1} day{item.duration !== 1 ? 's' : ''}
-                    </div>
-                  </div>
-                );
-              })}
-              <div className="border-t pt-2 mt-3">
-                <div className="flex justify-between font-semibold text-lg">
-                  <span>Total Amount:</span>
-                  <span className="text-green-600">₱{checkoutTotal.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Receipt Upload Form */}
-          {!qrPayment && !creatingPayment && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-              <div className="mb-4">
-                <svg className="w-16 h-16 mx-auto text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 21h.01M12 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <h3 className="text-xl font-bold text-blue-800 mb-2">Payment Setup Not Available</h3>
-                <p className="text-blue-700 mb-4">Please go back and complete the booking process</p>
-              </div>
-            </div>
-          )}
-
-          {qrPayment && (
+          {/* Main Payment Interface */}
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Left Column - QR Code and Instructions */}
             <div className="space-y-6">
               {/* QR Code Section */}
               <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <div className="text-center mb-6">
                   <h3 className="text-xl font-bold text-gray-800 mb-2">Scan QR Code to Pay</h3>
-                  <p className="text-gray-600 mb-2">Scan on the GCash app to complete your payment</p>
+                  <p className="text-gray-600">Scan on the GCash app to complete your payment</p>
                 </div>
 
                 <div className="flex justify-center mb-6">
-                  <div className="bg-white p-4 rounded-lg border-2 border-gray-200 relative space-y-4">
-                    {/* Brand Name Section - Above QR Code */}
-                    <div className="flex justify-center">
+                  <div className="bg-white border-2 border-gray-200 rounded-lg overflow-hidden">
+
+                    {/* Brand Name Section */}
+                    <div className="p-4 border-b border-gray-200 flex justify-center">
                       <img
                         src="/brandname.jpg"
                         alt="Brand Name"
-                        className="h-8 max-w-full object-contain"
+                        className="h-16 object-contain"
                         onError={(e) => {
-                          console.error('Brand name image failed to load');
                           e.currentTarget.style.display = 'none';
                         }}
                       />
                     </div>
 
                     {/* QR Code Section */}
-                    <div className="flex justify-center">
+                    <div className="p-4 border-b border-gray-200 flex justify-center">
                       {qrPayment.qrCode ? (
                         <img
                           src={qrPayment.qrCode}
@@ -1803,42 +1746,68 @@ export default function CheckoutPage() {
                       )}
                     </div>
 
-                    {/* GCash Name Section - Below QR Code */}
-                    <div className="flex justify-center">
+                    {/* GCash Name Section */}
+                    <div className="p-4 flex justify-center">
                       <img
                         src="/gcashname.jpg"
                         alt="GCash Name"
-                        className="h-8 max-w-full object-contain"
+                        className="h-16 object-contain"
                         onError={(e) => {
-                          console.error('GCash name image failed to load');
                           e.currentTarget.style.display = 'none';
                         }}
                       />
                     </div>
+
                   </div>
                 </div>
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                   <h4 className="font-semibold text-blue-800 mb-2">Payment Instructions:</h4>
-                  <ol className="text-sm text-blue-700 space-y-1">
+                  <div className="text-sm text-blue-700 space-y-1">
                     {qrPayment.instructions.instructions.map((instruction: string, index: number) => (
-                      <li key={index} className="flex items-start">
-                        <span className="font-medium mr-2">{index + 1}.</span>
+                      <div key={index} className="flex items-start">
                         {instruction.replace('₱' + qrPayment.instructions.amount, '₱' + checkoutTotal.toFixed(2))}
-                      </li>
+                      </div>
                     ))}
-                  </ol>
+                  </div>
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
                       <span className="font-medium text-gray-600">Reference:</span>
                       <div className="font-mono text-gray-800">{qrPayment.referenceNumber}</div>
                     </div>
-                    <div>
+                    <div className="flex justify-between">
                       <span className="font-medium text-gray-600">Amount:</span>
                       <div className="font-bold text-green-600">₱{checkoutTotal.toFixed(2)}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column - Summary and Upload */}
+            <div className="space-y-6">
+              {/* Checkout Summary */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <h3 className="font-semibold text-gray-800 mb-4">Payment Summary</h3>
+                <div className="space-y-2 text-sm">
+                  {checkoutItems.map((item, index) => {
+                    const schedule = scheduledItems[item.id];
+                    return (
+                      <div key={item.id} className="flex justify-between py-1">
+                        <span className="text-gray-600 truncate mr-2">
+                          {item.name} {item.quantity > 1 ? `(${item.quantity}x)` : ''}
+                        </span>
+                        <span className="font-medium">₱{(item.price * item.quantity).toFixed(2)}</span>
+                      </div>
+                    );
+                  })}
+                  <div className="border-t pt-3 mt-3">
+                    <div className="flex justify-between font-semibold text-lg">
+                      <span>Total:</span>
+                      <span className="text-green-600">₱{checkoutTotal.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -1848,7 +1817,7 @@ export default function CheckoutPage() {
               <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <div className="text-center mb-6">
                   <h3 className="text-xl font-bold text-gray-800 mb-2">Receipt Verification</h3>
-                  <p className="text-gray-600 mb-2">After completing payment, upload your GCash receipt screenshot for verification</p>
+                  <p className="text-gray-600">After completing payment, upload your GCash receipt screenshot for verification</p>
                 </div>
 
                 {/* Receipt Upload Form */}
@@ -1898,6 +1867,72 @@ export default function CheckoutPage() {
                   </ol>
                 </div>
               </div>
+
+              {/* Receipt Upload Status */}
+              <div className="text-center">
+                {receiptUploading && (
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center text-blue-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                      Verifying receipt...
+                    </div>
+                  </div>
+                )}
+                {receiptError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div className="flex items-center justify-center text-red-800">
+                      <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>{receiptError}</span>
+                    </div>
+                  </div>
+                )}
+                {paymentStatus === 'processing' && !receiptUploading && (
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center text-blue-600">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                      Payment under review...
+                    </div>
+                  </div>
+                )}
+                {paymentStatus === 'paid' && (
+                  <div className="inline-flex items-center text-green-600">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Payment completed! Redirecting...
+                  </div>
+                )}
+                {paymentStatus === 'failed' && (
+                  <div className="inline-flex items-center text-red-600">
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Payment failed. Please try again.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Receipt Upload Form */}
+          {!qrPayment && !creatingPayment && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+              <div className="mb-4">
+                <svg className="w-16 h-16 mx-auto text-blue-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 21h.01M12 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 className="text-xl font-bold text-blue-800 mb-2">Payment Setup Not Available</h3>
+                <p className="text-blue-700 mb-4">Please go back and complete the booking process</p>
+              </div>
+            </div>
+          )}
+
+          {qrPayment && (
+            <div className="space-y-6">
+              {/* QR Code Section */}
+
 
               {/* Receipt Upload Status */}
               <div className="mt-4 text-center">

@@ -200,12 +200,12 @@ export default function CartPage() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center max-w-md w-full">
           <div className="text-6xl sm:text-8xl mb-6 opacity-50">🛒</div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)] mb-4">Your Cart is Empty</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)] mb-4">Your Reservation is Empty</h1>
           <p className="text-[var(--muted)] mb-8 text-sm sm:text-base">
-            Add some services to your cart to get started with your booking.
+            Add some equipments to your reservation to get started.
           </p>
           <Link href="/customer/services" className="btn-primary w-full sm:w-auto">
-            Browse Services
+            Browse Equipments
           </Link>
         </div>
       </div>
@@ -225,16 +225,16 @@ export default function CartPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-[var(--foreground)] mb-2">Shopping Cart</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-[var(--foreground)] mb-2">Reservation Cart</h1>
           <p className="text-[var(--muted)]">
-            {totalItems} {totalItems === 1 ? 'item' : 'items'} in your cart
+            {totalItems} {totalItems === 1 ? 'item' : 'items'} in your reservation
           </p>
         </div>
         <button
           onClick={handleClearCart}
           className="btn-secondary text-red-600 hover:text-red-700 hover:bg-red-50 self-start sm:self-auto"
         >
-          Clear Cart
+          Clear Reservation
         </button>
       </div>
 
@@ -414,8 +414,8 @@ export default function CartPage() {
                   : isProcessing
                     ? 'Processing...'
                     : stockValidationIssues.length > 0
-                         ? 'Issues Detected - Cannot Checkout'
-                         : 'Proceed to Checkout'
+                        ? 'Issues Detected - Cannot Reserve'
+                        : 'Proceed to Reserved'
                 }
               </button>
 
@@ -423,7 +423,7 @@ export default function CartPage() {
                 href="/customer/services"
                 className="w-full btn-secondary py-3 text-center block"
               >
-                Continue Shopping
+                Continue Browsing
               </Link>
             </div>
 
@@ -530,16 +530,16 @@ export default function CartPage() {
         </div>
       )}
 
-      {/* Continue Shopping Banner */}
+      {/* Continue Browsing Banner */}
       <div className="mt-12 card-gradient p-8 text-center">
         <h3 className="text-2xl font-bold text-[var(--foreground)] mb-4">
-          Need More Services?
+          Need More Equipments?
         </h3>
         <p className="text-[var(--muted)] mb-6 max-w-2xl mx-auto">
-          Browse our complete catalog of event services, equipment rentals, and professional services to make your event unforgettable.
+          Browse our complete catalog of equipment rentals and professional services to make your event unforgettable.
         </p>
         <Link href="/customer/services" className="btn-primary">
-          Browse All Services →
+          Browse All Equipments →
         </Link>
       </div>
     </div>

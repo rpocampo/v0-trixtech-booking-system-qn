@@ -212,4 +212,82 @@ router.get('/summary', adminMiddleware, async (req, res, next) => {
   }
 });
 
+// Get stock history for date-to-date monitoring
+router.get('/stock-history', adminMiddleware, async (req, res, next) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Start date and end date are required'
+      });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999); // Include the entire end date
+
+    // Get all inventory transactions within the date range
+    const transactions = await InventoryTransaction.find({
+      createdAt: {
+        $gte: start,
+        $lte: end
+      }
+    })
+    .populate('serviceId', 'name category image serviceType')
+    .populate('performedBy', 'name')
+    .sort({ createdAt: 1 });
+
+    // Process transactions to create stock history
+    const stockHistory = [];
+    let totalStockAdded = 0;
+    let totalStockReduced = 0;
+
+    for (const transaction of transactions) {
+      const change = transaction.quantity; // This is the change amount (positive for additions, negative for reductions)
+      const type = change > 0 ? 'addition' : 'reduction';
+
+      if (change > 0) {
+        totalStockAdded += change;
+      } else {
+        totalStockReduced += Math.abs(change);
+      }
+
+      stockHistory.push({
+        date: transaction.createdAt,
+        itemId: transaction.serviceId._id,
+        itemName: transaction.serviceId.name,
+        itemImage: transaction.serviceId.image,
+        itemCategory: transaction.serviceId.category,
+        type,
+        previousStock: transaction.previousStock,
+        change,
+        newStock: transaction.newStock,
+        reason: transaction.reason || transaction.transactionType,
+        performedBy: transaction.performedBy?.name || 'System'
+      });
+    }
+
+    const summary = {
+      totalTransactions: stockHistory.length,
+      totalStockAdded,
+      totalStockReduced,
+      netChange: totalStockAdded - totalStockReduced,
+      dateRange: {
+        start: startDate,
+        end: endDate
+      }
+    };
+
+    res.json({
+      success: true,
+      summary,
+      transactions: stockHistory
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

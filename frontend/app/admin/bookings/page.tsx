@@ -506,8 +506,8 @@ export default function AdminBookings() {
 
   return (
     <div>
-      <h1 className="text-4xl font-bold mb-2">Manage Bookings</h1>
-      <p className="text-[var(--muted)] mb-8">View and update booking status</p>
+      <h1 className="text-4xl font-bold mb-2">Manage Reservations</h1>
+      <p className="text-[var(--muted)] mb-8">View and update reservation status</p>
 
       {/* View Mode Toggle */}
       <div className="flex gap-2 mb-6">

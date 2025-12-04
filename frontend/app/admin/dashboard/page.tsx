@@ -19,8 +19,6 @@ export default function AdminDashboard() {
   const [recentBookingsLoading, setRecentBookingsLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
-  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
-  const [showBookingModal, setShowBookingModal] = useState(false);
 
   const fetchStats = async () => {
     const token = localStorage.getItem('token');
@@ -169,371 +167,230 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-12">
-      {/* Real-time Update Indicator */}
-      {updating && (
-        <div className="fixed top-4 right-4 z-50 bg-[var(--primary)] text-white px-4 py-2 rounded-lg shadow-lg animate-slide-in flex items-center gap-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-          <span className="text-sm font-medium">Updating...</span>
-        </div>
-      )}
+    <div className="space-y-3">
 
       {/* Header */}
-      <div className="text-center mb-16">
-        <h1 className="text-5xl font-black text-transparent bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text mb-6">
-          Admin Dashboard
-        </h1>
-        <p className="text-xl text-[var(--muted)] max-w-2xl mx-auto leading-relaxed">
-          Comprehensive overview of your business performance and real-time insights
-        </p>
-        {lastUpdate && (
-          <p className="text-sm text-[var(--muted)] mt-6 bg-[var(--primary-50)] px-4 py-2 rounded-full inline-block">
-            🔄 Last updated: {lastUpdate.toLocaleTimeString()}
-          </p>
-        )}
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 mb-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-[var(--foreground)] mb-1">
+              Dashboard
+            </h1>
+            <p className="text-[var(--muted)] text-sm">
+              Monitor your business operations and manage reservations
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-[var(--muted)] mb-1">Status</div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-[var(--success)] rounded-full"></div>
+              <span className="text-sm font-medium text-[var(--foreground)]">Online</span>
+            </div>
+            {lastUpdate && (
+              <div className="text-xs text-[var(--muted)] mt-1">
+                Last updated: {lastUpdate.toLocaleTimeString()}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Stats Grid - Key Metrics */}
-      <div className="flex justify-center">
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl">
-          <div className="stat-box hover:shadow-2xl transition-all duration-300 p-8 min-h-[280px] flex flex-col justify-between relative bg-gradient-to-br from-white to-blue-50/50 ring-2 ring-blue-200/50">
-            <div className="stat-label flex items-center gap-3 mb-6">
-              <span className="text-4xl">📅</span>
-              <span className="text-2xl font-bold">Total Bookings</span>
+      {/* Key Metrics */}
+      <div className="grid md:grid-cols-3 gap-6 mb-6">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[var(--muted)] text-sm font-medium">Total Bookings</p>
+              <p className="text-3xl font-bold text-[var(--foreground)] mt-1">{stats.totalBookings}</p>
             </div>
-            <div className="stat-value text-[var(--accent)] text-6xl font-black">{stats.totalBookings}</div>
+            <div className="w-12 h-12 bg-[var(--primary-50)] rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
           </div>
-          <div className="stat-box hover:shadow-2xl transition-all duration-300 p-8 min-h-[280px] flex flex-col justify-between relative bg-gradient-to-br from-white to-green-50/50 ring-2 ring-green-200/50">
-            <div className="stat-label flex items-center gap-3 mb-6">
-              <span className="text-4xl">👥</span>
-              <span className="text-2xl font-bold">Booked Customers</span>
+        </div>
+
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[var(--muted)] text-sm font-medium">Active Customers</p>
+              <p className="text-3xl font-bold text-[var(--foreground)] mt-1">{stats.bookedCustomers}</p>
             </div>
-            <div className="stat-value text-blue-600 text-6xl font-black">{stats.bookedCustomers}</div>
+            <div className="w-12 h-12 bg-[var(--success)]/10 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-[var(--success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+              </svg>
+            </div>
           </div>
-          <div className="stat-box hover:shadow-2xl transition-all duration-300 p-8 min-h-[280px] flex flex-col justify-between relative bg-gradient-to-br from-white to-purple-50/50 ring-2 ring-purple-200/50">
-            <div className="stat-label flex items-center gap-3 mb-6">
-              <span className="text-4xl">📦</span>
-              <span className="text-2xl font-bold">Total Inventory</span>
+        </div>
+
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[var(--muted)] text-sm font-medium">Inventory Items</p>
+              <p className="text-3xl font-bold text-[var(--foreground)] mt-1">{stats.totalInventory}</p>
             </div>
-            <div className="stat-value text-purple-600 text-6xl font-black">{stats.totalInventory}</div>
+            <div className="w-12 h-12 bg-[var(--warning)]/10 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-[var(--warning)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Alerts */}
       {lowStockItems.length > 0 && (
-        <div className="card p-8 border-l-4 border-red-500 bg-gradient-to-r from-red-50 to-white min-h-[200px]">
-          <h2 className="text-3xl font-bold text-red-600 mb-8 flex items-center gap-3">
-            <span className="text-4xl">⚠️</span>
-            Low Stock Alerts
-          </h2>
-          <div className="space-y-4">
-            {lowStockItems.map((item) => (
-              <div key={item._id} className="flex justify-between items-center p-4 bg-red-50 rounded-lg hover:bg-red-100 transition-colors">
-                <div>
-                  <span className="font-semibold text-lg">{item.name}</span>
-                  <span className="text-red-600 ml-2 text-base">({item.quantity} remaining)</span>
+        <div className="bg-white border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            <h2 className="text-lg font-semibold text-red-900">Low Stock Alerts</h2>
+          </div>
+          <div className="space-y-2">
+            {lowStockItems.slice(0, 3).map((item) => (
+              <div key={item._id} className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900 text-sm">{item.name}</p>
+                    <p className="text-red-600 text-xs">{item.quantity} remaining</p>
+                  </div>
                 </div>
-                <Link href="/admin/services" className="btn-outline text-sm px-4 py-2 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all">
-                  Update Stock
+                <Link href="/admin/services" className="text-red-600 hover:text-red-800 text-sm font-medium">
+                  Update →
                 </Link>
               </div>
             ))}
+            {lowStockItems.length > 3 && (
+              <Link href="/admin/services" className="text-red-600 hover:text-red-800 text-sm font-medium block text-center">
+                View all {lowStockItems.length} alerts →
+              </Link>
+            )}
           </div>
         </div>
       )}
 
-      {/* Management Cards */}
-      <div className="mb-20">
-        <h2 className="text-4xl font-black text-center text-[var(--foreground)] mb-16">
-          Management Center
-        </h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          <Link href="/admin/services" className="card-hover p-8 group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border-l-4 border-[var(--primary)] bg-gradient-to-br from-white to-[var(--primary-50)] min-h-[280px] flex flex-col justify-between">
-            <div className="text-6xl mb-6 group-hover:scale-110 transition-transform duration-300">⚙️</div>
-            <div>
-              <h3 className="text-2xl font-bold mb-4 text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">Manage Services</h3>
-              <p className="text-[var(--muted)] text-lg leading-relaxed">Create, edit, or delete services with advanced inventory management</p>
+      {/* Quick Actions */}
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Link href="/admin/bookings" className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md hover:border-slate-300 transition-all duration-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
             </div>
-          </Link>
-          <Link href="/admin/bookings" className="card-hover p-8 group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border-l-4 border-[var(--accent)] bg-gradient-to-br from-white to-[var(--accent-50)] min-h-[280px] flex flex-col justify-between">
-            <div className="text-6xl mb-6 group-hover:scale-110 transition-transform duration-300">📅</div>
             <div>
-              <h3 className="text-2xl font-bold mb-4 text-[var(--foreground)] group-hover:text-[var(--accent)] transition-colors">Manage Bookings</h3>
-              <p className="text-[var(--muted)] text-lg leading-relaxed">Update booking status, process payments, and track delivery schedules</p>
+              <h3 className="font-semibold text-[var(--foreground)] text-sm">Manage Reservations</h3>
+              <p className="text-[var(--muted)] text-xs">View and process reservations</p>
             </div>
-          </Link>
-          <Link href="/admin/customers" className="card-hover p-8 group hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border-l-4 border-blue-500 bg-gradient-to-br from-white to-blue-50 min-h-[280px] flex flex-col justify-between">
-            <div className="text-6xl mb-6 group-hover:scale-110 transition-transform duration-300">👥</div>
+          </div>
+        </Link>
+
+        <Link href="/admin/services" className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md hover:border-slate-300 transition-all duration-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
             <div>
-              <h3 className="text-2xl font-bold mb-4 text-[var(--foreground)] group-hover:text-blue-600 transition-colors">Manage Customers</h3>
-              <p className="text-[var(--muted)] text-lg leading-relaxed">View and manage customer accounts, profiles, and communication</p>
+              <h3 className="font-semibold text-slate-900 text-sm">Equipment</h3>
+              <p className="text-slate-600 text-xs">Manage inventory and services</p>
             </div>
-          </Link>
-        </div>
+          </div>
+        </Link>
+
+        <Link href="/admin/customers" className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md hover:border-slate-300 transition-all duration-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900 text-sm">Customers</h3>
+              <p className="text-slate-600 text-xs">View customer accounts</p>
+            </div>
+          </div>
+        </Link>
+
+        <Link href="/admin/reports" className="bg-white border border-slate-200 rounded-lg p-4 hover:shadow-md hover:border-slate-300 transition-all duration-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-semibold text-slate-900 text-sm">Reports</h3>
+              <p className="text-slate-600 text-xs">View analytics and reports</p>
+            </div>
+          </div>
+        </Link>
       </div>
 
       {/* Recent Bookings */}
-      <div className="card p-8">
-        <h2 className="text-3xl font-bold text-[var(--foreground)] mb-8 flex items-center gap-3">
-          <span className="text-4xl">📋</span>
-          Recent Bookings
-        </h2>
+      <div className="bg-white border border-slate-200 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-slate-900">Recent Reservation</h2>
+          <Link href="/admin/bookings" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+            View all →
+          </Link>
+        </div>
         {recentBookingsLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-10 w-10 border-2 border-[var(--primary)] border-t-transparent"></div>
-            <span className="ml-3 text-[var(--muted)] text-lg">Loading recent bookings...</span>
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent"></div>
           </div>
         ) : recentBookings.length > 0 ? (
-          <>
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-base">
-                <thead>
-                  <tr className="border-b-2 border-[var(--border)]">
-                    <th className="text-left py-4 px-6 font-semibold text-[var(--muted)] text-lg">Service</th>
-                    <th className="text-left py-4 px-6 font-semibold text-[var(--muted)] text-lg">Customer</th>
-                    <th className="text-left py-4 px-6 font-semibold text-[var(--muted)] text-lg">Date & Time</th>
-                    <th className="text-left py-4 px-6 font-semibold text-[var(--muted)] text-lg">Status</th>
-                    <th className="text-right py-4 px-6 font-semibold text-[var(--muted)] text-lg">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentBookings.map((booking, index) => (
-                    <tr
-                      key={booking._id}
-                      className={`border-b border-[var(--border)] transition-all duration-200 cursor-pointer ${
-                        index % 2 === 0 ? 'bg-white hover:bg-blue-50' : 'bg-gray-50 hover:bg-blue-50'
-                      } hover:shadow-md`}
-                      onClick={() => {
-                        setSelectedBooking(booking);
-                        setShowBookingModal(true);
-                      }}
-                    >
-                      <td className="py-5 px-6 font-medium">{booking.serviceId?.name || 'Unknown Service'}</td>
-                      <td className="py-5 px-6">{booking.customerId?.name || 'Unknown Customer'}</td>
-                      <td className="py-5 px-6">
-                        <div className="text-base">
-                          <div className="font-medium">{new Date(booking.bookingDate).toLocaleDateString()}</div>
-                          <div className="text-[var(--muted)] text-sm">{new Date(booking.bookingDate).toLocaleTimeString()}</div>
-                        </div>
-                      </td>
-                      <td className="py-5 px-6">
-                        <span className={`badge text-sm px-3 py-1 ${
-                          booking.status === 'confirmed' ? 'badge-success' :
-                          booking.status === 'completed' ? 'badge-primary' :
-                          booking.status === 'pending' ? 'badge-info' :
-                          'badge-warning'
-                        }`}>
-                          {booking.status}
-                        </span>
-                      </td>
-                      <td className="py-5 px-6 text-right font-bold text-[var(--primary)] text-lg">₱{booking.totalPrice}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Card View */}
-            <div className="md:hidden space-y-4">
-              {recentBookings.map((booking, index) => (
-                <div
-                  key={booking._id}
-                  className="card p-4 cursor-pointer hover:shadow-lg transition-all duration-200"
-                  onClick={() => {
-                    setSelectedBooking(booking);
-                    setShowBookingModal(true);
-                  }}
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-lg truncate">{booking.serviceId?.name || 'Unknown Service'}</h3>
-                      <p className="text-[var(--muted)] text-sm truncate">{booking.customerId?.name || 'Unknown Customer'}</p>
-                    </div>
-                    <div className="text-right ml-4">
-                      <div className="font-bold text-[var(--primary)] text-xl">₱{booking.totalPrice}</div>
-                      <span className={`badge text-xs px-2 py-1 mt-1 ${
-                        booking.status === 'confirmed' ? 'badge-success' :
-                        booking.status === 'completed' ? 'badge-primary' :
-                        booking.status === 'pending' ? 'badge-info' :
-                        'badge-warning'
-                      }`}>
-                        {booking.status}
-                      </span>
-                    </div>
+          <div className="space-y-3">
+            {recentBookings.slice(0, 5).map((booking) => (
+              <div key={booking.id} className="flex items-center justify-between p-4 border border-slate-100 rounded-lg hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                   </div>
-
-                  <div className="text-sm text-[var(--muted)] space-y-1">
-                    <div className="flex justify-between">
-                      <span>Date:</span>
-                      <span className="font-medium">{new Date(booking.bookingDate).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Time:</span>
-                      <span className="font-medium">{new Date(booking.bookingDate).toLocaleTimeString()}</span>
-                    </div>
+                  <div>
+                    <p className="font-medium text-slate-900 text-sm">{booking.serviceId?.name || 'Unknown Equipment'}</p>
+                    <p className="text-slate-600 text-xs">{booking.customerId?.name || 'Unknown Customer'}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </>
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="font-semibold text-slate-900">₱{booking.totalPrice}</p>
+                    <p className="text-xs text-slate-500">{new Date(booking.bookingDate).toLocaleDateString()}</p>
+                  </div>
+                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                    booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                    booking.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                    booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {booking.status}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         ) : (
-          <p className="text-[var(--muted)] text-center py-12 text-lg">No bookings yet</p>
+          <div className="text-center py-8">
+            <svg className="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p className="text-slate-500 text-sm">No recent bookings</p>
+          </div>
         )}
       </div>
 
-      {/* Booking Details Modal */}
-      {showBookingModal && selectedBooking && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto mx-4">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-[var(--foreground)]">Booking Details</h3>
-                <button
-                  onClick={() => setShowBookingModal(false)}
-                  className="text-gray-500 hover:text-gray-700 text-3xl"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Booking Info */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="card p-4">
-                    <h4 className="font-semibold mb-3 text-[var(--foreground)]">Booking Information</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-[var(--muted)]">Booking ID:</span>
-                        <span className="font-mono text-xs">{selectedBooking._id}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[var(--muted)]">Status:</span>
-                        <span className={`badge ${
-                          selectedBooking.status === 'confirmed' ? 'badge-success' :
-                          selectedBooking.status === 'completed' ? 'badge-primary' :
-                          selectedBooking.status === 'pending' ? 'badge-info' :
-                          'badge-warning'
-                        }`}>
-                          {selectedBooking.status}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[var(--muted)]">Date & Time:</span>
-                        <span>{new Date(selectedBooking.bookingDate).toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[var(--muted)]">Quantity:</span>
-                        <span>{selectedBooking.quantity}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="card p-4">
-                    <h4 className="font-semibold mb-3 text-[var(--foreground)]">Customer Information</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-[var(--muted)]">Name:</span>
-                        <span>{selectedBooking.customerId?.name || 'Unknown'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-[var(--muted)]">Email:</span>
-                        <span className="text-xs">{selectedBooking.customerId?.email || 'Unknown'}</span>
-                      </div>
-                      {selectedBooking.customerId?.phone && (
-                        <div className="flex justify-between">
-                          <span className="text-[var(--muted)]">Phone:</span>
-                          <span>{selectedBooking.customerId.phone}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Service Details */}
-                <div className="card p-4">
-                  <h4 className="font-semibold mb-3 text-[var(--foreground)]">Service Details</h4>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-[var(--muted)]">Service:</span>
-                          <span>{selectedBooking.serviceId?.name || 'Unknown'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[var(--muted)]">Category:</span>
-                          <span className="capitalize">{selectedBooking.serviceId?.category?.replace('-', ' ') || 'Unknown'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[var(--muted)]">Type:</span>
-                          <span className="capitalize">{selectedBooking.serviceId?.serviceType || 'Unknown'}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-[var(--muted)]">Unit Price:</span>
-                          <span>₱{selectedBooking.serviceId?.price || 0}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-[var(--muted)]">Quantity:</span>
-                          <span>{selectedBooking.quantity}</span>
-                        </div>
-                        <div className="flex justify-between font-semibold text-lg">
-                          <span className="text-[var(--muted)]">Total:</span>
-                          <span className="text-[var(--primary)]">₱{selectedBooking.totalPrice}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Notes */}
-                {selectedBooking.notes && (
-                  <div className="card p-4">
-                    <h4 className="font-semibold mb-3 text-[var(--foreground)]">Additional Notes</h4>
-                    <p className="text-[var(--muted)] text-sm">{selectedBooking.notes}</p>
-                  </div>
-                )}
-
-                {/* Payment Status */}
-                <div className="card p-4">
-                  <h4 className="font-semibold mb-3 text-[var(--foreground)]">Payment Information</h4>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[var(--muted)]">Payment Status:</span>
-                    <span className={`badge ${
-                      selectedBooking.paymentStatus === 'paid' ? 'badge-success' :
-                      selectedBooking.paymentStatus === 'unpaid' ? 'badge-warning' :
-                      'badge-info'
-                    }`}>
-                      {selectedBooking.paymentStatus}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-4 mt-8 pt-6 border-t border-gray-200">
-                <button
-                  onClick={() => setShowBookingModal(false)}
-                  className="btn-secondary flex-1"
-                >
-                  Close
-                </button>
-                <Link
-                  href={`/admin/bookings`}
-                  className="btn-primary flex-1 text-center"
-                  onClick={() => setShowBookingModal(false)}
-                >
-                  Manage All Bookings
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

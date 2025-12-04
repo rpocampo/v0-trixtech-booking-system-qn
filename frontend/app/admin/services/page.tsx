@@ -447,8 +447,8 @@ export default function AdminServices() {
     <div>
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-4xl font-bold mb-2">Manage Services</h1>
-          <p className="text-[var(--muted)]">Create and manage your services</p>
+          <h1 className="text-4xl font-bold mb-2">Manage Equipment</h1>
+          <p className="text-[var(--muted)]">Create and manage your equipment</p>
           <p className="text-xs text-blue-600 mt-1">
             💡 Stock quantities are managed in the <a href="/admin/inventory" className="underline hover:text-blue-800">Inventory</a> module
           </p>

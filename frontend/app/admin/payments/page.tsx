@@ -233,7 +233,7 @@ export default function AdminPaymentsPage() {
                       </span>
                     </div>
                     <p className="text-gray-600">
-                      {payment.userId.name} ({payment.userId.email})
+                      {payment.userId ? `${payment.userId.name} (${payment.userId.email})` : 'Unknown User'}
                     </p>
                     {payment.bookingId && (
                       <p className="text-sm text-gray-500">
@@ -393,7 +393,7 @@ export default function AdminPaymentsPage() {
                 <div className="mt-2 text-sm text-gray-600">
                   <p><strong>Amount:</strong> ₱{selectedPayment.amount.toFixed(2)}</p>
                   <p><strong>Reference:</strong> {selectedPayment.referenceNumber}</p>
-                  <p><strong>Customer:</strong> {selectedPayment.userId.name} ({selectedPayment.userId.email})</p>
+                  <p><strong>Customer:</strong> {selectedPayment.userId ? `${selectedPayment.userId.name} (${selectedPayment.userId.email})` : 'Unknown User'}</p>
                   {selectedPayment.bookingId && (
                     <p><strong>Service:</strong> {selectedPayment.bookingId.serviceId.name}</p>
                   )}

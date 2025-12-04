@@ -17,6 +17,7 @@ interface Service {
   priceType: string;
   duration?: number;
   quantity?: number;
+  availableQuantity?: number;
   location?: string;
   tags?: string[];
   features?: string[];
@@ -35,6 +36,18 @@ export default function Services() {
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    // Check if user has previously selected a date
+    const savedDate = localStorage.getItem('selectedReservationDate');
+    if (savedDate) {
+      return savedDate;
+    }
+    // Default to today if no saved date
+    const today = new Date();
+    return today.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+  });
+  const [availabilityData, setAvailabilityData] = useState<{[key: string]: {available: boolean, availableQuantity: number, reason?: string}}>({});
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [filters, setFilters] = useState({
     serviceType: '',
     eventType: '',
@@ -62,6 +75,20 @@ export default function Services() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [showDateModal, setShowDateModal] = useState<boolean>(() => {
+    // Only show modal if no date has been saved in localStorage
+    return !localStorage.getItem('selectedReservationDate');
+  });
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [locationError, setLocationError] = useState<string>('');
+  const [locationAllowed, setLocationAllowed] = useState<boolean>(() => {
+    // Check if location permission has been previously granted
+    return localStorage.getItem('locationPermissionGranted') === 'true';
+  });
+  const [showLocationModal, setShowLocationModal] = useState<boolean>(() => {
+    // Only show modal if no permission decision has been saved
+    return !localStorage.getItem('locationPermissionDecision');
+  });
 
   const fetchServices = async (filterParams = filters) => {
     try {
@@ -73,6 +100,11 @@ export default function Services() {
           queryParams.append(key, value);
         }
       });
+
+      // Add selected date for availability checking
+      if (selectedDate) {
+        queryParams.append('date', selectedDate);
+      }
 
       const response = await fetch(`http://localhost:5000/api/services?${queryParams}`);
       const data = await response.json();
@@ -112,6 +144,13 @@ export default function Services() {
   };
 
   const handleAddToCart = (service: Service) => {
+    // Check if item is available for the selected date
+    const availableQty = service.availableQuantity ?? service.quantity ?? 0;
+    if (availableQty <= 0) {
+      alert('This equipment is not available for the selected date.');
+      return;
+    }
+
     addToCart({
       id: service._id,
       name: service.name,
@@ -120,7 +159,7 @@ export default function Services() {
       category: service.category,
       image: service.image,
       maxOrder: service.maxOrder,
-      availableQuantity: service.quantity,
+      availableQuantity: availableQty,
     });
   };
 
@@ -218,8 +257,170 @@ export default function Services() {
 
   if (loading) return <div>Loading services...</div>;
 
+  // Location permission and checking
+  const requestLocationPermission = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by this browser.');
+      setLocationAllowed(false);
+      setShowLocationModal(false);
+      // Save permission decision
+      localStorage.setItem('locationPermissionDecision', 'denied');
+      localStorage.setItem('locationPermissionGranted', 'false');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
+        setLocationAllowed(true);
+        setShowLocationModal(false);
+        // Save permission decision
+        localStorage.setItem('locationPermissionDecision', 'granted');
+        localStorage.setItem('locationPermissionGranted', 'true');
+        // Check if location is within serviceable area (example: within 50km of business location)
+        checkLocationProximity(latitude, longitude);
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        setLocationError('Unable to access your location. Please enable location services.');
+        setLocationAllowed(false);
+        setShowLocationModal(false);
+        // Save permission decision
+        localStorage.setItem('locationPermissionDecision', 'denied');
+        localStorage.setItem('locationPermissionGranted', 'false');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 300000 // 5 minutes
+      }
+    );
+  };
+
+  const checkLocationProximity = (lat: number, lng: number) => {
+    // Example business location (Manila, Philippines - adjust as needed)
+    const businessLat = 14.5995;
+    const businessLng = 120.9842;
+
+    const distance = calculateDistance(lat, lng, businessLat, businessLng);
+
+    // Allow bookings within 100km of business location
+    if (distance > 100) {
+      alert(`You are ${distance.toFixed(1)}km away from our service area. Equipment delivery may not be available in your location. Please contact us for special arrangements.`);
+    }
+  };
+
+  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  const skipLocationCheck = () => {
+    setLocationAllowed(false);
+    setShowLocationModal(false);
+    // Save permission decision
+    localStorage.setItem('locationPermissionDecision', 'skipped');
+    localStorage.setItem('locationPermissionGranted', 'false');
+    alert('Location services are recommended for accurate delivery estimates. You can continue browsing, but delivery availability cannot be guaranteed.');
+  };
+
+  // Location Modal
+  if (showLocationModal) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="p-6">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-4">📍</div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Location Access</h2>
+              <p className="text-gray-600">Allow location access to ensure equipment delivery is available in your area.</p>
+            </div>
+
+            <div className="space-y-4">
+              <button
+                onClick={requestLocationPermission}
+                className="w-full btn-primary py-3"
+              >
+                Allow Location Access
+              </button>
+
+              <button
+                onClick={skipLocationCheck}
+                className="w-full btn-secondary py-3"
+              >
+                Skip for Now
+              </button>
+            </div>
+
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-xs text-blue-700">
+                <strong>Why we need your location:</strong> To verify that equipment delivery services are available in your area and provide accurate delivery estimates.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Date Selection Modal - Only show if no date has been saved in localStorage
+  if (showDateModal || !localStorage.getItem('selectedReservationDate')) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="p-6">
+            <div className="text-center mb-6">
+              <div className="text-4xl mb-4">📅</div>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Select Reservation Date</h2>
+              <p className="text-gray-600">Please choose the date for your equipment reservation first.</p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reservation Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  className="input-field w-full"
+                  min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // Tomorrow minimum
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  required
+                />
+                <p className="text-xs text-gray-500 mt-1">Reservations must be made at least 24 hours in advance</p>
+              </div>
+
+              <button
+                onClick={() => {
+                  if (selectedDate) {
+                    // Save the selected date to localStorage
+                    localStorage.setItem('selectedReservationDate', selectedDate);
+                    setShowDateModal(false);
+                    fetchServices(); // Fetch services with the selected date
+                  }
+                }}
+                disabled={!selectedDate}
+                className="w-full btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Continue to Browse Equipments
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="animate-fade-in px-4 sm:px-6 lg:px-8">
+    <div className="animate-fade-in w-full min-h-screen flex flex-col">
       {/* Real-time Update Indicator */}
       {updating && (
         <div className="fixed top-4 right-4 z-50 bg-[var(--primary)] text-white px-4 py-2 rounded-lg shadow-lg animate-slide-in flex items-center gap-2">
@@ -228,27 +429,72 @@ export default function Services() {
         </div>
       )}
 
+      {/* Location and Date Status */}
+      <div className="space-y-4 mb-6 px-2 sm:px-4 lg:px-6">
+        {/* Location Status */}
+        <div className={`border rounded-lg p-4 flex items-center justify-between ${
+          locationAllowed ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'
+        }`}>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">{locationAllowed ? '📍' : '⚠️'}</span>
+            <div>
+              <p className={`text-sm font-medium ${locationAllowed ? 'text-green-600' : 'text-yellow-600'}`}>
+                {locationAllowed ? 'Location Access Granted' : 'Location Access Limited'}
+              </p>
+              <p className={`text-sm ${locationAllowed ? 'text-green-700' : 'text-yellow-700'}`}>
+                {locationAllowed
+                  ? 'Delivery availability verified for your area'
+                  : locationError || 'Location services not enabled - delivery availability cannot be guaranteed'
+                }
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            {!locationAllowed && (
+              <button
+                onClick={() => setShowLocationModal(true)}
+                className="text-yellow-600 hover:text-yellow-800 underline text-sm"
+              >
+                Enable Location
+              </button>
+            )}
+            <button
+              onClick={() => {
+                localStorage.removeItem('locationPermissionDecision');
+                localStorage.removeItem('locationPermissionGranted');
+                setLocationAllowed(false);
+                setShowLocationModal(true);
+              }}
+              className="text-gray-600 hover:text-gray-800 underline text-xs"
+            >
+              Change Settings
+            </button>
+          </div>
+        </div>
+
+      </div>
+
       {/* Hero Section */}
-      <div className="text-center mb-8 sm:mb-12 px-4">
+      <div className="text-center mb-4 sm:mb-6 px-2 sm:px-4 lg:px-6">
         <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent">
-          Our Services
+          Available Equipments
         </h1>
         <p className="text-lg sm:text-xl text-[var(--muted)] max-w-2xl mx-auto leading-relaxed">
-          Discover our comprehensive range of event services designed to make your special occasions unforgettable
+          Discover our comprehensive range of equipment rentals designed to make your special occasions unforgettable
         </p>
       </div>
 
       {/* Search and Filter Bar */}
-      <div className="card p-6 mb-8">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 mx-2 sm:mx-4 lg:mx-6">
         <div className="flex flex-col lg:flex-row gap-4 items-center">
           {/* Search Input */}
           <div className="flex-1 w-full lg:w-auto">
             <input
               type="text"
-              placeholder="Search services..."
+              placeholder="Search equipment..."
               value={pendingFilters.search}
               onChange={(e) => setPendingFilters(prev => ({ ...prev, search: e.target.value }))}
-              className="input-field w-full"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
 
@@ -256,7 +502,7 @@ export default function Services() {
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="btn-secondary flex items-center gap-2"
+              className="flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
             >
               <span>🔍</span>
               {showFilters ? 'Hide Filters' : 'More Filters'}
@@ -266,14 +512,14 @@ export default function Services() {
 
         {/* Advanced Filters */}
         {showFilters && (
-          <div className="mt-6 pt-6 border-t border-[var(--border)]">
+          <div className="mt-6 pt-6 border-t border-gray-200">
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Event Type</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Event Type</label>
                 <select
                   value={pendingFilters.category}
                   onChange={(e) => setPendingFilters(prev => ({ ...prev, category: e.target.value }))}
-                  className="input-field w-full"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">All Categories</option>
                   <option value="equipment">Equipment</option>
@@ -286,34 +532,34 @@ export default function Services() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Min Price</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Min Price</label>
                 <input
                   type="number"
                   placeholder="0"
                   value={pendingFilters.minPrice}
                   onChange={(e) => setPendingFilters(prev => ({ ...prev, minPrice: e.target.value }))}
-                  className="input-field w-full"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Max Price</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Max Price</label>
                 <input
                   type="number"
                   placeholder="No limit"
                   value={pendingFilters.maxPrice}
                   onChange={(e) => setPendingFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
-                  className="input-field w-full"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-2">Sort By</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
                 <div className="flex gap-2">
                   <select
                     value={pendingFilters.sortBy}
                     onChange={(e) => setPendingFilters(prev => ({ ...prev, sortBy: e.target.value }))}
-                    className="input-field flex-1"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="name">Name</option>
                     <option value="price">Price</option>
@@ -322,7 +568,7 @@ export default function Services() {
                   <select
                     value={pendingFilters.sortOrder}
                     onChange={(e) => setPendingFilters(prev => ({ ...prev, sortOrder: e.target.value }))}
-                    className="input-field w-20"
+                    className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="asc">↑</option>
                     <option value="desc">↓</option>
@@ -331,17 +577,17 @@ export default function Services() {
               </div>
             </div>
 
-            <div className="mt-4 flex justify-between items-center">
+            <div className="mt-6 flex justify-between items-center">
               <button
                 onClick={clearFilters}
-                className="text-red-600 hover:text-red-800 hover:underline"
+                className="text-red-600 hover:text-red-800 font-medium"
               >
                 Clear All Filters
               </button>
 
               <button
                 onClick={applyFilters}
-                className="btn-primary"
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200"
               >
                 Apply Filters
               </button>
@@ -353,13 +599,13 @@ export default function Services() {
       {services.length === 0 ? (
         <div className="card p-12 text-center animate-fade-in">
           <div className="text-6xl mb-4">🎪</div>
-          <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">No Services Available</h3>
-          <p className="text-[var(--muted)]">We're currently updating our services. Please check back soon!</p>
+          <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">No Equipments Available</h3>
+          <p className="text-[var(--muted)]">We're currently updating our equipments. Please check back soon!</p>
         </div>
       ) : (
         <>
           {/* Category Filter */}
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 px-4">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-3 sm:mb-4 px-2 sm:px-4 lg:px-6">
             {['all', 'equipment', 'corporate', 'wedding', 'birthday', 'funeral', 'graduation'].map((category) => (
               <button
                 key={category}
@@ -375,30 +621,29 @@ export default function Services() {
             ))}
           </div>
 
-          {/* Services Grid - Full Width Responsive Carousel */}
-          <div className="w-full">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8 lg:gap-10">
+          {/* Services Grid - Maximized Screen Usage */}
+          <div className="w-full min-h-screen flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 w-full">
               {filteredServices.map((service, index) => (
                 <div
                   key={service._id}
-                  className="service-card group animate-fade-in w-full min-h-[300px] sm:min-h-[350px]"
-                  style={{ animationDelay: `${index * 100}ms` }}
+                  className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden border border-gray-200"
                 >
                 {/* Service Image */}
-                <div className="relative overflow-hidden rounded-t-xl bg-gradient-to-br from-[var(--primary-50)] to-[var(--accent)]/10">
+                <div className="relative overflow-hidden">
                   {service.image ? (
                     <img
                       src={service.image.startsWith('/uploads/') ? `http://localhost:5000${service.image}` : service.image}
                       alt={service.name}
-                      className="service-image w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
+                      className="w-full h-48 object-cover transition-transform duration-300 hover:scale-105"
                       loading="lazy"
                       onError={(e) => {
                         e.currentTarget.src = 'https://via.placeholder.com/400x240?text=Service+Image';
                       }}
                     />
                   ) : (
-                    <div className="w-full h-48 flex items-center justify-center bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20">
-                      <div className="text-4xl sm:text-5xl opacity-50">
+                    <div className="w-full h-48 flex items-center justify-center bg-gray-100">
+                      <div className="text-4xl text-gray-400">
                         {service.category === 'party' ? '🎉' :
                          service.category === 'wedding' ? '💒' :
                          service.category === 'corporate' ? '🏢' :
@@ -418,95 +663,85 @@ export default function Services() {
                     }`}>
                       {service.serviceType}
                     </span>
-                    <span className="px-2 py-1 bg-white/95 backdrop-blur-sm text-[var(--primary)] text-xs font-semibold rounded-full capitalize shadow-sm">
+                    <span className="px-2 py-1 bg-white text-gray-700 text-xs font-semibold rounded-full capitalize shadow-sm">
                       {service.category.replace('-', ' ')}
                     </span>
                   </div>
 
                   {/* Availability Badge */}
-                  {(service.serviceType === 'equipment' || service.serviceType === 'supply') && service.quantity !== undefined && (
+                  {(service.serviceType === 'equipment' || service.serviceType === 'supply') && (service.availableQuantity !== undefined || service.quantity !== undefined) && (
                     <div className="absolute top-3 right-3">
                       <span className={`px-2 py-1 text-xs font-semibold rounded-full shadow-sm ${
-                        service.quantity > 5 ? 'bg-green-500 text-white' :
-                        service.quantity > 0 ? 'bg-yellow-500 text-white' :
+                        (service.availableQuantity ?? service.quantity ?? 0) > 5 ? 'bg-green-500 text-white' :
+                        (service.availableQuantity ?? service.quantity ?? 0) > 0 ? 'bg-yellow-500 text-white' :
                         'bg-red-500 text-white'
                       }`}>
-                        {service.quantity > 0 ? `${service.quantity} left` : 'Out of stock'}
+                        {(service.availableQuantity ?? service.quantity ?? 0) > 0 ? `${service.availableQuantity ?? service.quantity ?? 0} available` : 'Not available'}
                       </span>
                     </div>
                   )}
                 </div>
 
                 {/* Service Content */}
-                <div className="p-4 sm:p-6 flex flex-col flex-1 min-h-[200px]">
-                  <h3 className="text-lg sm:text-xl font-bold text-[var(--foreground)] mb-2 group-hover:text-[var(--primary)] transition-colors line-clamp-2">
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
                     {service.name}
                   </h3>
 
-                  <p className="text-[var(--muted)] text-sm mb-4 line-clamp-3 flex-1 leading-relaxed">
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">
                     {service.description}
                   </p>
 
                   {/* Service Details */}
-                  <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
-                    {service.serviceType === 'service' && (
-                      <div className="flex items-center justify-between text-xs sm:text-sm">
-                        <span className="text-[var(--muted)] flex items-center gap-1 flex-1 min-w-0">
-                          <span>⏱️</span>
-                          <span className="truncate">Duration</span>
-                        </span>
-                        <span className="font-semibold text-[var(--foreground)] flex-shrink-0 ml-2">1 day</span>
-                      </div>
-                    )}
-
-                    {(service.serviceType === 'equipment' || service.serviceType === 'supply') && service.quantity && (
-                      <div className="flex items-center justify-between text-xs sm:text-sm">
-                        <span className="text-[var(--muted)] flex items-center gap-1 flex-1 min-w-0">
+                  <div className="space-y-2 mb-4">
+                    {(service.serviceType === 'equipment' || service.serviceType === 'supply') && (service.availableQuantity ?? service.quantity) && (
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500 flex items-center gap-1">
                           <span>📦</span>
-                          <span className="truncate">Available</span>
+                          <span>Available</span>
                         </span>
-                        <span className="font-semibold text-[var(--foreground)] flex-shrink-0 ml-2">{service.quantity} units</span>
+                        <span className="font-medium text-gray-900">{service.availableQuantity ?? service.quantity} units</span>
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between text-xs sm:text-sm">
-                      <span className="text-[var(--muted)] flex items-center gap-1 flex-1 min-w-0">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-500 flex items-center gap-1">
                         <span>💰</span>
-                        <span className="truncate">{(service.priceType || 'flat-rate').replace('-', ' ')}</span>
+                        <span>Price</span>
                       </span>
-                      <span className="text-xl sm:text-2xl font-bold text-[var(--primary)] flex-shrink-0 ml-2">₱{isNaN(service.price) ? '0.00' : service.price.toFixed(2)}</span>
+                      <span className="text-xl font-bold text-blue-600">₱{isNaN(service.price) ? '0.00' : service.price.toFixed(2)}</span>
                     </div>
 
                     {service.location && (
-                      <div className="flex items-center justify-between text-xs sm:text-sm">
-                        <span className="text-[var(--muted)] flex items-center gap-1 flex-1 min-w-0">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-500 flex items-center gap-1">
                           <span>📍</span>
-                          <span className="truncate">Location</span>
+                          <span>Location</span>
                         </span>
-                        <span className="font-semibold text-[var(--foreground)] flex-shrink-0 ml-2 capitalize">{service.location === 'both' ? 'indoor/outdoor' : service.location}</span>
+                        <span className="font-medium text-gray-900 capitalize">{service.location === 'both' ? 'indoor/outdoor' : service.location}</span>
                       </div>
                     )}
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex flex-col md:flex-row gap-3 mt-auto">
+                  <div className="flex flex-col gap-3">
                     <button
                       onClick={() => viewServiceDetails(service)}
-                      className="btn-secondary flex-1 text-center text-sm py-3 sm:py-4"
+                      className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-50 transition-colors duration-200"
                     >
                       View Details
                     </button>
                     {isInCart(service._id) ? (
-                      <div className="flex flex-col md:flex-row gap-3 flex-1">
+                      <div className="flex gap-2">
                         <button
                           disabled
-                          className="btn-secondary flex-1 text-center text-green-600 border-green-200 opacity-60 cursor-not-allowed text-sm py-3 sm:py-4"
+                          className="flex-1 bg-green-50 text-green-600 border border-green-200 py-2 px-4 rounded-lg font-medium cursor-not-allowed"
                         >
                           ✓ In Cart
                         </button>
                         <Link
                           href="/customer/cart"
-                          className="btn-primary flex-1 text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300 text-sm py-3 sm:py-4"
+                          className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200 text-center"
                         >
                           View Cart
                         </Link>
@@ -514,9 +749,9 @@ export default function Services() {
                     ) : (
                       <button
                         onClick={() => handleAddToCart(service)}
-                        className="btn-primary flex-1 text-center group-hover:shadow-lg group-hover:shadow-[var(--primary)]/25 transition-all duration-300 text-sm py-3 sm:py-4"
+                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200"
                       >
-                        Add to Cart
+                        Add to Reservation
                       </button>
                     )}
                   </div>
@@ -527,7 +762,7 @@ export default function Services() {
           </div>
 
           {/* Call to Action */}
-          <div className="mt-12 sm:mt-16 text-center px-4">
+          <div className="mt-6 sm:mt-8 text-center px-2 sm:px-4 lg:px-6">
             <div className="card-gradient p-6 sm:p-8 max-w-2xl mx-auto">
               <h3 className="text-xl sm:text-2xl font-bold text-[var(--foreground)] mb-3 sm:mb-4">
                 Need Something Custom?
@@ -612,7 +847,7 @@ export default function Services() {
                 <div className="space-y-6">
                   {/* Basic Information */}
                   <div className="card p-6">
-                    <h4 className="text-xl font-semibold mb-4">Service Information</h4>
+                    <h4 className="text-xl font-semibold mb-4">Equipment Information</h4>
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-[var(--muted)]">Category:</span>
@@ -634,11 +869,11 @@ export default function Services() {
                           <span className="font-medium">1 day</span>
                         </div>
                       )}
-                      {(selectedService.serviceType === 'equipment' || selectedService.serviceType === 'supply') && selectedService.quantity && (
+                      {(selectedService.serviceType === 'equipment' || selectedService.serviceType === 'supply') && (selectedService.availableQuantity ?? selectedService.quantity ?? 0) > 0 && (
                         <div className="flex justify-between">
                           <span className="text-[var(--muted)]">Available Quantity:</span>
-                          <span className={`font-medium ${selectedService.quantity > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {selectedService.quantity} units
+                          <span className={`font-medium ${(selectedService.availableQuantity ?? selectedService.quantity ?? 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {selectedService.availableQuantity ?? selectedService.quantity ?? 0} units
                           </span>
                         </div>
                       )}
@@ -774,7 +1009,7 @@ export default function Services() {
                   className="btn-primary flex-1 text-center order-1 sm:order-2 text-sm sm:text-base py-3"
                   onClick={() => setShowServiceModal(false)}
                 >
-                  Book This Service
+                  Reserve This Equipment
                 </Link>
               </div>
             </div>

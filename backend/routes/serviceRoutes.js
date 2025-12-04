@@ -100,7 +100,8 @@ router.get('/', async (req, res, next) => {
       maxPrice,
       search,
       sortBy = 'name',
-      sortOrder = 'asc'
+      sortOrder = 'asc',
+      date // New date parameter for availability checking
     } = req.query;
 
     let query = { isAvailable: true };
@@ -142,15 +143,55 @@ router.get('/', async (req, res, next) => {
 
     const services = await Service.find(query).sort(sortOptions);
 
-    // Ensure price is properly calculated for each service
-    const servicesWithPrice = services.map(service => {
-      const serviceObj = service.toObject();
-      // Ensure price is set from basePrice - virtual getters don't serialize properly
-      serviceObj.price = service.basePrice || 0;
-      return serviceObj;
-    });
+    // If date is provided, check availability for equipment items
+    let servicesWithAvailability = services;
+    if (date) {
+      const Booking = require('../models/Booking');
+      const targetDate = new Date(date);
+      const nextDay = new Date(targetDate);
+      nextDay.setDate(nextDay.getDate() + 1);
 
-    res.json({ success: true, services: servicesWithPrice });
+      // Get all bookings for the selected date
+      const bookingsOnDate = await Booking.find({
+        bookingDate: {
+          $gte: targetDate,
+          $lt: nextDay
+        },
+        status: { $in: ['confirmed', 'pending'] } // Include pending bookings as they may still be reserved
+      });
+
+      // Calculate booked quantities for each service
+      const bookedQuantities = {};
+      bookingsOnDate.forEach(booking => {
+        if (booking.serviceId && booking.quantity) {
+          const serviceId = booking.serviceId.toString();
+          bookedQuantities[serviceId] = (bookedQuantities[serviceId] || 0) + booking.quantity;
+        }
+      });
+
+      // Adjust available quantities
+      servicesWithAvailability = services.map(service => {
+        const serviceObj = service.toObject();
+        serviceObj.price = service.basePrice || 0;
+
+        // For equipment and supply items, adjust quantity based on bookings
+        if ((service.serviceType === 'equipment' || service.serviceType === 'supply') && service.quantity !== undefined) {
+          const bookedQty = bookedQuantities[service._id.toString()] || 0;
+          serviceObj.availableQuantity = Math.max(0, service.quantity - bookedQty);
+        }
+
+        return serviceObj;
+      });
+    } else {
+      // Ensure price is properly calculated for each service when no date filtering
+      servicesWithAvailability = services.map(service => {
+        const serviceObj = service.toObject();
+        serviceObj.price = service.basePrice || 0;
+        return serviceObj;
+      });
+    }
+
+    res.json({ success: true, services: servicesWithAvailability });
   } catch (error) {
     next(error);
   }

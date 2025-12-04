@@ -118,47 +118,73 @@ export default function CustomerLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[var(--background)] to-[var(--surface-secondary)]">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[var(--background)] to-[var(--surface-secondary)]" data-theme="customer">
         {/* Navigation */}
-        <nav className="bg-white/90 backdrop-blur-xl border-b border-slate-200/50 sticky top-0 z-50 shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent hover:scale-105 transition-transform duration-200">
-              TRIXTECH
+        <nav className="bg-gradient-to-r from-white via-[var(--surface)] to-white border-b border-[var(--border)] sticky top-0 z-50 shadow-lg backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-between items-center">
+            <Link href="/" className="flex items-center group hover:scale-105 transition-all duration-300">
+              <div className="relative">
+                <img
+                  src="/logo.png"
+                  alt="TRIXTECH"
+                  className="h-10 w-auto transition-transform group-hover:scale-110"
+                />
+                <div className="absolute -inset-2 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+              </div>
+              <div className="ml-3">
+                <span className="text-2xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent">TRIXTECH</span>
+                <div className="text-xs text-[var(--muted)] font-medium -mt-1">Event Equipment Rental</div>
+              </div>
             </Link>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-2">
             <Link
               href="/customer/dashboard"
-              className={`px-6 py-3 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 font-semibold text-base ${pathname === '/customer/dashboard' ? 'bg-blue-600 text-white shadow-lg border-b-2 border-blue-300' : ''}`}
+              className={`group px-6 py-3 rounded-xl text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-300 font-semibold hover:scale-105 ${pathname === '/customer/dashboard' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-lg' : ''}`}
             >
-              🏠 Dashboard
-            </Link>
-            <Link
-              href="/customer/bookings"
-              className={`px-6 py-3 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 font-semibold text-base ${pathname === '/customer/bookings' ? 'bg-blue-600 text-white shadow-lg border-b-2 border-blue-300' : ''}`}
-            >
-              📅 Bookings
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z" />
+                </svg>
+                My Dashboard
+              </span>
             </Link>
             <Link
               href="/customer/services"
-              className={`px-6 py-3 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 font-semibold text-base ${pathname === '/customer/services' ? 'bg-blue-600 text-white shadow-lg border-b-2 border-blue-300' : ''}`}
+              className={`group px-6 py-3 rounded-xl text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-300 font-semibold hover:scale-105 ${pathname === '/customer/services' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-lg' : ''}`}
             >
-              🎪 Services
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Browse Equipment
+              </span>
             </Link>
             <Link
               href="/customer/suggestions"
-              className={`px-6 py-3 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 font-semibold text-base ${pathname === '/customer/suggestions' ? 'bg-blue-600 text-white shadow-lg border-b-2 border-blue-300' : ''}`}
+              className={`group px-6 py-3 rounded-xl text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-300 font-semibold hover:scale-105 ${pathname === '/customer/suggestions' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-lg' : ''}`}
             >
-              💡 Suggestions
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                Smart Suggestions
+              </span>
             </Link>
             <Link
               href="/customer/notifications"
-              className={`relative px-6 py-3 rounded-xl text-slate-700 hover:text-blue-600 hover:bg-blue-50 hover:shadow-lg transition-all duration-200 font-semibold text-base ${pathname === '/customer/notifications' ? 'bg-blue-600 text-white shadow-lg border-b-2 border-blue-300' : ''}`}
+              className={`group relative px-6 py-3 rounded-xl text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-300 font-semibold hover:scale-105 ${pathname === '/customer/notifications' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-lg' : ''}`}
             >
-              🔔 Notifications
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4.868 12.683A17.925 17.925 0 012 21h13.78a3 3 0 002.553-1.658c.69-1.396.69-3.132 0-4.528A17.925 17.925 0 0112.078 5c-1.944 0-3.814.482-5.526 1.355-.86.43-1.538 1.236-1.73 2.151-.228.966.234 1.944 1.099 2.51z" />
+                </svg>
+                Notifications
+              </span>
               {unreadNotifications > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1 animate-pulse shadow-lg">
+                <span className="absolute -top-2 -right-2 bg-gradient-to-r from-[var(--accent)] to-red-500 text-white text-xs font-bold rounded-full min-w-[1.5rem] h-6 flex items-center justify-center px-2 shadow-lg animate-pulse">
                   {unreadNotifications > 99 ? '99+' : unreadNotifications}
                 </span>
               )}
@@ -170,9 +196,9 @@ export default function CustomerLayout({
             <div className="relative ml-2">
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--border)] text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--nav-border)] text-[var(--nav-text)] hover:bg-[var(--nav-hover)] transition-all duration-200"
               >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-sm font-semibold">
+                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 text-sm font-semibold">
                   {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                 </div>
                 <svg className={`w-4 h-4 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,25 +207,27 @@ export default function CustomerLayout({
               </button>
 
               {isUserMenuOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-[var(--border)] z-50 animate-slide-in">
-                  <div className="p-4 border-b border-[var(--border)]">
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+                  <div className="p-4 border-b border-slate-200">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-semibold flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-semibold flex-shrink-0">
                         {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-[var(--foreground)] truncate">{user?.name}</p>
-                        <p className="text-sm text-[var(--muted)] truncate">{user?.email}</p>
+                        <p className="font-semibold text-slate-900 truncate">{user?.name}</p>
+                        <p className="text-sm text-slate-500 truncate">{user?.email}</p>
                       </div>
                     </div>
                   </div>
                   <div className="py-2">
                     <Link
                       href="/customer/profile"
-                      className="flex items-center gap-3 px-4 py-3 text-sm text-[var(--foreground)] hover:bg-[var(--surface-hover)] hover:text-[var(--primary)] transition-colors"
+                      className="flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
                       onClick={() => setIsUserMenuOpen(false)}
                     >
-                      <span className="flex-shrink-0">👤</span>
+                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
                       <span className="truncate">Profile Settings</span>
                     </Link>
                     <button
@@ -208,9 +236,11 @@ export default function CustomerLayout({
                         router.push('/');
                         setIsUserMenuOpen(false);
                       }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-[var(--danger)] hover:bg-red-50 hover:text-red-700 transition-colors"
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
                     >
-                      <span className="flex-shrink-0">🚪</span>
+                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
                       <span className="truncate">Logout</span>
                     </button>
                   </div>
@@ -224,7 +254,7 @@ export default function CustomerLayout({
             <CartIcon />
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-lg border border-[var(--border)] text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] transition-all duration-200"
+              className="p-2 rounded-lg border border-[var(--nav-border)] text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-200"
               aria-label="Toggle menu"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -236,17 +266,17 @@ export default function CustomerLayout({
 
         {/* Mobile Dropdown Menu */}
         {isMenuOpen && (
-          <div className="md:hidden bg-white/95 backdrop-blur-lg border-t border-[var(--border)] animate-slide-in">
+          <div className="md:hidden bg-[var(--nav-bg)] border-t border-[var(--nav-border)]">
             <div className="px-4 py-4 space-y-1">
               {/* User Info */}
               {user && (
-                <div className="flex items-center gap-3 p-3 mb-4 bg-gradient-to-r from-[var(--primary-50)] to-[var(--accent)]/10 rounded-lg">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-semibold">
+                <div className="flex items-center gap-3 p-3 mb-4 bg-slate-50 rounded-lg">
+                  <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-semibold">
                     {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                   </div>
                   <div>
-                    <p className="font-semibold text-[var(--foreground)] text-sm">{user?.name}</p>
-                    <p className="text-xs text-[var(--muted)]">{user?.email}</p>
+                    <p className="font-semibold text-slate-900 text-sm">{user?.name}</p>
+                    <p className="text-xs text-slate-500">{user?.email}</p>
                   </div>
                 </div>
               )}
@@ -254,57 +284,61 @@ export default function CustomerLayout({
               {/* Navigation Links */}
               <Link
                 href="/customer/dashboard"
-                className={`flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200 ${pathname === '/customer/dashboard' ? 'bg-[var(--primary)] text-white' : ''}`}
+                className={`flex items-center gap-3 px-3 py-3 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-lg transition-all duration-200 ${pathname === '/customer/dashboard' ? 'bg-[var(--nav-active)] text-[var(--primary)]' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
-                <span className="text-lg">🏠</span>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z" />
+                </svg>
                 Dashboard
               </Link>
               <Link
-                href="/customer/bookings"
-                className={`flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200 ${pathname === '/customer/bookings' ? 'bg-[var(--primary)] text-white' : ''}`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                <span className="text-lg">📅</span>
-                Bookings
-              </Link>
-              <Link
                 href="/customer/services"
-                className={`flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200 ${pathname === '/customer/services' ? 'bg-[var(--primary)] text-white' : ''}`}
+                className={`flex items-center gap-3 px-3 py-3 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-lg transition-all duration-200 ${pathname === '/customer/services' ? 'bg-[var(--nav-active)] text-[var(--primary)]' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
-                <span className="text-lg">🎪</span>
-                Services
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                Equipment
               </Link>
               <Link
                 href="/customer/suggestions"
-                className={`flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200 ${pathname === '/customer/suggestions' ? 'bg-[var(--primary)] text-white' : ''}`}
+                className={`flex items-center gap-3 px-3 py-3 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-lg transition-all duration-200 ${pathname === '/customer/suggestions' ? 'bg-[var(--nav-active)] text-[var(--primary)]' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
                 Suggestions
               </Link>
               <Link
                 href="/customer/notifications"
-                className={`relative flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200 ${pathname === '/customer/notifications' ? 'bg-[var(--primary)] text-white' : ''}`}
+                className={`relative flex items-center gap-3 px-3 py-3 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-lg transition-all duration-200 ${pathname === '/customer/notifications' ? 'bg-[var(--nav-active)] text-[var(--primary)]' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
-                <span className="text-lg">🔔</span>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4.868 12.683A17.925 17.925 0 012 21h13.78a3 3 0 002.553-1.658c.69-1.396.69-3.132 0-4.528A17.925 17.925 0 0112.078 5c-1.944 0-3.814.482-5.526 1.355-.86.43-1.538 1.236-1.73 2.151-.228.966.234 1.944 1.099 2.51z" />
+                </svg>
                 Notifications
                 {unreadNotifications > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1 animate-pulse shadow-lg">
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1">
                     {unreadNotifications > 99 ? '99+' : unreadNotifications}
                   </span>
                 )}
               </Link>
 
-              <div className="border-t border-[var(--border)] my-3"></div>
+              <div className="border-t border-[var(--nav-border)] my-3"></div>
 
               <Link
                 href="/customer/profile"
-                className="flex items-center gap-3 px-3 py-3 text-[var(--foreground)] hover:text-[var(--primary)] hover:bg-[var(--primary-50)] rounded-lg transition-all duration-200"
+                className="flex items-center gap-3 px-3 py-3 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-lg transition-all duration-200"
                 onClick={() => setIsMenuOpen(false)}
               >
-                <span className="text-lg">👤</span>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
                 Profile
               </Link>
               <button
@@ -313,9 +347,11 @@ export default function CustomerLayout({
                   router.push('/');
                   setIsMenuOpen(false);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-3 border border-[var(--border)] text-[var(--danger)] hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
+                className="w-full flex items-center gap-3 px-3 py-3 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
               >
-                <span className="text-lg">🚪</span>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
                 Logout
               </button>
             </div>
@@ -324,60 +360,98 @@ export default function CustomerLayout({
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 w-full">
+      <main className="flex-1 w-full bg-gradient-to-br from-[var(--background)] via-[var(--surface-secondary)] to-[var(--background)] min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Welcome header */}
+          <div className="mb-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent mb-3">
+                Welcome to TRIXTECH
+              </h1>
+              <p className="text-xl text-[var(--foreground-secondary)] max-w-2xl mx-auto">
+                Discover premium event equipment and create unforgettable moments for your special occasions
+              </p>
+              <div className="mt-6 flex justify-center gap-4">
+                <div className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] rounded-full px-6 py-2 text-white text-sm font-semibold shadow-lg">
+                  ✨ Premium Quality Equipment
+                </div>
+                <div className="bg-gradient-to-r from-[var(--accent)] to-[var(--primary)] rounded-full px-6 py-2 text-white text-sm font-semibold shadow-lg">
+                  🎉 Easy Booking Process
+                </div>
+                <div className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] rounded-full px-6 py-2 text-white text-sm font-semibold shadow-lg">
+                  💝 Exceptional Service
+                </div>
+              </div>
+            </div>
+          </div>
           {children}
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white py-16 mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 mb-6 sm:mb-8">
-            <div className="md:col-span-2">
-              <h3 className="text-2xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent mb-4">
-                TRIXTECH
-              </h3>
-              <p className="text-gray-300 mb-4 max-w-md">
-                Your trusted partner for exceptional event experiences. From weddings to corporate gatherings,
-                we make every moment unforgettable.
+      <footer className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white py-12 mt-16 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-[var(--primary)]/5 to-[var(--accent)]/5"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
+            <div className="lg:col-span-2">
+              <div className="flex items-center mb-4">
+                <img
+                  src="/logo.png"
+                  alt="TRIXTECH"
+                  className="h-8 w-auto mr-3"
+                />
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent">
+                  TRIXTECH
+                </h3>
+              </div>
+              <p className="text-slate-300 mb-6 max-w-md leading-relaxed">
+                ✨ Your trusted partner for exceptional event experiences. We provide high-quality equipment
+                rental services for all your special occasions with love and care.
               </p>
               <div className="flex gap-4">
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <span className="text-xl">📘</span>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <span className="text-xl">📷</span>
-                </a>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                  <span className="text-xl">🐦</span>
-                </a>
+                <div className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] rounded-full p-3 hover:scale-110 transition-transform cursor-pointer">
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/>
+                  </svg>
+                </div>
+                <div className="bg-gradient-to-r from-[var(--accent)] to-[var(--primary)] rounded-full p-3 hover:scale-110 transition-transform cursor-pointer">
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12.017 0C5.396 0 .029 5.367.029 11.987c0 5.079 3.158 9.417 7.618 11.174-.105-.949-.199-2.403.041-3.439.219-.937 1.406-5.957 1.406-5.957s-.359-.72-.359-1.781c0-1.663.967-2.911 2.168-2.911 1.024 0 1.518.769 1.518 1.688 0 1.029-.653 2.567-.992 3.992-.285 1.193.6 2.165 1.775 2.165 2.128 0 3.768-2.245 3.768-5.487 0-2.861-2.063-4.869-5.008-4.869-3.41 0-5.409 2.562-5.409 5.199 0 1.033.394 2.143.889 2.749.099.12.112.225.085.345-.09.375-.293 1.199-.334 1.363-.053.225-.172.271-.402.165-1.495-.69-2.433-2.878-2.433-4.646 0-3.776 2.748-7.252 7.92-7.252 4.158 0 7.392 2.967 7.392 6.923 0 4.135-2.607 7.462-6.233 7.462-1.214 0-2.357-.629-2.747-1.378 0 0-.599 2.282-.744 2.84-.282 1.084-1.064 2.456-1.549 3.235C9.584 23.815 10.77 24.001 12.017 24.001c6.624 0 11.99-5.367 11.99-11.987C24.007 5.367 18.641.001.012.017z"/>
+                  </svg>
+                </div>
               </div>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
-              <ul className="space-y-2 text-gray-300">
-                <li><Link href="/customer/services" className="hover:text-white transition-colors">Services</Link></li>
-                <li><Link href="/customer/suggestions" className="hover:text-white transition-colors">Suggestions</Link></li>
-                <li><Link href="/customer/bookings" className="hover:text-white transition-colors">My Bookings</Link></li>
-                <li><Link href="/customer/profile" className="hover:text-white transition-colors">Profile</Link></li>
-                <li><Link href="/customer/notifications" className="hover:text-white transition-colors">Notifications</Link></li>
+              <h4 className="font-bold mb-6 text-white text-lg">Explore</h4>
+              <ul className="space-y-3 text-slate-300">
+                <li><Link href="/customer/services" className="hover:text-[var(--accent)] transition-colors flex items-center gap-2">🎪 Browse Equipment</Link></li>
+                <li><Link href="/customer/suggestions" className="hover:text-[var(--accent)] transition-colors flex items-center gap-2">💡 Smart Suggestions</Link></li>
+                <li><Link href="/customer/profile" className="hover:text-[var(--accent)] transition-colors flex items-center gap-2">👤 My Profile</Link></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-4">Support</h4>
-              <ul className="space-y-2 text-gray-300">
-                <li>Contact Us: 09127607860</li>
-                <li><button onClick={() => setShowPrivacyPolicy(true)} className="hover:text-white transition-colors">Privacy Policy</button></li>
+              <h4 className="font-bold mb-6 text-white text-lg">Get Help</h4>
+              <ul className="space-y-3 text-slate-300">
+                <li className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                  09127607860
+                </li>
+                <li><button onClick={() => setShowPrivacyPolicy(true)} className="hover:text-[var(--accent)] transition-colors flex items-center gap-2">🔒 Privacy Policy</button></li>
+                <li className="text-sm opacity-75">Available 24/7 for your events! 🎉</li>
               </ul>
             </div>
           </div>
 
-          <div className="border-t border-gray-700 pt-8 text-center">
-            <p className="text-gray-400">
-              &copy; 2025 TRIXTECH. All rights reserved. Made with ❤️ for exceptional events.
+          <div className="border-t border-slate-700 pt-8 text-center">
+            <p className="text-slate-400 text-sm mb-2">
+              Made with ❤️ for unforgettable moments
+            </p>
+            <p className="text-slate-500 text-xs">
+              &copy; 2025 TRIXTECH. All rights reserved. | Bringing joy to every celebration ✨
             </p>
           </div>
         </div>

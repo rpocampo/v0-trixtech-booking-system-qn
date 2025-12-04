@@ -68,7 +68,7 @@ export default function Login() {
       </div>
 
       {/* Card */}
-      <div className="bg-white/95 backdrop-blur-lg w-full max-w-md p-8 relative z-10 shadow-2xl rounded-2xl border border-white/20">
+      <div className="bg-white/80 backdrop-blur-2xl w-full max-w-md p-8 relative z-10 shadow-2xl rounded-2xl border border-white/30">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-block p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 rounded-2xl mb-4 shadow-lg transform hover:scale-105 transition-transform duration-300">

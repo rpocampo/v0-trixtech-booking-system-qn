@@ -190,7 +190,7 @@ export default function Register() {
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-green-400/30 to-teal-600/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-br from-yellow-400/20 to-orange-500/20 rounded-full blur-2xl animate-bounce"></div>
       </div>
-      <div className="bg-white/95 backdrop-blur-lg w-full max-w-md p-8 relative z-10 shadow-2xl rounded-2xl border border-white/20">
+      <div className="bg-white/80 backdrop-blur-2xl w-full max-w-md p-8 relative z-10 shadow-2xl rounded-2xl border border-white/30">
         <h1 className="text-3xl font-bold text-center mb-2 text-[var(--primary)]">TRIXTECH</h1>
         <p className="text-center text-[var(--muted)] mb-6">
           {currentStep === 'register' ? 'Create your account' : 'Verify your email'}
