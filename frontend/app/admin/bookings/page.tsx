@@ -313,7 +313,7 @@ export default function AdminBookings() {
           itemQuantities: editFormData.itemQuantities
         } : null);
 
-        setUpdateMessage('Booking details updated successfully!');
+        setUpdateMessage('Reservation details updated successfully!');
         setUpdateMessageType('success');
         setIsEditingBooking(false);
 
@@ -423,7 +423,7 @@ export default function AdminBookings() {
                 {hasBookings && (
                   <div className="text-xs">
                     <div className="bg-indigo-500 text-white rounded-full px-2 py-1 text-center">
-                      {dayBookings.length} booking{dayBookings.length !== 1 ? 's' : ''}
+                      {dayBookings.length} reservation{dayBookings.length !== 1 ? 's' : ''}
                     </div>
                   </div>
                 )}
@@ -436,7 +436,7 @@ export default function AdminBookings() {
         {selectedDate && (
           <div className="mt-6 border-t pt-6">
             <h3 className="text-lg font-semibold mb-4">
-              Bookings for {selectedDate.toLocaleDateString()}
+              Reservations for {selectedDate.toLocaleDateString()}
             </h3>
             {dailyBookings.length > 0 ? (
               <div className="space-y-3">
@@ -479,7 +479,7 @@ export default function AdminBookings() {
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-8">No bookings for this date</p>
+              <p className="text-gray-500 text-center py-8">No reservations for this date</p>
             )}
           </div>
         )}
@@ -490,15 +490,15 @@ export default function AdminBookings() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'confirmed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-100 text-gray-900 border-green-300';
       case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-yellow-100 text-gray-900 border-yellow-300';
       case 'completed':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-100 text-gray-900 border-blue-300';
       case 'cancelled':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-100 text-gray-900 border-red-300';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-900 border-gray-300';
     }
   };
 
@@ -537,7 +537,7 @@ export default function AdminBookings() {
         <>
           {/* Filters */}
           <div className="card p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Filter Bookings</h2>
+            <h2 className="text-xl font-semibold mb-4">Filter Reservations</h2>
             <div className="grid md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Status</label>
@@ -592,7 +592,7 @@ export default function AdminBookings() {
                 Clear Filters
               </button>
               <span className="text-sm text-[var(--muted)] self-center">
-                Showing {filteredBookings.length} of {bookings.length} bookings
+                Showing {filteredBookings.length} of {bookings.length} reservations
               </span>
             </div>
           </div>
@@ -638,9 +638,9 @@ export default function AdminBookings() {
                       <select
                         value={booking.paymentStatus}
                         onChange={(e) => updateBooking(booking._id, booking.status, e.target.value)}
-                        className={`px-3 py-1 rounded text-sm font-semibold ${
-                          booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
-                          'bg-yellow-100 text-yellow-800'
+                        className={`px-3 py-1 rounded text-sm font-semibold border ${
+                          booking.paymentStatus === 'paid' ? 'bg-green-100 text-gray-900 border-green-300' :
+                          'bg-yellow-100 text-gray-900 border-yellow-300'
                         }`}
                       >
                         <option value="unpaid">Unpaid</option>
@@ -669,7 +669,7 @@ export default function AdminBookings() {
 
           {bookings.length === 0 && (
             <div className="card p-8 text-center">
-              <p className="text-[var(--muted)]">No bookings yet</p>
+              <p className="text-[var(--muted)]">No reservations yet</p>
             </div>
           )}
 
@@ -679,14 +679,14 @@ export default function AdminBookings() {
               <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-6">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-2xl font-bold">Booking Details</h3>
+                    <h3 className="text-2xl font-bold">Reservation Details</h3>
                     <div className="flex gap-2">
                       {!isEditingBooking ? (
                         <button
                           onClick={startEditingBooking}
                           className="btn-primary text-sm px-4 py-2"
                         >
-                          ✏️ Edit Details
+                          ✏️ Edit Reservation Details
                         </button>
                       ) : (
                         <div className="flex gap-2">
@@ -732,7 +732,7 @@ export default function AdminBookings() {
                   <div className="space-y-6">
                     {/* Booking ID */}
                     <div className="bg-gray-50 p-4 rounded-lg">
-                      <h4 className="font-semibold text-sm text-gray-600 mb-1">Booking ID</h4>
+                      <h4 className="font-semibold text-sm text-gray-600 mb-1">Reservation ID</h4>
                       <p className="font-mono text-sm">{selectedBooking._id}</p>
                     </div>
 
@@ -786,7 +786,7 @@ export default function AdminBookings() {
                       <h4 className="font-semibold mb-3">Booking Details</h4>
                       <div className="grid md:grid-cols-4 gap-4">
                         <div>
-                          <span className="text-sm text-gray-600">Booking Date:</span>
+                          <span className="text-sm text-gray-600">Reservation Date:</span>
                           <p className="font-medium">{new Date(selectedBooking.bookingDate).toLocaleDateString()}</p>
                           <p className="text-sm text-gray-500">{new Date(selectedBooking.bookingDate).toLocaleTimeString()}</p>
                         </div>
@@ -888,7 +888,7 @@ export default function AdminBookings() {
                       <h4 className="font-semibold mb-3">Status Information</h4>
                       <div className="grid md:grid-cols-3 gap-4">
                         <div>
-                          <span className="text-sm text-gray-600">Booking Status:</span>
+                          <span className="text-sm text-gray-600">Reservation Status:</span>
                           <div className="mt-1">
                             <select
                               value={selectedBooking.status}
@@ -908,12 +908,12 @@ export default function AdminBookings() {
                             <select
                               value={selectedBooking.paymentStatus}
                               onChange={(e) => updateBooking(selectedBooking._id, selectedBooking.status, e.target.value)}
-                              className={`px-3 py-1 rounded text-sm font-semibold ${
-                                selectedBooking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
-                                selectedBooking.paymentStatus === 'processing' ? 'bg-blue-100 text-blue-800' :
-                                selectedBooking.paymentStatus === 'failed' ? 'bg-red-100 text-red-800' :
-                                selectedBooking.paymentStatus === 'unpaid' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
+                              className={`px-3 py-1 rounded text-sm font-semibold border ${
+                                selectedBooking.paymentStatus === 'paid' ? 'bg-green-100 text-gray-900 border-green-300' :
+                                selectedBooking.paymentStatus === 'processing' ? 'bg-blue-100 text-gray-900 border-blue-300' :
+                                selectedBooking.paymentStatus === 'failed' ? 'bg-red-100 text-gray-900 border-red-300' :
+                                selectedBooking.paymentStatus === 'unpaid' ? 'bg-yellow-100 text-gray-900 border-yellow-300' :
+                                'bg-gray-100 text-gray-900 border-gray-300'
                               }`}
                             >
                               <option value="unpaid">Unpaid</option>
@@ -1089,7 +1089,7 @@ export default function AdminBookings() {
                   <div className="mt-4 pt-4 border-t border-[var(--border)]">
                     <div className="flex justify-between items-center">
                       <div className="text-sm text-gray-600">
-                        Need help managing this booking? Contact the customer support team for assistance.
+                        Need help managing this reservation? Contact the customer support team for assistance.
                       </div>
                       <div className="text-sm text-[var(--primary)] font-medium">
                         📞 Support: (+63) 912-760-7860| ✉️ trixtech011@gmail.com

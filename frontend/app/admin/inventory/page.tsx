@@ -356,7 +356,7 @@ export default function InventoryManagement() {
 
       {/* Low Stock Alerts */}
       {showAlerts && lowStockAlerts && (
-        <div className="card p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+        <div className="card p-6 bg-gradient-to-r from-[var(--primary-50)] to-[var(--accent-50)] border-[var(--primary-200)]">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-blue-900 flex items-center gap-2">
               <span className="text-xl">🔔</span>
@@ -373,7 +373,7 @@ export default function InventoryManagement() {
           {lowStockAlerts.items && lowStockAlerts.items.length > 0 ? (
             <div className="space-y-3">
               {lowStockAlerts.items.map((item: any) => (
-                <div key={item.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-100">
+                <div key={item.id} className="flex items-center justify-between p-3 bg-[var(--surface)] rounded-lg border border-[var(--border)]">
                   <div className="flex items-center gap-3">
                     <div className={`w-3 h-3 rounded-full ${
                       item.level === 'out_of_stock' ? 'bg-red-500' :
@@ -381,8 +381,8 @@ export default function InventoryManagement() {
                       item.level === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
                     }`}></div>
                     <div>
-                      <p className="font-medium text-gray-900">{item.name}</p>
-                      <p className="text-sm text-gray-600 capitalize">{item.category} • {item.level.replace('_', ' ')}</p>
+                      <p className="font-medium text-[var(--foreground)]">{item.name}</p>
+                      <p className="text-sm text-[var(--muted)] capitalize">{item.category} • {item.level.replace('_', ' ')}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -410,7 +410,7 @@ export default function InventoryManagement() {
             <div className="text-center py-8">
               <div className="text-4xl mb-2">✅</div>
               <p className="text-green-700 font-medium">All inventory levels are healthy!</p>
-              <p className="text-sm text-gray-600 mt-1">No low stock alerts at this time.</p>
+              <p className="text-sm text-[var(--muted)] mt-1">No low stock alerts at this time.</p>
             </div>
           )}
         </div>
@@ -446,7 +446,7 @@ export default function InventoryManagement() {
                 {inventory.map((item) => {
                   const stockStatus = getStockStatus(item.quantity);
                   return (
-                    <tr key={item._id} className="border-b border-[var(--border)] hover:bg-gray-50 transition-colors">
+                    <tr key={item._id} className="border-b border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors">
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-3">
                           {item.image ? (
@@ -519,12 +519,12 @@ export default function InventoryManagement() {
       {/* Update Stock Modal */}
       {showModal && selectedItem && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div className="bg-[var(--surface)] rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6">
               <h3 className="text-2xl font-bold text-[var(--foreground)] mb-4">Update Stock</h3>
 
               <div className="mb-6">
-                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg mb-4">
+                <div className="flex items-center gap-3 p-3 bg-[var(--surface-secondary)] rounded-lg mb-4">
                   {selectedItem.image ? (
                     <img
                       src={selectedItem.image.startsWith('/uploads/') ? `http://localhost:5000${selectedItem.image}` : selectedItem.image}
@@ -587,7 +587,7 @@ export default function InventoryManagement() {
       {/* Batch Management Modal */}
       {showBatches && selectedServiceBatches && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-[var(--surface)] rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
@@ -649,7 +649,7 @@ export default function InventoryManagement() {
                   </thead>
                   <tbody>
                     {selectedServiceBatches.batchDetails.batches.map((batch: any) => (
-                      <tr key={batch._id} className="border-b border-[var(--border)] hover:bg-gray-50">
+                      <tr key={batch._id} className="border-b border-[var(--border)] hover:bg-[var(--surface-hover)]">
                         <td className="py-3 px-4 font-medium">{batch.batchId}</td>
                         <td className="py-3 px-4">{batch.supplier}</td>
                         <td className="py-3 px-4 text-center">{batch.quantity}</td>
@@ -684,7 +684,7 @@ export default function InventoryManagement() {
       {/* Add Batch Modal */}
       {showAddBatch && selectedServiceBatches && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+          <div className="bg-[var(--surface)] rounded-lg shadow-xl max-w-md w-full">
             <div className="p-6">
               <h3 className="text-2xl font-bold text-[var(--foreground)] mb-4">Add New Batch</h3>
               <p className="text-[var(--muted)] mb-6">{selectedServiceBatches.service.name}</p>
@@ -808,7 +808,7 @@ export default function InventoryManagement() {
       {/* Stock History Modal */}
       {showStockHistory && stockHistory && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-[var(--surface)] rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
                 <div>
@@ -888,7 +888,7 @@ export default function InventoryManagement() {
                   </thead>
                   <tbody>
                     {stockHistory.transactions?.map((transaction: any, index: number) => (
-                      <tr key={index} className="border-b border-[var(--border)] hover:bg-gray-50">
+                      <tr key={index} className="border-b border-[var(--border)] hover:bg-[var(--surface-hover)]">
                         <td className="py-3 px-4">
                           {new Date(transaction.date).toLocaleDateString()}
                         </td>
@@ -904,7 +904,7 @@ export default function InventoryManagement() {
                                 }}
                               />
                             ) : (
-                              <div className="w-6 h-6 rounded bg-gray-200 flex items-center justify-center text-xs">📦</div>
+                              <div className="w-6 h-6 rounded bg-[var(--surface-secondary)] flex items-center justify-center text-xs">📦</div>
                             )}
                             <span className="font-medium">{transaction.itemName}</span>
                           </div>

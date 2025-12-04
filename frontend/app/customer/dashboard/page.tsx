@@ -214,95 +214,40 @@ export default function CustomerDashboard() {
 
             return (
               <button
-                key={index}
-                onClick={() => !isPastDate && handleDateClick(date)}
-                disabled={isPastDate}
-                className={`p-3 text-sm border rounded-lg transition-colors min-h-[80px] ${
-                  isPastDate
-                    ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-60'
-                    : isCurrentMonth
-                      ? isSelected
-                        ? 'bg-[var(--primary)]/10 border-[var(--primary)] text-[var(--primary)]'
-                        : isToday
-                          ? 'bg-[var(--secondary)]/10 border-[var(--secondary)] text-[var(--secondary)]'
-                          : 'bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--surface-hover)]'
-                      : 'bg-[var(--surface-secondary)] border-[var(--border)] text-[var(--muted)]'
-                }`}
-              >
-                <div className="text-right mb-1">{date.getDate()}</div>
-                {!isPastDate && (
-                  <div className="text-xs">
-                    {hasBookings ? (
-                      (() => {
-                        const confirmedBookings = dayBookings.filter(b => b.status === 'confirmed').length;
-                        const pendingBookings = dayBookings.filter(b => b.status !== 'confirmed').length;
-
-                        return (
-                          <>
-                            {confirmedBookings > 0 && (
-                              <div className="bg-[var(--primary)] text-white rounded-full px-2 py-1 text-center mb-1">
-                                {confirmedBookings} reserved
-                              </div>
-                            )}
-                            {pendingBookings > 0 && (
-                              <div className="bg-[var(--accent)] text-white rounded-full px-2 py-1 text-center">
-                                {pendingBookings} open
-                              </div>
-                            )}
-                          </>
-                        );
-                      })()
-                    ) : (
-                      <div className="bg-[var(--secondary)] text-white rounded-full px-2 py-1 text-center">
-                        open
-                      </div>
-                    )}
-                  </div>
-                )}
-              </button>
+                  key={index}
+                  onClick={() => !isPastDate && handleDateClick(date)}
+                  disabled={isPastDate}
+                  className={`p-3 text-sm border rounded-lg transition-colors min-h-[60px] ${
+                    isPastDate
+                      ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-60'
+                      : isCurrentMonth
+                        ? isSelected
+                          ? 'bg-[var(--primary)]/10 border-[var(--primary)] text-[var(--primary)]'
+                          : isToday
+                            ? 'bg-[var(--secondary)]/10 border-[var(--secondary)] text-[var(--secondary)]'
+                            : 'bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--surface-hover)]'
+                        : 'bg-[var(--surface-secondary)] border-[var(--border)] text-[var(--muted)]'
+                  }`}
+                >
+                  <div className="text-right mb-1">{date.getDate()}</div>
+                  {!isPastDate && (
+                    <div className="text-xs">
+                      {hasBookings ? (
+                        <div className="bg-[var(--primary)] text-white rounded-full px-2 py-1 text-center">
+                          reserved
+                        </div>
+                      ) : (
+                        <div className="bg-[var(--secondary)] text-white rounded-full px-2 py-1 text-center">
+                          open
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </button>
             );
           })}
         </div>
 
-        {/* Daily Bookings Display */}
-        {selectedDate && (
-          <div className="mt-6 border-t border-[var(--border)] pt-6">
-            <h3 className="text-lg font-semibold mb-4">
-              Bookings for {selectedDate.toLocaleDateString()}
-            </h3>
-            {dailyBookings.length > 0 ? (
-              <div className="space-y-3">
-                {dailyBookings.map(booking => (
-                  <div key={booking.id} className="border border-[var(--border)] rounded-lg p-4 bg-[var(--surface-secondary)]">
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div>
-                        <span className="text-sm text-[var(--muted)]">Equipment:</span>
-                        <p className="font-medium">{booking.serviceId?.name || 'Unknown'}</p>
-                      </div>
-                      <div>
-                        <span className="text-sm text-[var(--muted)]">Time:</span>
-                        <p className="font-medium">{new Date(booking.bookingDate).toLocaleTimeString()}</p>
-                      </div>
-                      <div>
-                        <span className="text-sm text-[var(--muted)]">Status:</span>
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                          booking.status === 'completed' ? 'bg-blue-100 text-blue-800' :
-                          booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {booking.status}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-[var(--muted)] text-center py-8">No bookings for this date</p>
-            )}
-          </div>
-        )}
       </div>
     );
   };

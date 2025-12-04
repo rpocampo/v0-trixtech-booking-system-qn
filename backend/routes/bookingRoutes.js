@@ -65,6 +65,21 @@ router.get('/check-availability/:serviceId', authMiddleware, async (req, res, ne
       let deliveryTruckReason = '';
       let nextAvailableDeliveryTime = null;
 
+      // Check for one active event reservation per customer rule
+      // If this is an event service (not equipment), check if customer already has an active event reservation
+      if (service.category !== 'equipment') {
+        const existingActiveEventBooking = await Booking.findOne({
+          customerId: req.user.id,
+          status: { $in: ['pending', 'confirmed'] },
+        }).populate('serviceId');
+
+        if (existingActiveEventBooking && existingActiveEventBooking.serviceId.category !== 'equipment') {
+          isAvailable = false;
+          reason = 'You already have an active event reservation. Only one event reservation allowed at a time.';
+          availableQuantity = 0;
+        }
+      }
+
       // Import delivery service
       const { requiresDeliveryTruck, checkDeliveryTruckAvailability } = require('../utils/deliveryService');
 
@@ -162,6 +177,27 @@ router.post('/', authMiddleware, async (req, res, next) => {
       const pkg = await Package.findById(packageId);
       if (!pkg) {
         return res.status(404).json({ success: false, message: 'Package not found' });
+      }
+
+      // Check for one active event reservation per customer rule for packages
+      // Packages typically contain event services, so check if customer has any active event reservation
+      const existingActiveEventBooking = await Booking.findOne({
+        customerId: req.user.id,
+        status: { $in: ['pending', 'confirmed'] },
+      }).populate('serviceId');
+
+      if (existingActiveEventBooking && existingActiveEventBooking.serviceId.category !== 'equipment') {
+        return res.status(409).json({
+          success: false,
+          message: 'You can only have one active event reservation at a time. Please complete or cancel your current event booking before creating a new package booking.',
+          existingBooking: {
+            id: existingActiveEventBooking._id,
+            serviceName: existingActiveEventBooking.serviceId.name,
+            bookingDate: existingActiveEventBooking.bookingDate,
+            status: existingActiveEventBooking.status
+          },
+          errorType: 'multiple_event_reservation'
+        });
       }
 
       // Create bookings for all included services in the package
@@ -332,6 +368,31 @@ router.post('/', authMiddleware, async (req, res, next) => {
 
     const requestedQuantity = quantity || 1;
     const bookingDateObj = new Date(bookingDate);
+
+    // Check for one active event reservation per customer rule
+    // Events are services that are NOT equipment category
+    if (service.category !== 'equipment') {
+      // Check if customer already has an active event reservation
+      const existingActiveEventBooking = await Booking.findOne({
+        customerId: req.user.id,
+        status: { $in: ['pending', 'confirmed'] },
+        // Find bookings where the service is NOT equipment (i.e., events)
+      }).populate('serviceId');
+
+      if (existingActiveEventBooking && existingActiveEventBooking.serviceId.category !== 'equipment') {
+        return res.status(409).json({
+          success: false,
+          message: 'You can only have one active event reservation at a time. Please complete or cancel your current event booking before creating a new one.',
+          existingBooking: {
+            id: existingActiveEventBooking._id,
+            serviceName: existingActiveEventBooking.serviceId.name,
+            bookingDate: existingActiveEventBooking.bookingDate,
+            status: existingActiveEventBooking.status
+          },
+          errorType: 'multiple_event_reservation'
+        });
+      }
+    }
 
     // Import delivery service
     const { requiresDeliveryTruck, checkDeliveryTruckAvailability } = require('../utils/deliveryService');
@@ -1319,6 +1380,28 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
 
     const requestedQuantity = quantity || 1;
     const bookingDateObj = new Date(bookingDate);
+
+    // Check for one active event reservation per customer rule
+    if (service.category !== 'equipment') {
+      const existingActiveEventBooking = await Booking.findOne({
+        customerId: req.user.id,
+        status: { $in: ['pending', 'confirmed'] },
+      }).populate('serviceId');
+
+      if (existingActiveEventBooking && existingActiveEventBooking.serviceId.category !== 'equipment') {
+        return res.status(409).json({
+          success: false,
+          message: 'You can only have one active event reservation at a time. Please complete or cancel your current event booking before creating a new one.',
+          existingBooking: {
+            id: existingActiveEventBooking._id,
+            serviceName: existingActiveEventBooking.serviceId.name,
+            bookingDate: existingActiveEventBooking.bookingDate,
+            status: existingActiveEventBooking.status
+          },
+          errorType: 'multiple_event_reservation'
+        });
+      }
+    }
 
     // Check available quantity
     if (service.quantity !== undefined && service.quantity < requestedQuantity) {

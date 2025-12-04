@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useSocket } from '../../../components/SocketProvider';
 import { useCart } from '../../../components/CartContext';
@@ -75,10 +75,6 @@ export default function Services() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [showServiceModal, setShowServiceModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [showDateModal, setShowDateModal] = useState<boolean>(() => {
-    // Only show modal if no date has been saved in localStorage
-    return !localStorage.getItem('selectedReservationDate');
-  });
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [locationError, setLocationError] = useState<string>('');
   const [locationAllowed, setLocationAllowed] = useState<boolean>(() => {
@@ -90,7 +86,7 @@ export default function Services() {
     return !localStorage.getItem('locationPermissionDecision');
   });
 
-  const fetchServices = async (filterParams = filters) => {
+  const fetchServices = useCallback(async (filterParams = filters) => {
     try {
       const queryParams = new URLSearchParams();
 
@@ -117,7 +113,7 @@ export default function Services() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedDate, filters]);
 
 
   const clearFilters = () => {
@@ -148,6 +144,13 @@ export default function Services() {
     const availableQty = service.availableQuantity ?? service.quantity ?? 0;
     if (availableQty <= 0) {
       alert('This equipment is not available for the selected date.');
+      return;
+    }
+
+    // Check if trying to add more than available
+    const currentQtyInCart = getItemQuantity(service._id);
+    if (currentQtyInCart >= availableQty) {
+      alert(`You can only add up to ${availableQty} of this item for the selected date.`);
       return;
     }
 
@@ -214,14 +217,8 @@ export default function Services() {
       console.log('Inventory updated:', data);
       setUpdating(true);
 
-      // Update the specific service's quantity
-      setServices(prev =>
-        prev.map(service =>
-          service._id === data.serviceId
-            ? { ...service, quantity: data.availableQuantity }
-            : service
-        )
-      );
+      // Refetch services with current date to get updated availability
+      fetchServices();
 
       setTimeout(() => setUpdating(false), 2000);
     };
@@ -230,18 +227,8 @@ export default function Services() {
       console.log('Service updated:', data);
       setUpdating(true);
 
-      // Update the service details
-      setServices(prev =>
-        prev.map(service =>
-          service._id === data.serviceId
-            ? {
-                ...service,
-                quantity: data.quantity,
-                isAvailable: data.isAvailable
-              }
-            : service
-        )
-      );
+      // Refetch services with current date to get updated availability
+      fetchServices();
 
       setTimeout(() => setUpdating(false), 2000);
     };
@@ -253,7 +240,7 @@ export default function Services() {
       socket.off('inventory-updated', handleInventoryUpdate);
       socket.off('service-updated', handleServiceUpdate);
     };
-  }, [socket]);
+  }, [socket, fetchServices]); // Add fetchServices as dependency
 
   if (loading) return <div>Loading services...</div>;
 
@@ -370,54 +357,6 @@ export default function Services() {
     );
   }
 
-  // Date Selection Modal - Only show if no date has been saved in localStorage
-  if (showDateModal || !localStorage.getItem('selectedReservationDate')) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-          <div className="p-6">
-            <div className="text-center mb-6">
-              <div className="text-4xl mb-4">📅</div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">Select Reservation Date</h2>
-              <p className="text-gray-600">Please choose the date for your equipment reservation first.</p>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Reservation Date <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  className="input-field w-full"
-                  min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // Tomorrow minimum
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">Reservations must be made at least 24 hours in advance</p>
-              </div>
-
-              <button
-                onClick={() => {
-                  if (selectedDate) {
-                    // Save the selected date to localStorage
-                    localStorage.setItem('selectedReservationDate', selectedDate);
-                    setShowDateModal(false);
-                    fetchServices(); // Fetch services with the selected date
-                  }
-                }}
-                disabled={!selectedDate}
-                className="w-full btn-primary py-3 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Continue to Browse Equipments
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="animate-fade-in w-full min-h-screen flex flex-col">
@@ -484,8 +423,43 @@ export default function Services() {
         </p>
       </div>
 
-      {/* Search and Filter Bar */}
+      {/* Date Selection and Search/Filter Bar */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 mx-2 sm:mx-4 lg:mx-6">
+        {/* Date Picker */}
+        <div className="mb-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reservation Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // Tomorrow minimum
+                value={selectedDate}
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  setSelectedDate(newDate);
+                  localStorage.setItem('selectedReservationDate', newDate);
+                  // Refetch services with new date
+                  fetchServices();
+                }}
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">Select date to check equipment availability</p>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <span>📅</span>
+              <span>Selected: {new Date(selectedDate).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}</span>
+            </div>
+          </div>
+        </div>
+
         <div className="flex flex-col lg:flex-row gap-4 items-center">
           {/* Search Input */}
           <div className="flex-1 w-full lg:w-auto">
@@ -627,7 +601,9 @@ export default function Services() {
               {filteredServices.map((service, index) => (
                 <div
                   key={service._id}
-                  className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden border border-gray-200"
+                  className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden border border-gray-200 ${
+                    (service.availableQuantity ?? service.quantity ?? 0) <= 0 ? 'opacity-60 grayscale' : ''
+                  }`}
                 >
                 {/* Service Image */}
                 <div className="relative overflow-hidden">
@@ -661,7 +637,7 @@ export default function Services() {
                       service.serviceType === 'equipment' ? 'bg-green-500 text-white' :
                       'bg-purple-500 text-white'
                     }`}>
-                      {service.serviceType}
+                      {service.serviceType === 'service' ? 'event' : service.serviceType}
                     </span>
                     <span className="px-2 py-1 bg-white text-gray-700 text-xs font-semibold rounded-full capitalize shadow-sm">
                       {service.category.replace('-', ' ')}
@@ -676,7 +652,10 @@ export default function Services() {
                         (service.availableQuantity ?? service.quantity ?? 0) > 0 ? 'bg-yellow-500 text-white' :
                         'bg-red-500 text-white'
                       }`}>
-                        {(service.availableQuantity ?? service.quantity ?? 0) > 0 ? `${service.availableQuantity ?? service.quantity ?? 0} available` : 'Not available'}
+                        {(service.availableQuantity ?? service.quantity ?? 0) > 0
+                          ? `${service.availableQuantity ?? service.quantity ?? 0} remaining`
+                          : 'Unavailable'
+                        }
                       </span>
                     </div>
                   )}
@@ -749,9 +728,14 @@ export default function Services() {
                     ) : (
                       <button
                         onClick={() => handleAddToCart(service)}
-                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors duration-200"
+                        disabled={(service.availableQuantity ?? service.quantity ?? 0) <= 0}
+                        className={`w-full py-2 px-4 rounded-lg font-medium transition-colors duration-200 ${
+                          (service.availableQuantity ?? service.quantity ?? 0) <= 0
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-blue-600 text-white hover:bg-blue-700'
+                        }`}
                       >
-                        Add to Reservation
+                        {(service.availableQuantity ?? service.quantity ?? 0) <= 0 ? 'Unavailable' : 'Add to Reservation'}
                       </button>
                     )}
                   </div>

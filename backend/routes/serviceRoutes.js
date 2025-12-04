@@ -104,6 +104,9 @@ router.get('/', async (req, res, next) => {
       date // New date parameter for availability checking
     } = req.query;
 
+    // Handle date parameter - if it's an array (due to duplicate params), take the first value
+    const selectedDate = Array.isArray(date) ? date[0] : date;
+
     let query = { isAvailable: true };
 
     // Apply filters
@@ -145,9 +148,9 @@ router.get('/', async (req, res, next) => {
 
     // If date is provided, check availability for equipment items
     let servicesWithAvailability = services;
-    if (date) {
+    if (selectedDate) {
       const Booking = require('../models/Booking');
-      const targetDate = new Date(date);
+      const targetDate = new Date(selectedDate);
       const nextDay = new Date(targetDate);
       nextDay.setDate(nextDay.getDate() + 1);
 

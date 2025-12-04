@@ -668,7 +668,7 @@ button, a, input, textarea, select {
 }
 
 .btn-outline {
-  @apply border border-[var(--border)] bg-white text-[var(--foreground)] px-4 py-2.5 rounded-lg font-medium hover:bg-[var(--surface-hover)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all duration-200 relative;
+  @apply border border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] px-4 py-2.5 rounded-lg font-medium hover:bg-[var(--surface-hover)] hover:border-[var(--primary)] hover:text-[var(--primary)] transition-all duration-200 relative;
 }
 
 .btn-outline::before {
@@ -1025,9 +1025,74 @@ button, a, input, textarea, select {
   @apply border-red-300 focus:ring-red-500 focus:ring-opacity-30;
 }
 
+/* Date input specific styling for better visibility */
+.input-field[type="date"] {
+  color: var(--foreground);
+  color-scheme: dark light; /* Allow browser to choose appropriate color scheme */
+}
+
+.input-field[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(var(--foreground-invert, 0));
+}
+
+/* Admin theme specific date input styling */
+[data-theme="admin"] .input-field[type="date"] {
+  color: #f8fafc;
+  background-color: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme="admin"] .input-field[type="date"]:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="admin"] .input-field[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1); /* Make calendar icon light in dark theme */
+}
+
+[data-theme="admin"] .input-field[type="date"]::-webkit-datetime-edit {
+  color: #f8fafc;
+}
+
+[data-theme="admin"] .input-field[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  color: #f8fafc;
+}
+
+[data-theme="admin"] .input-field[type="date"]::-webkit-datetime-edit-text {
+  color: #f8fafc;
+}
+
+[data-theme="admin"] .input-field[type="date"]::-webkit-datetime-edit-month-field,
+[data-theme="admin"] .input-field[type="date"]::-webkit-datetime-edit-day-field,
+[data-theme="admin"] .input-field[type="date"]::-webkit-datetime-edit-year-field {
+  color: #f8fafc;
+}
+
 /* Select dropdowns */
 .select-field {
   @apply input-field cursor-pointer pr-10 appearance-none;
+}
+
+/* Ensure select dropdown options are visible */
+select.input-field option {
+  color: var(--foreground);
+  background-color: white;
+}
+
+select.input-field {
+  color: var(--foreground);
+}
+
+/* Admin theme select styling */
+[data-theme="admin"] select.input-field {
+  background-color: var(--surface);
+  border-color: var(--border);
+}
+
+[data-theme="admin"] select.input-field option {
+  background-color: var(--surface);
+  color: var(--foreground);
 }
 
 /* Textarea */

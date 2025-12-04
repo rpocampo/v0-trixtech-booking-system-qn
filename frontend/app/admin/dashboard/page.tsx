@@ -200,7 +200,7 @@ export default function AdminDashboard() {
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[var(--muted)] text-sm font-medium">Total Bookings</p>
+              <p className="text-[var(--muted)] text-sm font-medium">Total Reservations</p>
               <p className="text-3xl font-bold text-[var(--foreground)] mt-1">{stats.totalBookings}</p>
             </div>
             <div className="w-12 h-12 bg-[var(--primary-50)] rounded-lg flex items-center justify-center">
@@ -386,7 +386,7 @@ export default function AdminDashboard() {
             <svg className="w-12 h-12 text-slate-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <p className="text-slate-500 text-sm">No recent bookings</p>
+            <p className="text-slate-500 text-sm">No recent reservations</p>
           </div>
         )}
       </div>

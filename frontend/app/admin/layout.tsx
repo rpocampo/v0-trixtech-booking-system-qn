@@ -280,7 +280,7 @@ export default function AdminLayout({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
               </div>
-              {!isSidebarCollapsed && <span className="font-semibold tracking-wide">Booking Management</span>}
+              {!isSidebarCollapsed && <span className="font-semibold tracking-wide">Reservation Management</span>}
             </Link>
             <Link href="/admin/inventory" className={`group flex items-center gap-4 px-4 py-4 rounded-xl hover:bg-[var(--sidebar-hover)] transition-all duration-200 hover:scale-[1.02] ${isSidebarCollapsed ? 'justify-center' : ''} ${pathname === '/admin/inventory' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-lg shadow-[var(--primary)]/20' : 'text-[var(--sidebar-text-secondary)] hover:text-[var(--sidebar-text)]'}`}>
               <div className={`p-2 rounded-lg ${pathname === '/admin/inventory' ? 'bg-white/20' : 'bg-[var(--sidebar-hover)] group-hover:bg-[var(--sidebar-active)]'} transition-all duration-200`}>

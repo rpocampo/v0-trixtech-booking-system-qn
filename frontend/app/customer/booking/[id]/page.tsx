@@ -562,7 +562,31 @@ export default function BookingPage() {
       const intentData = await intentResponse.json();
 
       if (!intentResponse.ok) {
-        setError(intentData.message || 'Failed to create booking intent');
+        // Handle specific error types
+        if (intentData.errorType === 'multiple_event_reservation') {
+          setError(
+            <div className="space-y-3">
+              <div className="font-semibold text-red-800">{intentData.message}</div>
+              {intentData.existingBooking && (
+                <div className="bg-red-50 border border-red-200 rounded p-3 text-sm">
+                  <div className="font-medium text-red-800 mb-2">Your Current Event Booking:</div>
+                  <div className="text-red-700">
+                    <div><strong>Service:</strong> {intentData.existingBooking.serviceName}</div>
+                    <div><strong>Date:</strong> {new Date(intentData.existingBooking.bookingDate).toLocaleDateString()}</div>
+                    <div><strong>Status:</strong> {intentData.existingBooking.status}</div>
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-red-200">
+                    <p className="text-xs text-red-600">
+                      To book a new event, please complete or cancel your current booking first.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        } else {
+          setError(intentData.message || 'Failed to create booking intent');
+        }
         setSubmitting(false);
         return;
       }
@@ -1243,7 +1267,18 @@ export default function BookingPage() {
                           <div>
                             <div className="font-semibold mb-1">Not Available</div>
                             <div className="text-xs mt-1">
-                              {availabilityStatus.reason}
+                              {availabilityStatus.reason?.includes('active event reservation') ? (
+                                <div className="space-y-2">
+                                  <div>{availabilityStatus.reason}</div>
+                                  <div className="p-2 bg-blue-50 border border-blue-200 rounded text-blue-700 text-xs">
+                                    <div className="font-medium mb-1">💡 What to do next:</div>
+                                    <div>• Complete or cancel your current event booking</div>
+                                    <div>• Visit your bookings page to manage existing reservations</div>
+                                  </div>
+                                </div>
+                              ) : (
+                                availabilityStatus.reason
+                              )}
                               {availabilityStatus.deliveryTruckReason && (
                                 <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700 text-xs">
                                   <div className="font-medium mb-1">🚚 Delivery Truck Unavailable</div>
