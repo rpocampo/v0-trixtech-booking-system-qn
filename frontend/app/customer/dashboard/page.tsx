@@ -49,9 +49,8 @@ export default function CustomerDashboard() {
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [locationError, setLocationError] = useState<string>('');
   const [locationRestricted, setLocationRestricted] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [dailyBookings, setDailyBookings] = useState<Booking[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [bookedDates, setBookedDates] = useState<Set<string>>(new Set());
 
   // Location-based access control
   useEffect(() => {
@@ -113,18 +112,10 @@ export default function CustomerDashboard() {
   };
 
   const handleDateClick = (date: Date) => {
-    setSelectedDate(date);
-    // Filter bookings for the selected date
-    const dayStart = new Date(date);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(date);
-    dayEnd.setHours(23, 59, 59, 999);
-
-    const bookingsForDate = recentBookings.filter(booking => {
-      const bookingDate = new Date(booking.bookingDate);
-      return bookingDate >= dayStart && bookingDate <= dayEnd;
-    });
-    setDailyBookings(bookingsForDate);
+    // Store selected date and redirect to equipment browsing
+    const dateStr = date.toISOString().split('T')[0];
+    localStorage.setItem('selectedReservationDate', dateStr);
+    router.push(`/customer/services?date=${dateStr}`);
   };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
@@ -139,17 +130,38 @@ export default function CustomerDashboard() {
     });
   };
 
-  const getBookingsForDate = (date: Date) => {
-    const dayStart = new Date(date);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(date);
-    dayEnd.setHours(23, 59, 59, 999);
+  // Fetch booked dates for the current month
+  useEffect(() => {
+    const fetchBookedDates = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
 
-    return recentBookings.filter(booking => {
-      const bookingDate = new Date(booking.bookingDate);
-      return bookingDate >= dayStart && bookingDate <= dayEnd;
-    });
-  };
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth() + 1; // JS months are 0-indexed
+
+        const response = await fetch(`http://localhost:5000/api/bookings/calendar?year=${year}&month=${month}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            // Create a set of booked date strings (YYYY-MM-DD format)
+            const booked = new Set<string>();
+            data.bookedDates.forEach((dateStr: string) => {
+              booked.add(dateStr);
+            });
+            setBookedDates(booked);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch booked dates:', error);
+      }
+    };
+
+    fetchBookedDates();
+  }, [currentMonth]);
 
   const renderCalendar = () => {
     const year = currentMonth.getFullYear();
@@ -175,19 +187,26 @@ export default function CustomerDashboard() {
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6">
         {/* Calendar Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold">
-            {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-          </h2>
+          <div>
+            <h2 className="text-xl font-semibold">
+              Select Reservation Date
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </p>
+          </div>
           <div className="flex gap-2">
             <button
               onClick={() => navigateMonth('prev')}
               className="btn-secondary px-3 py-1"
+              aria-label="Previous month"
             >
               ←
             </button>
             <button
               onClick={() => navigateMonth('next')}
               className="btn-secondary px-3 py-1"
+              aria-label="Next month"
             >
               →
             </button>
@@ -207,10 +226,9 @@ export default function CustomerDashboard() {
           {calendarDays.map((date, index) => {
             const isCurrentMonth = date.getMonth() === month;
             const isToday = date.toDateString() === new Date().toDateString();
-            const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
             const isPastDate = date < new Date(new Date().setHours(0, 0, 0, 0));
-            const dayBookings = getBookingsForDate(date);
-            const hasBookings = dayBookings.length > 0;
+            const dateStr = date.toISOString().split('T')[0];
+            const isBooked = bookedDates.has(dateStr);
 
             return (
               <button
@@ -221,24 +239,22 @@ export default function CustomerDashboard() {
                     isPastDate
                       ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-60'
                       : isCurrentMonth
-                        ? isSelected
-                          ? 'bg-[var(--primary)]/10 border-[var(--primary)] text-[var(--primary)]'
-                          : isToday
-                            ? 'bg-[var(--secondary)]/10 border-[var(--secondary)] text-[var(--secondary)]'
-                            : 'bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--surface-hover)]'
-                        : 'bg-[var(--surface-secondary)] border-[var(--border)] text-[var(--muted)]'
+                        ? isToday
+                          ? 'bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                          : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-blue-300'
+                        : 'bg-gray-50 border-gray-200 text-gray-400'
                   }`}
                 >
                   <div className="text-right mb-1">{date.getDate()}</div>
                   {!isPastDate && (
                     <div className="text-xs">
-                      {hasBookings ? (
-                        <div className="bg-[var(--primary)] text-white rounded-full px-2 py-1 text-center">
-                          reserved
+                      {isBooked ? (
+                        <div className="bg-red-100 text-red-700 px-1 py-0.5 rounded text-center">
+                          Busy
                         </div>
                       ) : (
-                        <div className="bg-[var(--secondary)] text-white rounded-full px-2 py-1 text-center">
-                          open
+                        <div className="bg-green-100 text-green-700 px-1 py-0.5 rounded text-center">
+                          Available
                         </div>
                       )}
                     </div>
@@ -246,6 +262,25 @@ export default function CustomerDashboard() {
                 </button>
             );
           })}
+        </div>
+
+        {/* Legend */}
+        <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
+            <span className="text-gray-600">Available</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
+            <span className="text-gray-600">Busy</span>
+          </div>
+        </div>
+
+        {/* Instructions */}
+        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800 text-center">
+            📅 Click on an available date to browse equipment for that day
+          </p>
         </div>
 
       </div>

@@ -909,6 +909,46 @@ router.post('/', authMiddleware, async (req, res, next) => {
 
 
 
+// Get booked dates for calendar display
+router.get('/calendar', authMiddleware, async (req, res, next) => {
+  try {
+    const { year, month } = req.query;
+
+    if (!year || !month) {
+      return res.status(400).json({ success: false, message: 'Year and month are required' });
+    }
+
+    const yearNum = parseInt(year);
+    const monthNum = parseInt(month) - 1; // JS months are 0-indexed
+
+    // Get start and end of the month
+    const startDate = new Date(yearNum, monthNum, 1);
+    const endDate = new Date(yearNum, monthNum + 1, 0, 23, 59, 59, 999);
+
+    // Find all confirmed bookings for this month
+    const bookings = await Booking.find({
+      bookingDate: {
+        $gte: startDate,
+        $lt: endDate
+      },
+      status: { $in: ['confirmed', 'pending'] } // Include pending bookings as they may still be reserved
+    }).select('bookingDate');
+
+    // Extract unique dates
+    const bookedDates = [...new Set(
+      bookings.map(booking => booking.bookingDate.toISOString().split('T')[0])
+    )];
+
+    res.json({
+      success: true,
+      bookedDates,
+      total: bookedDates.length
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Get delivery schedules for customer (shows customer's own delivery bookings)
 router.get('/delivery-schedules', authMiddleware, async (req, res, next) => {
   try {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSocket } from '../../../components/SocketProvider';
 import { useCart } from '../../../components/CartContext';
 
@@ -31,12 +32,19 @@ interface Service {
 }
 
 export default function Services() {
-  const { socket } = useSocket();
-  const { addToCart, isInCart, getItemQuantity } = useCart();
+   const router = useRouter();
+   const searchParams = useSearchParams();
+   const { socket } = useSocket();
+   const { addToCart, isInCart, getItemQuantity } = useCart();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => {
+    // Check URL parameters first
+    const urlDate = searchParams.get('date');
+    if (urlDate) {
+      return urlDate;
+    }
     // Check if user has previously selected a date
     const savedDate = localStorage.getItem('selectedReservationDate');
     if (savedDate) {
@@ -473,41 +481,20 @@ export default function Services() {
         </p>
       </header>
 
-      {/* Date Selection and Search/Filter Bar */}
+      {/* Search/Filter Bar */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 mx-2 sm:mx-4 lg:mx-6">
-        {/* Date Picker */}
-        <div className="mb-4">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-             <label className="block text-sm font-medium text-gray-700 mb-2">
-               Reservation Date <span className="text-red-500">*</span>
-             </label>
-             <input
-               type="date"
-               className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[48px]"
-               min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // Tomorrow minimum
-               value={selectedDate}
-               onChange={(e) => {
-                 const newDate = e.target.value;
-                 setSelectedDate(newDate);
-                 localStorage.setItem('selectedReservationDate', newDate);
-                 // Refetch services with new date
-                 fetchServices();
-               }}
-               required
-             />
-             <p className="text-xs text-gray-500 mt-1">Select date to check equipment availability</p>
-           </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>📅</span>
-              <span>Selected: {new Date(selectedDate).toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-              })}</span>
-            </div>
+        {/* Selected Date Display */}
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-2 text-sm text-blue-800">
+            <span>📅</span>
+            <span className="font-medium">Selected Date: {new Date(selectedDate).toLocaleDateString('en-US', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}</span>
           </div>
+          <p className="text-xs text-blue-600 mt-1">Equipment availability shown for this date</p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-4 items-center">
