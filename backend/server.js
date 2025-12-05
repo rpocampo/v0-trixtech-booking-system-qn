@@ -28,6 +28,7 @@ const { autoApplyDiscounts } = require('./utils/dynamicDiscountService');
 const { cleanupExpiredWaitlistEntries, sendProactiveWaitlistUpdates } = require('./utils/autoWaitlistService');
 const { sendReorderAlerts, optimizeInventoryLevels } = require('./utils/autoInventoryService');
 const AutoRebookingService = require('./utils/autoRebookingService');
+const AutoRentalCompletionService = require('./utils/autoRentalCompletionService');
 const { errorHandler, requestLogger } = require('./middleware/errorHandler');
 const { monitoringMiddleware } = require('./utils/monitoring');
 
@@ -282,6 +283,18 @@ if (process.env.NODE_ENV !== 'test') {
       console.error('Error processing auto-rebookings:', error);
     }
   }, 7 * 24 * 60 * 60 * 1000); // 7 days
+
+  // Auto-complete rentals every 2 hours
+  setInterval(async () => {
+    try {
+      const result = await AutoRentalCompletionService.runAutoCompletionCheck();
+      if (result.completed > 0) {
+        console.log(`Auto-completed ${result.completed}/${result.processed} rentals, restored ${result.inventoryRestored} inventory items, sent ${result.notificationsSent} notifications`);
+      }
+    } catch (error) {
+      console.error('Error auto-completing rentals:', error);
+    }
+  }, 2 * 60 * 60 * 1000); // 2 hours
 }
 
 // Function to send automated follow-up communications

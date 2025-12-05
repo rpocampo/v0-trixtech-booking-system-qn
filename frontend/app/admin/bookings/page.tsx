@@ -345,6 +345,114 @@ export default function AdminBookings() {
     });
   };
 
+  const getRentalPeriod = (booking: Booking) => {
+    const startDate = new Date(booking.bookingDate);
+
+    // For equipment rentals, pickup is usually next day
+    if (booking.serviceId?.category === 'equipment' ||
+        booking.serviceId?.category === 'furniture' ||
+        booking.serviceId?.category === 'lighting' ||
+        booking.serviceId?.category === 'sound-system' ||
+        booking.serviceId?.category === 'tents-canopies' ||
+        booking.serviceId?.category === 'linens-tableware' ||
+        booking.serviceId?.serviceType === 'equipment' ||
+        booking.serviceId?.serviceType === 'supply' ||
+        booking.serviceId?.requiresDelivery === true ||
+        (booking.serviceId?.includedEquipment && booking.serviceId.includedEquipment.length > 0)) {
+      startDate.setDate(startDate.getDate() + 1);
+    }
+
+    const endDate = new Date(startDate);
+    if (booking.duration && booking.duration > 1) {
+      endDate.setDate(endDate.getDate() + booking.duration - 1);
+    }
+
+    return { startDate, endDate };
+  };
+
+  const isDateInRentalPeriod = (date: Date, booking: Booking) => {
+    const { startDate, endDate } = getRentalPeriod(booking);
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+
+    return checkDate >= startDate && checkDate <= endDate;
+  };
+
+  const getEquipmentBookingsForDate = (date: Date) => {
+    return bookings.filter(booking => {
+      // Only include equipment/supply rentals
+      const isEquipment = booking.serviceId?.category === 'equipment' ||
+        booking.serviceId?.category === 'furniture' ||
+        booking.serviceId?.category === 'lighting' ||
+        booking.serviceId?.category === 'sound-system' ||
+        booking.serviceId?.category === 'tents-canopies' ||
+        booking.serviceId?.category === 'linens-tableware' ||
+        booking.serviceId?.serviceType === 'equipment' ||
+        booking.serviceId?.serviceType === 'supply' ||
+        booking.serviceId?.requiresDelivery === true ||
+        (booking.serviceId?.includedEquipment && booking.serviceId.includedEquipment.length > 0);
+
+      if (!isEquipment) return false;
+
+      return isDateInRentalPeriod(date, booking);
+    });
+  };
+
+  const getDayAvailabilityStatus = (date: Date) => {
+    const equipmentBookings = getEquipmentBookingsForDate(date);
+    const totalEquipmentBookings = equipmentBookings.length;
+
+    if (totalEquipmentBookings === 0) return 'available';
+    if (totalEquipmentBookings >= 3) return 'busy'; // High utilization
+    return 'moderate'; // Some utilization
+  };
+
+  const checkForOverlappingRentals = (booking: Booking, allBookings: Booking[]) => {
+    const { startDate: checkStart, endDate: checkEnd } = getRentalPeriod(booking);
+    const overlaps: Booking[] = [];
+
+    for (const otherBooking of allBookings) {
+      if (otherBooking._id === booking._id) continue;
+
+      // Only check equipment/supply rentals
+      const isEquipment = otherBooking.serviceId?.category === 'equipment' ||
+        otherBooking.serviceId?.category === 'furniture' ||
+        otherBooking.serviceId?.category === 'lighting' ||
+        otherBooking.serviceId?.category === 'sound-system' ||
+        otherBooking.serviceId?.category === 'tents-canopies' ||
+        otherBooking.serviceId?.category === 'linens-tableware' ||
+        otherBooking.serviceId?.serviceType === 'equipment' ||
+        otherBooking.serviceId?.serviceType === 'supply' ||
+        otherBooking.serviceId?.requiresDelivery === true ||
+        (otherBooking.serviceId?.includedEquipment && otherBooking.serviceId.includedEquipment.length > 0);
+
+      if (!isEquipment) continue;
+
+      const { startDate: otherStart, endDate: otherEnd } = getRentalPeriod(otherBooking);
+
+      // Check for overlap
+      if (checkStart <= otherEnd && checkEnd >= otherStart) {
+        overlaps.push(otherBooking);
+      }
+    }
+
+    return overlaps;
+  };
+
+  const getOverlappingBookingsForDate = (date: Date) => {
+    const equipmentBookings = getEquipmentBookingsForDate(date);
+    const overlaps: { booking: Booking; conflicts: Booking[] }[] = [];
+
+    for (const booking of equipmentBookings) {
+      const conflicts = checkForOverlappingRentals(booking, bookings);
+      if (conflicts.length > 0) {
+        overlaps.push({ booking, conflicts });
+      }
+    }
+
+    return overlaps;
+  };
+
   const renderCalendar = () => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
@@ -398,93 +506,345 @@ export default function AdminBookings() {
         </div>
 
         <div className="grid grid-cols-7 gap-1">
-          {calendarDays.map((date, index) => {
-            const isCurrentMonth = date.getMonth() === month;
-            const isToday = date.toDateString() === new Date().toDateString();
-            const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
-            const dayBookings = getBookingsForDate(date);
-            const hasBookings = dayBookings.length > 0;
+           {calendarDays.map((date, index) => {
+             const isCurrentMonth = date.getMonth() === month;
+             const isToday = date.toDateString() === new Date().toDateString();
+             const isSelected = selectedDate && date.toDateString() === selectedDate.toDateString();
+             const dayBookings = getBookingsForDate(date);
+             const equipmentBookings = getEquipmentBookingsForDate(date);
+             const availabilityStatus = getDayAvailabilityStatus(date);
+             const overlappingBookings = getOverlappingBookingsForDate(date);
+             const hasBookings = dayBookings.length > 0;
+             const hasEquipmentBookings = equipmentBookings.length > 0;
+             const hasOverlaps = overlappingBookings.length > 0;
 
-            return (
-              <button
-                key={index}
-                onClick={() => handleDateClick(date)}
-                className={`p-3 text-sm border rounded-lg transition-colors min-h-[80px] ${
-                  isCurrentMonth
-                    ? isSelected
-                      ? 'bg-indigo-100 border-indigo-300 text-indigo-800'
-                      : isToday
-                        ? 'bg-blue-50 border-blue-200 text-blue-800'
-                        : 'bg-white border-gray-200 hover:bg-gray-50'
-                    : 'bg-gray-50 border-gray-100 text-gray-400'
-                }`}
-              >
-                <div className="text-right mb-1">{date.getDate()}</div>
-                {hasBookings && (
-                  <div className="text-xs">
-                    <div className="bg-indigo-500 text-white rounded-full px-2 py-1 text-center">
-                      {dayBookings.length} reservation{dayBookings.length !== 1 ? 's' : ''}
-                    </div>
-                  </div>
-                )}
-              </button>
-            );
-          })}
+             // Determine background color based on availability and overlaps
+             let bgColor = '';
+             if (isCurrentMonth) {
+               if (hasOverlaps) {
+                 bgColor = 'bg-red-100 border-red-400 text-red-900'; // Highlight overlaps
+               } else if (isSelected) {
+                 bgColor = 'bg-indigo-100 border-indigo-300 text-indigo-800';
+               } else if (isToday) {
+                 bgColor = 'bg-blue-50 border-blue-200 text-blue-800';
+               } else {
+                 switch (availabilityStatus) {
+                   case 'busy':
+                     bgColor = 'bg-red-50 border-red-200 text-red-800';
+                     break;
+                   case 'moderate':
+                     bgColor = 'bg-yellow-50 border-yellow-200 text-yellow-800';
+                     break;
+                   case 'available':
+                   default:
+                     bgColor = 'bg-white border-gray-200 hover:bg-gray-50';
+                     break;
+                 }
+               }
+             } else {
+               bgColor = 'bg-gray-50 border-gray-100 text-gray-400';
+             }
+
+             return (
+               <button
+                 key={index}
+                 onClick={() => handleDateClick(date)}
+                 className={`p-3 text-sm border rounded-lg transition-colors min-h-[100px] ${bgColor}`}
+               >
+                 <div className="text-right mb-1 font-medium">{date.getDate()}</div>
+
+                 {/* Equipment Rental Indicators */}
+                 {hasEquipmentBookings && (
+                   <div className="mb-2">
+                     <div className="text-xs text-center">
+                       {equipmentBookings.map((booking, idx) => {
+                         const { startDate, endDate } = getRentalPeriod(booking);
+                         const isStart = date.toDateString() === startDate.toDateString();
+                         const isEnd = date.toDateString() === endDate.toDateString();
+                         const isMiddle = !isStart && !isEnd && isDateInRentalPeriod(date, booking);
+
+                         return (
+                           <div
+                             key={booking._id}
+                             className={`inline-block mx-0.5 px-1 py-0.5 rounded text-xs font-medium ${
+                               isStart ? 'bg-green-500 text-white' :
+                               isEnd ? 'bg-blue-500 text-white' :
+                               'bg-indigo-500 text-white'
+                             }`}
+                             title={`${booking.serviceId?.name || 'Equipment'} - ${booking.customerId?.name || 'Customer'}`}
+                           >
+                             {isStart ? '▶' : isEnd ? '◀' : '●'}
+                           </div>
+                         );
+                       })}
+                     </div>
+                   </div>
+                 )}
+
+                 {/* Regular Bookings Count */}
+                 {hasBookings && (
+                   <div className="text-xs">
+                     <div className="bg-indigo-500 text-white rounded-full px-2 py-1 text-center">
+                       {dayBookings.length} booking{dayBookings.length !== 1 ? 's' : ''}
+                     </div>
+                   </div>
+                 )}
+
+                 {/* Overlap Warning */}
+                 {hasOverlaps && (
+                   <div className="text-xs text-center mt-1">
+                     <span className="inline-block px-1 py-0.5 bg-red-500 text-white text-xs rounded font-bold">
+                       ⚠️ {overlappingBookings.length} conflict{overlappingBookings.length !== 1 ? 's' : ''}
+                     </span>
+                   </div>
+                 )}
+
+                 {/* Availability Indicator */}
+                 {isCurrentMonth && !hasBookings && !hasEquipmentBookings && !hasOverlaps && (
+                   <div className="text-xs text-center mt-1">
+                     <span className={`inline-block w-2 h-2 rounded-full ${
+                       availabilityStatus === 'available' ? 'bg-green-400' :
+                       availabilityStatus === 'moderate' ? 'bg-yellow-400' :
+                       'bg-red-400'
+                     }`}></span>
+                   </div>
+                 )}
+               </button>
+             );
+           })}
+         </div>
+
+        {/* Calendar Legend */}
+        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+          <h4 className="font-semibold mb-2">Calendar Legend</h4>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-3 h-3 bg-green-400 rounded-full"></span>
+              <span>Available</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-3 h-3 bg-yellow-400 rounded-full"></span>
+              <span>Moderate Usage</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block w-3 h-3 bg-red-400 rounded-full"></span>
+              <span>High Usage</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block px-2 py-1 bg-red-500 text-white text-xs rounded font-bold">⚠️</span>
+              <span>Conflicts</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block px-2 py-1 bg-green-500 text-white text-xs rounded">▶</span>
+              <span>Rental Start</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block px-2 py-1 bg-indigo-500 text-white text-xs rounded">●</span>
+              <span>Rental Period</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="inline-block px-2 py-1 bg-blue-500 text-white text-xs rounded">◀</span>
+              <span>Rental End</span>
+            </div>
+          </div>
         </div>
 
         {/* Daily Bookings Display */}
-        {selectedDate && (
-          <div className="mt-6 border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4">
-              Reservations for {selectedDate.toLocaleDateString()}
-            </h3>
-            {dailyBookings.length > 0 ? (
-              <div className="space-y-3">
-                {dailyBookings.map(booking => (
-                  <div key={booking._id} className="border rounded-lg p-4 bg-gray-50">
-                    <div className="grid md:grid-cols-4 gap-4">
-                      <div>
-                        <span className="text-sm text-gray-600">Customer:</span>
-                        <p className="font-medium">{booking.customerId?.name || 'Unknown'}</p>
-                      </div>
-                      <div>
-                        <span className="text-sm text-gray-600">Service:</span>
-                        <p className="font-medium">{booking.serviceId?.name || 'Unknown'}</p>
-                      </div>
-                      <div>
-                        <span className="text-sm text-gray-600">Time:</span>
-                        <p className="font-medium">{new Date(booking.bookingDate).toLocaleTimeString()}</p>
-                      </div>
-                      <div>
-                        <span className="text-sm text-gray-600">Status:</span>
-                        <div className="flex gap-2">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(booking.status)}`}>
-                            {booking.status}
-                          </span>
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {booking.paymentStatus}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-3">
-                      <div className="text-sm text-gray-600">
-                        Inventory consumed: {booking.serviceId?.name || 'Unknown'} x{booking.quantity}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 text-center py-8">No reservations for this date</p>
-            )}
-          </div>
-        )}
+         {selectedDate && (
+           <div className="mt-6 border-t pt-6">
+             <h3 className="text-lg font-semibold mb-4">
+               Activity for {selectedDate.toLocaleDateString()}
+             </h3>
+
+             {/* Overlap Warnings for this date */}
+             {getOverlappingBookingsForDate(selectedDate).length > 0 && (
+               <div className="mb-6">
+                 <h4 className="font-medium mb-3 text-red-700 flex items-center gap-2">
+                   <span>⚠️</span>
+                   Scheduling Conflicts Detected
+                 </h4>
+                 <div className="space-y-3">
+                   {getOverlappingBookingsForDate(selectedDate).map(({ booking, conflicts }) => (
+                     <div key={booking._id} className="border rounded-lg p-4 bg-red-50 border-red-200">
+                       <div className="mb-3">
+                         <p className="font-medium text-red-800">
+                           {booking.serviceId?.name || 'Equipment'} - {booking.customerId?.name || 'Customer'}
+                         </p>
+                         <p className="text-sm text-red-600">
+                           Conflicts with {conflicts.length} other booking{conflicts.length !== 1 ? 's' : ''}:
+                         </p>
+                       </div>
+                       <div className="space-y-2">
+                         {conflicts.map(conflict => (
+                           <div key={conflict._id} className="bg-white p-2 rounded border border-red-300">
+                             <p className="text-sm">
+                               <span className="font-medium">{conflict.serviceId?.name || 'Equipment'}</span> - {conflict.customerId?.name || 'Customer'}
+                               <span className="text-gray-500 ml-2">
+                                 ({getRentalPeriod(conflict).startDate.toLocaleDateString()} - {getRentalPeriod(conflict).endDate.toLocaleDateString()})
+                               </span>
+                             </p>
+                           </div>
+                         ))}
+                       </div>
+                       <div className="mt-3 text-sm text-red-700">
+                         <strong>Action Required:</strong> Review and resolve scheduling conflicts to prevent double-booking.
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             )}
+
+             {/* Equipment Rentals for this date */}
+             {getEquipmentBookingsForDate(selectedDate).length > 0 && (
+               <div className="mb-6">
+                 <h4 className="font-medium mb-3 text-indigo-700">📦 Equipment Rentals Active</h4>
+                 <div className="space-y-2">
+                   {getEquipmentBookingsForDate(selectedDate).map(booking => {
+                     const { startDate, endDate } = getRentalPeriod(booking);
+                     const isStart = selectedDate.toDateString() === startDate.toDateString();
+                     const isEnd = selectedDate.toDateString() === endDate.toDateString();
+                     const daysRemaining = Math.ceil((endDate.getTime() - selectedDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                     return (
+                       <div key={booking._id} className="border rounded-lg p-4 bg-indigo-50 border-indigo-200">
+                         <div className="grid md:grid-cols-4 gap-4">
+                           <div>
+                             <span className="text-sm text-gray-600">Equipment:</span>
+                             <p className="font-medium">{booking.serviceId?.name || 'Unknown'}</p>
+                           </div>
+                           <div>
+                             <span className="text-sm text-gray-600">Customer:</span>
+                             <p className="font-medium">{booking.customerId?.name || 'Unknown'}</p>
+                           </div>
+                           <div>
+                             <span className="text-sm text-gray-600">Rental Period:</span>
+                             <p className="font-medium">
+                               {startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}
+                               {isStart && <span className="text-green-600 font-bold"> (START)</span>}
+                               {isEnd && <span className="text-blue-600 font-bold"> (END)</span>}
+                             </p>
+                           </div>
+                           <div>
+                             <span className="text-sm text-gray-600">Status:</span>
+                             <div className="flex gap-2 mt-1">
+                               <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(getDisplayStatus(booking))}`}>
+                                 {getDisplayStatus(booking)}
+                               </span>
+                               {!isEnd && daysRemaining > 0 && (
+                                 <span className="px-2 py-1 bg-orange-100 text-orange-800 rounded text-xs font-medium">
+                                   {daysRemaining} day{daysRemaining !== 1 ? 's' : ''} left
+                                 </span>
+                               )}
+                             </div>
+                           </div>
+                         </div>
+                       </div>
+                     );
+                   })}
+                 </div>
+               </div>
+             )}
+
+             {/* Regular Bookings for this date */}
+             {dailyBookings.length > 0 ? (
+               <div>
+                 <h4 className="font-medium mb-3 text-gray-700">📅 Regular Bookings</h4>
+                 <div className="space-y-3">
+                   {dailyBookings.map(booking => (
+                     <div key={booking._id} className="border rounded-lg p-4 bg-gray-50">
+                       <div className="grid md:grid-cols-4 gap-4">
+                         <div>
+                           <span className="text-sm text-gray-600">Customer:</span>
+                           <p className="font-medium">{booking.customerId?.name || 'Unknown'}</p>
+                         </div>
+                         <div>
+                           <span className="text-sm text-gray-600">Service:</span>
+                           <p className="font-medium">{booking.serviceId?.name || 'Unknown'}</p>
+                         </div>
+                         <div>
+                           <span className="text-sm text-gray-600">Time:</span>
+                           <p className="font-medium">{new Date(booking.bookingDate).toLocaleTimeString()}</p>
+                         </div>
+                         <div>
+                           <span className="text-sm text-gray-600">Status:</span>
+                           <div className="flex gap-2">
+                             <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(getDisplayStatus(booking))}`}>
+                               {getDisplayStatus(booking)}
+                             </span>
+                             <span className={`px-2 py-1 rounded text-xs font-medium ${
+                               booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                               'bg-yellow-100 text-yellow-800'
+                             }`}>
+                               {booking.paymentStatus}
+                             </span>
+                           </div>
+                         </div>
+                       </div>
+                       <div className="mt-3">
+                         <div className="text-sm text-gray-600">
+                           Quantity: {booking.quantity}
+                         </div>
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             ) : getEquipmentBookingsForDate(selectedDate).length === 0 ? (
+               <p className="text-gray-500 text-center py-8">No activity for this date</p>
+             ) : null}
+           </div>
+         )}
       </div>
     );
+  };
+
+  const shouldAutoComplete = (booking: Booking) => {
+    try {
+      // Only process confirmed rentals (equipment and supplies)
+      if (booking.status !== 'confirmed') {
+        return false;
+      }
+
+      // Check if service is a rental (equipment or supply)
+      const service = booking.serviceId;
+      if (!service || (service.serviceType !== 'equipment' && service.serviceType !== 'supply')) {
+        return false;
+      }
+
+      const now = new Date();
+
+      // Check if pick-up time has passed
+      if (booking.deliveryStartTime && new Date(booking.deliveryStartTime) < now) {
+        return true;
+      }
+
+      // Check if booking date + duration has passed (fallback for rentals without delivery time)
+      if (booking.bookingDate && booking.duration) {
+        const endDate = new Date(booking.bookingDate);
+        endDate.setDate(endDate.getDate() + booking.duration);
+        if (endDate < now) {
+          return true;
+        }
+      }
+
+      // Check if marked as finished (could be a custom field, for now assume based on notes)
+      if (booking.notes && booking.notes.toLowerCase().includes('finished')) {
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error checking shouldAutoComplete:', error);
+      return false;
+    }
+  };
+
+  const getDisplayStatus = (booking: Booking) => {
+    if (shouldAutoComplete(booking)) {
+      return 'completed';
+    }
+    return booking.status;
   };
 
   const getStatusColor = (status: string) => {
