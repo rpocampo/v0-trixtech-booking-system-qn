@@ -144,19 +144,10 @@ export default function CheckoutPage() {
           updatedScheduledItems[item.id] = {
             date: defaultDateTime,
             notes: '',
-            sameDateTime: false
+            sameDateTime: true // All items now share the same delivery time
           };
         }
       });
-
-      // If there are multiple items, set the first one as synchronized by default
-      if (initialCheckoutItems.length > 1) {
-        const firstItemId = initialCheckoutItems[0].id;
-        updatedScheduledItems[firstItemId] = {
-          ...updatedScheduledItems[firstItemId],
-          sameDateTime: true
-        };
-      }
 
       setScheduledItems(updatedScheduledItems);
     } else {
@@ -233,9 +224,6 @@ export default function CheckoutPage() {
 
   const handleScheduleUpdate = (itemId: string, date: string, notes: string) => {
     setScheduledItems(prev => {
-      const currentItem = prev[itemId] || { date: '', notes: '', sameDateTime: false };
-      const isSameDateTime = currentItem.sameDateTime;
-
       // If no date provided, use the reservation date as default
       let finalDate = date;
       if (!finalDate) {
@@ -246,10 +234,17 @@ export default function CheckoutPage() {
         }
       }
 
-      return {
-        ...prev,
-        [itemId]: { date: finalDate, notes, sameDateTime: isSameDateTime }
-      };
+      // Update all items with the same date and notes (unified scheduling)
+      const updated = { ...prev };
+      checkoutItems.forEach(item => {
+        updated[item.id] = {
+          date: finalDate,
+          notes: item.id === itemId ? notes : (prev[item.id]?.notes || ''), // Keep existing notes for other items
+          sameDateTime: true
+        };
+      });
+
+      return updated;
     });
     calculateNumberOfDays();
   };
@@ -781,7 +776,7 @@ export default function CheckoutPage() {
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                   </svg>
-                  <h3 className="text-xl font-bold">Synchronized Bookings</h3>
+                  <h3 className="text-xl font-bold">Delivery Scheduling</h3>
                 </div>
                 <p className="text-sm text-blue-700 mb-4">
                   These items share the same delivery and pick-up schedule
@@ -1087,8 +1082,8 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* Individual Bookings Section */}
-            {checkoutItems.some(item => !scheduledItems[item.id]?.sameDateTime) && (
+            {/* All items now use unified scheduling */}
+            {false && (
               <div className="card p-6 bg-gray-50 border-gray-200">
                 <div className="flex items-center gap-2 text-gray-800 mb-6">
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -1115,21 +1110,6 @@ export default function CheckoutPage() {
                         <div className="flex-1">
                           <h4 className="text-lg font-semibold text-gray-800">{item.name}</h4>
                           <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            id={`same-datetime-${item.id}`}
-                            checked={scheduledItems[item.id]?.sameDateTime || false}
-                            onChange={(e) => handleSameDateTimeChange(item.id, e.target.checked)}
-                            className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                          />
-                          <label
-                            htmlFor={`same-datetime-${item.id}`}
-                            className="text-sm text-gray-700 cursor-pointer font-medium"
-                          >
-                            Sync with group
-                          </label>
                         </div>
                       </div>
 
@@ -1467,46 +1447,17 @@ export default function CheckoutPage() {
 
           {/* Missing Dates Warning */}
           {(() => {
-            const missingDelivery = checkoutItems.filter(item => !scheduledItems[item.id]?.date);
-            // Only require pick-up dates for items that are extending rental duration
-            const missingIndividualPickup = checkoutItems.filter(item =>
-              !scheduledItems[item.id]?.sameDateTime &&
-              scheduledItems[item.id]?.extendDuration &&
-              !scheduledItems[item.id]?.pickupDate
-            );
-            const missingSynchronizedPickup = checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) &&
-              scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.extendDuration &&
-              !scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate;
+            const hasDeliveryDate = checkoutItems.length > 0 && scheduledItems[checkoutItems[0]?.id]?.date;
 
-            return (missingDelivery.length > 0 || missingIndividualPickup.length > 0 || missingSynchronizedPickup) ? (
+            return !hasDeliveryDate ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
                 <div className="flex items-center gap-2 text-yellow-800 mb-2">
                   <span className="text-lg">⚠️</span>
-                  <span className="font-semibold">Please complete all date selections</span>
+                  <span className="font-semibold">Delivery time required</span>
                 </div>
                 <p className="text-sm text-yellow-700">
-                  The following items need scheduling before you can proceed:
+                  Please select a delivery time for all items in your cart before proceeding.
                 </p>
-                <ul className="text-sm text-yellow-700 mt-2 space-y-1">
-                  {missingDelivery.map(item => (
-                    <li key={item.id} className="flex items-center gap-2">
-                      <span>•</span>
-                      <span>{item.name} - Delivery date required</span>
-                    </li>
-                  ))}
-                  {missingIndividualPickup.map(item => (
-                    <li key={item.id} className="flex items-center gap-2">
-                      <span>•</span>
-                      <span>{item.name} - Pick-up date required (extension selected)</span>
-                    </li>
-                  ))}
-                  {missingSynchronizedPickup && (
-                    <li className="flex items-center gap-2">
-                      <span>•</span>
-                      <span>Synchronized bookings - Pick-up date required (extension selected)</span>
-                    </li>
-                  )}
-                </ul>
               </div>
             ) : null;
           })()}
@@ -1522,31 +1473,18 @@ export default function CheckoutPage() {
             <button
               onClick={() => setCurrentStep('confirm')}
               disabled={(() => {
-                const hasAllDeliveryDates = checkoutItems.every(item => scheduledItems[item.id]?.date);
-                // Only require pick-up dates for items that are extending rental duration
-                const hasAllIndividualPickups = checkoutItems.filter(item =>
-                  !scheduledItems[item.id]?.sameDateTime && scheduledItems[item.id]?.extendDuration
-                ).every(item => scheduledItems[item.id]?.pickupDate);
-                const hasSynchronizedPickup = !checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) ||
-                  !scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.extendDuration ||
-                  scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate;
+                // Since all items now share the same delivery time, just check that the first item has a date
+                const hasDeliveryDate = checkoutItems.length > 0 && scheduledItems[checkoutItems[0]?.id]?.date;
                 const hasValidDuration = !durationError;
-                return !(hasAllDeliveryDates && hasAllIndividualPickups && hasSynchronizedPickup && hasValidDuration);
+                return !(hasDeliveryDate && hasValidDuration);
               })()}
               className="btn-primary"
               title={(() => {
-                const hasAllDeliveryDates = checkoutItems.every(item => scheduledItems[item.id]?.date);
-                // Only require pick-up dates for items that are extending rental duration
-                const hasAllIndividualPickups = checkoutItems.filter(item =>
-                  !scheduledItems[item.id]?.sameDateTime && scheduledItems[item.id]?.extendDuration
-                ).every(item => scheduledItems[item.id]?.pickupDate);
-                const hasSynchronizedPickup = !checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) ||
-                  !scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.extendDuration ||
-                  scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate;
+                const hasDeliveryDate = checkoutItems.length > 0 && scheduledItems[checkoutItems[0]?.id]?.date;
                 const hasValidDuration = !durationError;
 
                 if (!hasValidDuration) return 'Minimum booking duration is 1 day. Please adjust your pick-up date.';
-                if (!(hasAllDeliveryDates && hasAllIndividualPickups && hasSynchronizedPickup)) return 'Please complete all required date selections to continue';
+                if (!hasDeliveryDate) return 'Please select a delivery time to continue';
                 return '';
               })()}
             >
@@ -1565,140 +1503,70 @@ export default function CheckoutPage() {
 
           {/* Final Summary */}
           <div className="space-y-6">
-            {/* Synchronized Bookings Summary */}
-            {checkoutItems.some(item => scheduledItems[item.id]?.sameDateTime) && (
-              <div className="card p-6 bg-blue-50 border-blue-200">
-                <div className="flex items-center gap-2 text-blue-800 mb-4">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                  </svg>
-                  <h3 className="text-lg font-bold">Synchronized Bookings</h3>
-                </div>
-                <div className="space-y-3">
-                  {checkoutItems.filter(item => scheduledItems[item.id]?.sameDateTime).map((item) => {
-                    const schedule = scheduledItems[item.id];
-                    return (
-                      <div key={item.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm">
-                            {item.category === 'party' ? '🎉' :
-                             item.category === 'wedding' ? '💒' :
-                             item.category === 'corporate' ? '🏢' :
-                             item.category === 'equipment' ? '🎪' :
-                             item.category === 'birthday' ? '🎂' :
-                             item.category === 'funeral' ? '⚰️' : '⚙️'}
-                          </div>
-                          <div>
-                            <h4 className="text-sm font-semibold text-gray-800">{item.name}</h4>
-                            <p className="text-xs text-gray-600">Quantity: {item.quantity}</p>
-                          </div>
+            {/* Delivery Scheduling Summary */}
+            <div className="card p-6 bg-blue-50 border-blue-200">
+              <div className="flex items-center gap-2 text-blue-800 mb-4">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                </svg>
+                <h3 className="text-lg font-bold">Delivery Scheduling</h3>
+              </div>
+              <div className="space-y-3">
+                {checkoutItems.map((item) => {
+                  const schedule = scheduledItems[item.id];
+                  return (
+                    <div key={item.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-blue-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center text-sm">
+                          {item.category === 'party' ? '🎉' :
+                           item.category === 'wedding' ? '💒' :
+                           item.category === 'corporate' ? '🏢' :
+                           item.category === 'equipment' ? '🎪' :
+                           item.category === 'birthday' ? '🎂' :
+                           item.category === 'funeral' ? '⚰️' : '⚙️'}
                         </div>
-                        <div className="text-right">
-                          <div className="text-sm font-bold text-blue-600">₱{(item.price * item.quantity).toFixed(2)}</div>
-                          <div className="text-xs text-blue-500">
-                            ₱{(item.dailyRate || item.price).toFixed(2)}/day × {item.duration || 1} day{item.duration !== 1 ? 's' : ''}
-                          </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-gray-800">{item.name}</h4>
+                          <p className="text-xs text-gray-600">Quantity: {item.quantity}</p>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-4 grid md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-blue-200">
-                  <div>
-                    <span className="text-sm text-blue-700">Delivery:</span>
-                    <p className="font-medium text-blue-900">
-                      {(() => {
-                        const dateStr = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date;
-                        return dateStr ? parseLocalDate(dateStr)?.toLocaleString() || 'Invalid date' : 'Not set';
-                      })()}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-blue-700">Pick-up:</span>
-                    <p className="font-medium text-blue-900">
-                      {(() => {
-                        const dateStr = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date;
-                        if (!dateStr) return 'Not set';
-                        const deliveryDate = parseLocalDate(dateStr);
-                        if (!deliveryDate) return 'Invalid date';
-                        const pickupDate = new Date(deliveryDate);
-                        pickupDate.setDate(pickupDate.getDate() + 1);
-                        pickupDate.setHours(18, 0, 0, 0);
-                        return pickupDate.toLocaleString();
-                      })()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Individual Bookings Summary */}
-            {checkoutItems.some(item => !scheduledItems[item.id]?.sameDateTime) && (
-              <div className="card p-6 bg-gray-50 border-gray-200">
-                <div className="flex items-center gap-2 text-gray-800 mb-4">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z" clipRule="evenodd" />
-                  </svg>
-                  <h3 className="text-lg font-bold">Individual Bookings</h3>
-                </div>
-                <div className="space-y-3">
-                  {checkoutItems.filter(item => !scheduledItems[item.id]?.sameDateTime).map((item) => {
-                    const schedule = scheduledItems[item.id];
-                    return (
-                      <div key={item.id} className="p-4 bg-white rounded-lg border border-gray-200">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-lg">
-                              {item.category === 'party' ? '🎉' :
-                               item.category === 'wedding' ? '💒' :
-                               item.category === 'corporate' ? '🏢' :
-                               item.category === 'equipment' ? '🎪' :
-                               item.category === 'birthday' ? '🎂' :
-                               item.category === 'funeral' ? '⚰️' : '⚙️'}
-                            </div>
-                            <div>
-                              <h4 className="text-lg font-semibold text-gray-800">{item.name}</h4>
-                              <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-lg font-bold text-indigo-600">₱{(item.price * item.quantity).toFixed(2)}</div>
-                            <div className="text-xs text-indigo-500">
-                              ₱{(item.dailyRate || item.price).toFixed(2)}/day × {item.duration || 1} day{item.duration !== 1 ? 's' : ''}
-                            </div>
-                          </div>
-                        </div>
-                        <div className="grid md:grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="text-gray-600">Delivery:</span>
-                            <p className="font-medium text-gray-900">
-                              {schedule?.date ? parseLocalDate(schedule.date)?.toLocaleString() || 'Invalid date' : 'Not scheduled'}
-                            </p>
-                            {schedule?.notes && (
-                              <p className="text-xs text-gray-500 mt-1">Notes: {schedule.notes}</p>
-                            )}
-                          </div>
-                          <div>
-                            <span className="text-gray-600">Pick-up:</span>
-                            <p className="font-medium text-gray-900">
-                              {schedule?.date ? (() => {
-                                const deliveryDate = parseLocalDate(schedule.date);
-                                if (!deliveryDate) return 'Invalid date';
-                                const pickupDate = new Date(deliveryDate);
-                                pickupDate.setDate(pickupDate.getDate() + 1);
-                                pickupDate.setHours(18, 0, 0, 0);
-                                return pickupDate.toLocaleString();
-                              })() : 'Not scheduled'}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">Auto-calculated: 1 day after delivery at 6:00 PM</p>
-                          </div>
+                      <div className="text-right">
+                        <div className="text-sm font-bold text-blue-600">₱{(item.price * item.quantity).toFixed(2)}</div>
+                        <div className="text-xs text-blue-500">
+                          ₱{(item.dailyRate || item.price).toFixed(2)}/day × {item.duration || 1} day{item.duration !== 1 ? 's' : ''}
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mt-4 grid md:grid-cols-2 gap-4 p-4 bg-white rounded-lg border border-blue-200">
+                <div>
+                  <span className="text-sm text-blue-700">Delivery:</span>
+                  <p className="font-medium text-blue-900">
+                    {(() => {
+                      const dateStr = scheduledItems[checkoutItems[0]?.id]?.date;
+                      return dateStr ? parseLocalDate(dateStr)?.toLocaleString() || 'Invalid date' : 'Not set';
+                    })()}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-sm text-blue-700">Pick-up:</span>
+                  <p className="font-medium text-blue-900">
+                    {(() => {
+                      const dateStr = scheduledItems[checkoutItems[0]?.id]?.date;
+                      if (!dateStr) return 'Not set';
+                      const deliveryDate = parseLocalDate(dateStr);
+                      if (!deliveryDate) return 'Invalid date';
+                      const pickupDate = new Date(deliveryDate);
+                      pickupDate.setDate(pickupDate.getDate() + 1);
+                      pickupDate.setHours(18, 0, 0, 0);
+                      return pickupDate.toLocaleString();
+                    })()}
+                  </p>
                 </div>
               </div>
-            )}
+            </div>
 
           </div>
 

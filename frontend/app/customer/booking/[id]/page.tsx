@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import Button from '../../../../components/Button';
 import Calendar from '../../../../components/Calendar';
@@ -53,7 +54,7 @@ export default function BookingPage() {
     extendedHours: 0,
   });
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | React.ReactElement>('');
   const [queued, setQueued] = useState(savedData?.queued || false);
   const [alternatives, setAlternatives] = useState<any[]>(savedData?.alternatives || []);
   const [recommendations, setRecommendations] = useState<Service[]>([]);
