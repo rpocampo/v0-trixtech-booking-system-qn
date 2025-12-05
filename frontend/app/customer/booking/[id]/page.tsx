@@ -58,7 +58,18 @@ export default function BookingPage() {
   const [alternatives, setAlternatives] = useState<any[]>(savedData?.alternatives || []);
   const [recommendations, setRecommendations] = useState<Service[]>([]);
   const [showDateTimePicker, setShowDateTimePicker] = useState(savedData?.showDateTimePicker || false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(savedData?.selectedDate ? new Date(savedData.selectedDate) : null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(() => {
+    // First check saved booking data
+    if (savedData?.selectedDate) {
+      return new Date(savedData.selectedDate);
+    }
+    // Then check if user has previously selected a reservation date
+    const reservationDate = localStorage.getItem('selectedReservationDate');
+    if (reservationDate) {
+      return new Date(reservationDate);
+    }
+    return null;
+  });
   const [selectedHour, setSelectedHour] = useState(savedData?.selectedHour || 9);
   const [selectedMinute, setSelectedMinute] = useState(savedData?.selectedMinute || 0);
   const [selectedAmPm, setSelectedAmPm] = useState<'AM' | 'PM'>(savedData?.selectedAmPm || 'AM');
@@ -279,7 +290,7 @@ export default function BookingPage() {
 
   const handleTimeConfirm = async () => {
     if (!selectedDate) {
-      setError('Please select a date first');
+      setError('No delivery date available. Please go back and select a reservation date.');
       return;
     }
 
@@ -687,7 +698,7 @@ export default function BookingPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-2">Booking Date & Time</label>
+              <label className="block text-sm font-medium mb-2">Delivery Date & Time</label>
               <button
                 type="button"
                 onClick={openDateTimePicker}
@@ -696,15 +707,26 @@ export default function BookingPage() {
                 {booking.bookingDate ? (
                   <div className="flex items-center gap-2">
                     <span className="text-green-600">✓</span>
-                    {new Date(booking.bookingDate).toLocaleString()}
+                    <div>
+                      <div className="font-medium">{new Date(booking.bookingDate).toLocaleDateString()}</div>
+                      <div className="text-sm text-gray-600">{new Date(booking.bookingDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+                    </div>
+                  </div>
+                ) : selectedDate ? (
+                  <div className="flex items-center gap-2">
+                    <span>📅</span>
+                    <div>
+                      <div className="font-medium">{selectedDate.toLocaleDateString()}</div>
+                      <div className="text-sm text-gray-600">Select delivery time</div>
+                    </div>
                   </div>
                 ) : (
-                  'Select date and time'
+                  'Select delivery time'
                 )}
               </button>
               {dateTimeConfirmed && (
                 <p className="text-sm text-green-600 mt-1 flex items-center gap-1">
-                  <span>✓</span> Schedule selected successfully
+                  <span>✓</span> Delivery time selected successfully
                 </p>
               )}
             </div>
@@ -1175,22 +1197,30 @@ export default function BookingPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative">
             <div className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Select Date & Time</h3>
+              <h3 className="text-lg font-semibold mb-4">Select Delivery Time</h3>
 
-              {/* Date Selection */}
+              {/* Delivery Date Display */}
               <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">Date</label>
-                <Calendar
-                  selectedDate={selectedDate}
-                  onDateSelect={handleDateSelect}
-                  minDate={new Date()}
-                  className="w-full"
-                />
+                <label className="block text-sm font-medium mb-2">Delivery Date</label>
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center gap-2 text-blue-800">
+                    <span>📅</span>
+                    <span className="font-medium">
+                      {selectedDate ? selectedDate.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      }) : 'No date selected'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-blue-600 mt-1">Date selected from your reservation</p>
+                </div>
               </div>
 
               {/* Time Selection */}
               <div className="mb-6">
-                <label className="block text-sm font-medium mb-2">Time</label>
+                <label className="block text-sm font-medium mb-2">Delivery Time</label>
                 <div className="grid grid-cols-3 gap-2 items-center">
                   <select
                     value={selectedHour}
@@ -1310,12 +1340,12 @@ export default function BookingPage() {
                   }`}
                 >
                   {!selectedDate
-                    ? 'Select a date first'
+                    ? 'No delivery date selected'
                     : !availabilityChecked
-                      ? 'Checking availability...'
-                      : availabilityStatus?.available
-                        ? 'Confirm Selection'
-                        : 'Not Available'
+                    ? 'Checking availability...'
+                    : availabilityStatus?.available
+                      ? 'Confirm Delivery Time'
+                      : 'Not Available'
                   }
                 </button>
               </div>

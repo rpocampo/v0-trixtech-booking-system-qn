@@ -61,6 +61,16 @@ export default function CheckoutPage() {
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
+  // Helper function to get time from datetime string
+  const getTimeFromDatetime = (datetimeString: string) => {
+    if (!datetimeString) return '';
+    const date = parseLocalDate(datetimeString);
+    if (!date) return '';
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  };
+
   const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [stockValidationIssues, setStockValidationIssues] = useState<string[]>([]);
@@ -113,13 +123,44 @@ export default function CheckoutPage() {
     // Load scheduled items from localStorage
     const savedScheduledItems = localStorage.getItem('cartScheduledItems');
 
+    let scheduledData: { [key: string]: { date: string; notes: string; sameDateTime: boolean; pickupDate?: string; pickupNotes?: string; extendDuration?: boolean; extendedDays?: number; extendedHours?: number } } = {};
     if (savedScheduledItems) {
       try {
-        const parsedScheduledItems = JSON.parse(savedScheduledItems);
-        setScheduledItems(parsedScheduledItems);
+        scheduledData = JSON.parse(savedScheduledItems);
       } catch (error) {
         console.error('Failed to load scheduled items:', error);
       }
+    }
+
+    // Pre-populate delivery dates with reservation date if available
+    const reservationDate = localStorage.getItem('selectedReservationDate');
+    if (reservationDate) {
+      const defaultDateTime = formatForDatetimeLocal(new Date(reservationDate));
+
+      // Set default delivery dates for all items that don't have scheduled dates
+      const updatedScheduledItems = { ...scheduledData };
+      initialCheckoutItems.forEach(item => {
+        if (!updatedScheduledItems[item.id]) {
+          updatedScheduledItems[item.id] = {
+            date: defaultDateTime,
+            notes: '',
+            sameDateTime: false
+          };
+        }
+      });
+
+      // If there are multiple items, set the first one as synchronized by default
+      if (initialCheckoutItems.length > 1) {
+        const firstItemId = initialCheckoutItems[0].id;
+        updatedScheduledItems[firstItemId] = {
+          ...updatedScheduledItems[firstItemId],
+          sameDateTime: true
+        };
+      }
+
+      setScheduledItems(updatedScheduledItems);
+    } else {
+      setScheduledItems(scheduledData);
     }
   }, [items, router]);
 
@@ -195,9 +236,19 @@ export default function CheckoutPage() {
       const currentItem = prev[itemId] || { date: '', notes: '', sameDateTime: false };
       const isSameDateTime = currentItem.sameDateTime;
 
+      // If no date provided, use the reservation date as default
+      let finalDate = date;
+      if (!finalDate) {
+        const reservationDate = localStorage.getItem('selectedReservationDate');
+        if (reservationDate) {
+          const date = new Date(reservationDate);
+          finalDate = formatForDatetimeLocal(date);
+        }
+      }
+
       return {
         ...prev,
-        [itemId]: { date, notes, sameDateTime: isSameDateTime }
+        [itemId]: { date: finalDate, notes, sameDateTime: isSameDateTime }
       };
     });
     calculateNumberOfDays();
@@ -273,7 +324,18 @@ export default function CheckoutPage() {
       if (checked) {
         // When checking, use the current date/time or set a default
         const currentItem = updated[itemId] || { date: '', notes: '', sameDateTime: false };
-        const dateTime = currentItem.date || formatForDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000));
+        let dateTime = currentItem.date;
+
+        // If no date, use reservation date as default
+        if (!dateTime) {
+          const reservationDate = localStorage.getItem('selectedReservationDate');
+          if (reservationDate) {
+            const date = new Date(reservationDate);
+            dateTime = formatForDatetimeLocal(date);
+          } else {
+            dateTime = formatForDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000));
+          }
+        }
 
         updated[itemId] = {
           date: dateTime,
@@ -849,28 +911,35 @@ export default function CheckoutPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-blue-800 mb-2">
-                      Delivery Date & Time {!scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date && <span className="text-red-500">*</span>}
+                      Delivery Time {!scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date && <span className="text-red-500">*</span>}
                     </label>
                     <input
-                      type="datetime-local"
+                      type="time"
                       className={`input-field ${
                         !scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date
                           ? 'border-red-300 focus:border-red-500'
                           : 'border-green-300 focus:border-green-500'
                       }`}
-                      min={formatForDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000))}
-                      value={scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date || ''}
+                      value={(() => {
+                        const scheduledDate = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date;
+                        if (scheduledDate) return getTimeFromDatetime(scheduledDate);
+                        return '09:00';
+                      })()}
                       onChange={(e) => {
-                        const selectedDate = e.target.value;
-                        // Update all synchronized items
-                        const synchronizedItems = checkoutItems.filter(item => scheduledItems[item.id]?.sameDateTime);
-                        synchronizedItems.forEach(item => {
-                          handleScheduleUpdate(item.id, selectedDate, scheduledItems[item.id]?.notes || '');
-                        });
-
-                        // For synchronized bookings, pick-up is auto-calculated (24 hours after delivery)
-                        // No need to set pickupDate - it will be calculated in the display
-                        calculateNumberOfDays();
+                        const time = e.target.value;
+                        const reservationDate = localStorage.getItem('selectedReservationDate');
+                        if (reservationDate) {
+                          const date = new Date(reservationDate);
+                          const [hours, minutes] = time.split(':');
+                          date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                          const datetimeString = formatForDatetimeLocal(date);
+                          // Update all synchronized items
+                          const synchronizedItems = checkoutItems.filter(item => scheduledItems[item.id]?.sameDateTime);
+                          synchronizedItems.forEach(item => {
+                            handleScheduleUpdate(item.id, datetimeString, scheduledItems[item.id]?.notes || '');
+                          });
+                          calculateNumberOfDays();
+                        }
                       }}
                       required
                     />
@@ -914,7 +983,27 @@ export default function CheckoutPage() {
                             const baseDate = deliveryDate ? parseLocalDate(deliveryDate) : new Date(Date.now() + 60 * 60 * 1000);
                             return baseDate ? formatForDatetimeLocal(new Date(baseDate.getTime() + 60 * 60 * 1000)) : formatForDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000));
                           })()}
-                          value={scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate || ''}
+                          value={(() => {
+                            const pickupDate = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate;
+                            if (pickupDate) return pickupDate;
+
+                            // Auto-calculate pickup date (24 hours after delivery)
+                            const deliveryDate = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date;
+                            if (deliveryDate) {
+                              const delivery = parseLocalDate(deliveryDate);
+                              if (delivery) {
+                                return formatForDatetimeLocal(new Date(delivery.getTime() + 24 * 60 * 60 * 1000));
+                              }
+                            }
+
+                            // Fallback to reservation date + 24 hours
+                            const reservationDate = localStorage.getItem('selectedReservationDate');
+                            if (reservationDate) {
+                              const delivery = new Date(reservationDate);
+                              return formatForDatetimeLocal(new Date(delivery.getTime() + 24 * 60 * 60 * 1000));
+                            }
+                            return '';
+                          })()}
                           onChange={(e) => {
                             const pickupDate = e.target.value;
                             // Update all synchronized items
@@ -986,7 +1075,9 @@ export default function CheckoutPage() {
                           const dateStr = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].date;
                           const deliveryDate = parseLocalDate(dateStr);
                           if (!deliveryDate) return 'Invalid date';
-                          const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
+                          const pickupDate = new Date(deliveryDate);
+                          pickupDate.setDate(pickupDate.getDate() + 1);
+                          pickupDate.setHours(18, 0, 0, 0);
                           return pickupDate.toLocaleString();
                         })()}
                       </span>
@@ -1149,33 +1240,35 @@ export default function CheckoutPage() {
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Delivery Date & Time {!scheduledItems[item.id]?.date && <span className="text-red-500">*</span>}
+                            Delivery Time {!scheduledItems[item.id]?.date && <span className="text-red-500">*</span>}
                           </label>
                           <input
-                            type="datetime-local"
+                            type="time"
                             className={`input-field ${
                               !scheduledItems[item.id]?.date
                                 ? 'border-red-300 focus:border-red-500'
                                 : 'border-green-300 focus:border-green-500'
                             }`}
-                            min={formatForDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000))}
-                            value={scheduledItems[item.id]?.date || ''}
+                            value={(() => {
+                              const scheduledDate = scheduledItems[item.id]?.date;
+                              if (scheduledDate) return getTimeFromDatetime(scheduledDate);
+                              return '09:00';
+                            })()}
                             onChange={(e) => {
-                              const selectedDate = e.target.value;
-                              if (selectedDate) {
-                                handleScheduleUpdate(item.id, selectedDate, scheduledItems[item.id]?.notes || '');
-                              } else {
-                                const updatedNotes = scheduledItems[item.id]?.notes || '';
-                                setScheduledItems(prev => ({
-                                  ...prev,
-                                  [item.id]: { date: '', notes: updatedNotes, sameDateTime: false }
-                                }));
+                              const time = e.target.value;
+                              const reservationDate = localStorage.getItem('selectedReservationDate');
+                              if (reservationDate) {
+                                const date = new Date(reservationDate);
+                                const [hours, minutes] = time.split(':');
+                                date.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                                const datetimeString = formatForDatetimeLocal(date);
+                                handleScheduleUpdate(item.id, datetimeString, scheduledItems[item.id]?.notes || '');
                               }
                             }}
                             required
                           />
                           {!scheduledItems[item.id]?.date && (
-                            <p className="text-xs text-red-600 mt-1">Please select a delivery date and time</p>
+                            <p className="text-xs text-red-600 mt-1">Please select a delivery time</p>
                           )}
                         </div>
 
@@ -1192,8 +1285,10 @@ export default function CheckoutPage() {
                                 value={(() => {
                                   const deliveryDate = parseLocalDate(scheduledItems[item.id].date);
                                   if (!deliveryDate) return '';
-                                  // Add 24 hours for standard 1-day rental
-                                  const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
+                                  // Add 1 day and set to 6:00 PM
+                                  const pickupDate = new Date(deliveryDate);
+                                  pickupDate.setDate(pickupDate.getDate() + 1);
+                                  pickupDate.setHours(18, 0, 0, 0);
                                   return formatForDatetimeLocal(pickupDate);
                                 })()}
                                 readOnly
@@ -1206,7 +1301,7 @@ export default function CheckoutPage() {
                               </div>
                             </div>
                             <p className="text-xs text-gray-500 mt-1">
-                              Standard 1-day rental: 24 hours after delivery
+                              Standard 1-day rental: 1 day after delivery at 6:00 PM
                             </p>
                           </div>
                         )}
@@ -1240,7 +1335,27 @@ export default function CheckoutPage() {
                                   const baseDate = deliveryDate ? parseLocalDate(deliveryDate) : new Date(Date.now() + 60 * 60 * 1000);
                                   return baseDate ? formatForDatetimeLocal(new Date(baseDate.getTime() + 60 * 60 * 1000)) : formatForDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000));
                                 })()}
-                                value={scheduledItems[item.id]?.pickupDate || ''}
+                                value={(() => {
+                                  const pickupDate = scheduledItems[item.id]?.pickupDate;
+                                  if (pickupDate) return pickupDate;
+
+                                  // Auto-calculate pickup date (24 hours after delivery)
+                                  const deliveryDate = scheduledItems[item.id]?.date;
+                                  if (deliveryDate) {
+                                    const delivery = parseLocalDate(deliveryDate);
+                                    if (delivery) {
+                                      return formatForDatetimeLocal(new Date(delivery.getTime() + 24 * 60 * 60 * 1000));
+                                    }
+                                  }
+
+                                  // Fallback to reservation date + 24 hours
+                                  const reservationDate = localStorage.getItem('selectedReservationDate');
+                                  if (reservationDate) {
+                                    const delivery = new Date(reservationDate);
+                                    return formatForDatetimeLocal(new Date(delivery.getTime() + 24 * 60 * 60 * 1000));
+                                  }
+                                  return '';
+                                })()}
                                 onChange={(e) => {
                                   const pickupDate = e.target.value;
                                   const deliveryDate = scheduledItems[item.id]?.date;
@@ -1305,11 +1420,13 @@ export default function CheckoutPage() {
                                   Pick-up scheduled for: {(() => {
                                     const deliveryDate = parseLocalDate(scheduledItems[item.id].date);
                                     if (!deliveryDate) return 'Invalid date';
-                                    const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
+                                    const pickupDate = new Date(deliveryDate);
+                                    pickupDate.setDate(pickupDate.getDate() + 1);
+                                    pickupDate.setHours(18, 0, 0, 0);
                                     return pickupDate.toLocaleString();
                                   })()}
                                 </span>
-                                <p className="text-xs text-blue-700 mt-1">Auto-calculated: 24 hours after delivery</p>
+                                <p className="text-xs text-blue-700 mt-1">Auto-calculated: 1 day after delivery at 6:00 PM</p>
                               </div>
                             </div>
                           </div>
@@ -1504,7 +1621,9 @@ export default function CheckoutPage() {
                         if (!dateStr) return 'Not set';
                         const deliveryDate = parseLocalDate(dateStr);
                         if (!deliveryDate) return 'Invalid date';
-                        const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
+                        const pickupDate = new Date(deliveryDate);
+                        pickupDate.setDate(pickupDate.getDate() + 1);
+                        pickupDate.setHours(18, 0, 0, 0);
                         return pickupDate.toLocaleString();
                       })()}
                     </p>
@@ -1565,11 +1684,13 @@ export default function CheckoutPage() {
                               {schedule?.date ? (() => {
                                 const deliveryDate = parseLocalDate(schedule.date);
                                 if (!deliveryDate) return 'Invalid date';
-                                const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
+                                const pickupDate = new Date(deliveryDate);
+                                pickupDate.setDate(pickupDate.getDate() + 1);
+                                pickupDate.setHours(18, 0, 0, 0);
                                 return pickupDate.toLocaleString();
                               })() : 'Not scheduled'}
                             </p>
-                            <p className="text-xs text-gray-500 mt-1">Auto-calculated: 24 hours after delivery</p>
+                            <p className="text-xs text-gray-500 mt-1">Auto-calculated: 1 day after delivery at 6:00 PM</p>
                           </div>
                         </div>
                       </div>
