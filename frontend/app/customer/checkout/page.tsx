@@ -41,6 +41,26 @@ export default function CheckoutPage() {
     refreshStockData,
   } = useCart();
 
+  // Helper function to parse date string as local time
+  const parseLocalDate = (dateString: string) => {
+    if (!dateString) return null;
+    const [year, month, day, hour, minute] = dateString.split(/[-T:]/).map(Number);
+    const date = new Date();
+    date.setFullYear(year, month - 1, day);
+    date.setHours(hour || 0, minute || 0, 0, 0);
+    return date;
+  };
+
+  // Helper function to format date for datetime-local input
+  const formatForDatetimeLocal = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
+
   const [checkoutItems, setCheckoutItems] = useState<CheckoutItem[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [stockValidationIssues, setStockValidationIssues] = useState<string[]>([]);
@@ -191,8 +211,10 @@ export default function CheckoutPage() {
   const calculateItemDuration = (itemId: string, deliveryDate?: string, pickupDate?: string) => {
     if (!deliveryDate || !pickupDate) return;
 
-    const delivery = new Date(deliveryDate);
-    const pickup = new Date(pickupDate);
+    const delivery = parseLocalDate(deliveryDate);
+    const pickup = parseLocalDate(pickupDate);
+
+    if (!delivery || !pickup) return;
 
     // Validate that pick-up is after delivery
     if (pickup <= delivery) {
@@ -251,7 +273,7 @@ export default function CheckoutPage() {
       if (checked) {
         // When checking, use the current date/time or set a default
         const currentItem = updated[itemId] || { date: '', notes: '', sameDateTime: false };
-        const dateTime = currentItem.date || new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
+        const dateTime = currentItem.date || formatForDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000));
 
         updated[itemId] = {
           date: dateTime,
@@ -278,7 +300,8 @@ export default function CheckoutPage() {
     const deliveryDates = Object.values(scheduledItems)
       .map(item => item.date)
       .filter(date => date)
-      .map(date => new Date(date));
+      .map(date => parseLocalDate(date))
+      .filter(date => date !== null);
 
     if (deliveryDates.length === 0 || !pickupDate) {
       setNumberOfDays(0);
@@ -287,7 +310,9 @@ export default function CheckoutPage() {
     }
 
     const earliestDelivery = new Date(Math.min(...deliveryDates.map(d => d.getTime())));
-    const pickup = new Date(pickupDate);
+    const pickup = parseLocalDate(pickupDate);
+
+    if (!pickup) return;
 
     // Calculate difference in days
     const diffTime = pickup.getTime() - earliestDelivery.getTime();
@@ -379,7 +404,7 @@ export default function CheckoutPage() {
           bookingIntents.push({
             serviceId: item.id, // This will be the package ID
             quantity: item.quantity,
-            bookingDate: scheduleData.date,
+            bookingDate: parseLocalDate(scheduleData.date)?.toISOString() || scheduleData.date,
             notes: scheduleData.notes || '',
             duration: item.duration || 1,
             dailyRate: item.dailyRate || item.price,
@@ -392,7 +417,7 @@ export default function CheckoutPage() {
           bookingIntents.push({
             serviceId: item.id,
             quantity: item.quantity,
-            bookingDate: scheduleData.date,
+            bookingDate: parseLocalDate(scheduleData.date)?.toISOString() || scheduleData.date,
             notes: scheduleData.notes || '',
             duration: item.duration || 1,
             dailyRate: item.dailyRate || item.price,
@@ -833,7 +858,7 @@ export default function CheckoutPage() {
                           ? 'border-red-300 focus:border-red-500'
                           : 'border-green-300 focus:border-green-500'
                       }`}
-                      min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
+                      min={formatForDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000))}
                       value={scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date || ''}
                       onChange={(e) => {
                         const selectedDate = e.target.value;
@@ -886,7 +911,8 @@ export default function CheckoutPage() {
                           }`}
                           min={(() => {
                             const deliveryDate = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date;
-                            return deliveryDate ? new Date(new Date(deliveryDate).getTime() + 60 * 60 * 1000).toISOString().slice(0, 16) : new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
+                            const baseDate = deliveryDate ? parseLocalDate(deliveryDate) : new Date(Date.now() + 60 * 60 * 1000);
+                            return baseDate ? formatForDatetimeLocal(new Date(baseDate.getTime() + 60 * 60 * 1000)) : formatForDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000));
                           })()}
                           value={scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate || ''}
                           onChange={(e) => {
@@ -947,14 +973,19 @@ export default function CheckoutPage() {
                     <div className="flex items-center gap-2 text-green-800 bg-green-50 border border-green-200 rounded-lg p-3">
                       <span className="text-lg">✅</span>
                       <span className="text-sm font-medium">
-                        Delivery scheduled for: {new Date(scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].date).toLocaleString()}
+                        Delivery scheduled for: {(() => {
+                          const dateStr = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].date;
+                          return parseLocalDate(dateStr)?.toLocaleString() || 'Invalid date';
+                        })()}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-blue-800 bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <span className="text-sm">📅</span>
                       <span className="text-sm font-medium">
                         Pick-up scheduled for: {(() => {
-                          const deliveryDate = new Date(scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].date);
+                          const dateStr = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].date;
+                          const deliveryDate = parseLocalDate(dateStr);
+                          if (!deliveryDate) return 'Invalid date';
                           const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
                           return pickupDate.toLocaleString();
                         })()}
@@ -1127,7 +1158,7 @@ export default function CheckoutPage() {
                                 ? 'border-red-300 focus:border-red-500'
                                 : 'border-green-300 focus:border-green-500'
                             }`}
-                            min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)}
+                            min={formatForDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000))}
                             value={scheduledItems[item.id]?.date || ''}
                             onChange={(e) => {
                               const selectedDate = e.target.value;
@@ -1159,10 +1190,11 @@ export default function CheckoutPage() {
                                 type="datetime-local"
                                 className="input-field bg-gray-50 border-gray-300 cursor-not-allowed text-gray-700"
                                 value={(() => {
-                                  const deliveryDate = new Date(scheduledItems[item.id].date);
+                                  const deliveryDate = parseLocalDate(scheduledItems[item.id].date);
+                                  if (!deliveryDate) return '';
                                   // Add 24 hours for standard 1-day rental
                                   const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
-                                  return pickupDate.toISOString().slice(0, 16);
+                                  return formatForDatetimeLocal(pickupDate);
                                 })()}
                                 readOnly
                                 disabled
@@ -1205,7 +1237,8 @@ export default function CheckoutPage() {
                                 }`}
                                 min={(() => {
                                   const deliveryDate = scheduledItems[item.id]?.date;
-                                  return deliveryDate ? new Date(new Date(deliveryDate).getTime() + 60 * 60 * 1000).toISOString().slice(0, 16) : new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16);
+                                  const baseDate = deliveryDate ? parseLocalDate(deliveryDate) : new Date(Date.now() + 60 * 60 * 1000);
+                                  return baseDate ? formatForDatetimeLocal(new Date(baseDate.getTime() + 60 * 60 * 1000)) : formatForDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000));
                                 })()}
                                 value={scheduledItems[item.id]?.pickupDate || ''}
                                 onChange={(e) => {
@@ -1257,7 +1290,7 @@ export default function CheckoutPage() {
                             <div className="flex items-center gap-2 text-green-800">
                               <span className="text-lg">✅</span>
                               <div>
-                                <span className="text-sm font-medium">Delivery scheduled for: {new Date(scheduledItems[item.id].date).toLocaleString()}</span>
+                                <span className="text-sm font-medium">Delivery scheduled for: {parseLocalDate(scheduledItems[item.id].date)?.toLocaleString() || 'Invalid date'}</span>
                                 {scheduledItems[item.id]?.notes && (
                                   <p className="text-xs text-green-700 mt-1">Notes: {scheduledItems[item.id].notes}</p>
                                 )}
@@ -1270,7 +1303,8 @@ export default function CheckoutPage() {
                               <div>
                                 <span className="text-sm font-medium">
                                   Pick-up scheduled for: {(() => {
-                                    const deliveryDate = new Date(scheduledItems[item.id].date);
+                                    const deliveryDate = parseLocalDate(scheduledItems[item.id].date);
+                                    if (!deliveryDate) return 'Invalid date';
                                     const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
                                     return pickupDate.toLocaleString();
                                   })()}
@@ -1288,7 +1322,7 @@ export default function CheckoutPage() {
                           <div className="flex items-center gap-2 text-blue-800">
                             <span className="text-sm">📅</span>
                             <div>
-                              <span className="text-xs font-medium">Pick-up scheduled for: {new Date(scheduledItems[item.id].pickupDate!).toLocaleString()}</span>
+                              <span className="text-xs font-medium">Pick-up scheduled for: {parseLocalDate(scheduledItems[item.id].pickupDate!)?.toLocaleString() || 'Invalid date'}</span>
                               {scheduledItems[item.id]?.pickupNotes && (
                                 <p className="text-xs text-blue-700 mt-1">Notes: {scheduledItems[item.id].pickupNotes}</p>
                               )}
@@ -1456,19 +1490,23 @@ export default function CheckoutPage() {
                   <div>
                     <span className="text-sm text-blue-700">Delivery:</span>
                     <p className="font-medium text-blue-900">
-                      {scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date
-                        ? new Date(scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].date).toLocaleString()
-                        : 'Not set'}
+                      {(() => {
+                        const dateStr = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date;
+                        return dateStr ? parseLocalDate(dateStr)?.toLocaleString() || 'Invalid date' : 'Not set';
+                      })()}
                     </p>
                   </div>
                   <div>
                     <span className="text-sm text-blue-700">Pick-up:</span>
                     <p className="font-medium text-blue-900">
-                      {scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date ? (() => {
-                        const deliveryDate = new Date(scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].date);
+                      {(() => {
+                        const dateStr = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date;
+                        if (!dateStr) return 'Not set';
+                        const deliveryDate = parseLocalDate(dateStr);
+                        if (!deliveryDate) return 'Invalid date';
                         const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
                         return pickupDate.toLocaleString();
-                      })() : 'Not set'}
+                      })()}
                     </p>
                   </div>
                 </div>
@@ -1515,7 +1553,7 @@ export default function CheckoutPage() {
                           <div>
                             <span className="text-gray-600">Delivery:</span>
                             <p className="font-medium text-gray-900">
-                              {schedule?.date ? new Date(schedule.date).toLocaleString() : 'Not scheduled'}
+                              {schedule?.date ? parseLocalDate(schedule.date)?.toLocaleString() || 'Invalid date' : 'Not scheduled'}
                             </p>
                             {schedule?.notes && (
                               <p className="text-xs text-gray-500 mt-1">Notes: {schedule.notes}</p>
@@ -1525,7 +1563,8 @@ export default function CheckoutPage() {
                             <span className="text-gray-600">Pick-up:</span>
                             <p className="font-medium text-gray-900">
                               {schedule?.date ? (() => {
-                                const deliveryDate = new Date(schedule.date);
+                                const deliveryDate = parseLocalDate(schedule.date);
+                                if (!deliveryDate) return 'Invalid date';
                                 const pickupDate = new Date(deliveryDate.getTime() + 24 * 60 * 60 * 1000);
                                 return pickupDate.toLocaleString();
                               })() : 'Not scheduled'}
@@ -1662,7 +1701,7 @@ export default function CheckoutPage() {
         </div>
       )}
 
-      {currentStep === 'payment' && paymentBooking && (
+      {currentStep === 'payment' && paymentBooking && qrPayment && (
         <div className="space-y-6">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Complete Your Payment</h1>
@@ -1709,13 +1748,13 @@ export default function CheckoutPage() {
 
                     {/* QR Code Section */}
                     <div className="p-4 border-b border-gray-200 flex justify-center">
-                      {qrPayment.qrCode ? (
+                      {qrPayment!.qrCode ? (
                         <img
-                          src={qrPayment.qrCode}
+                          src={qrPayment!.qrCode}
                           alt="GCash QR Code"
                           className="w-64 h-64"
                           onError={(e) => {
-                            console.error('QR code failed to load, src:', qrPayment.qrCode);
+                            console.error('QR code failed to load, src:', qrPayment!.qrCode);
                             e.currentTarget.style.display = 'none';
                             // Show error message instead
                             const errorDiv = document.createElement('div');
@@ -1764,9 +1803,9 @@ export default function CheckoutPage() {
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                   <h4 className="font-semibold text-blue-800 mb-2">Payment Instructions:</h4>
                   <div className="text-sm text-blue-700 space-y-1">
-                    {qrPayment.instructions.instructions.map((instruction: string, index: number) => (
+                    {qrPayment!.instructions.instructions.map((instruction: string, index: number) => (
                       <div key={index} className="flex items-start">
-                        {instruction.replace('₱' + qrPayment.instructions.amount, '₱' + checkoutTotal.toFixed(2))}
+                        {instruction.replace('₱' + qrPayment!.instructions.amount, '₱' + checkoutTotal.toFixed(2))}
                       </div>
                     ))}
                   </div>
@@ -1776,7 +1815,7 @@ export default function CheckoutPage() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="font-medium text-gray-600">Reference:</span>
-                      <div className="font-mono text-gray-800">{qrPayment.referenceNumber}</div>
+                      <div className="font-mono text-gray-800">{qrPayment!.referenceNumber}</div>
                     </div>
                     <div className="flex justify-between">
                       <span className="font-medium text-gray-600">Amount:</span>

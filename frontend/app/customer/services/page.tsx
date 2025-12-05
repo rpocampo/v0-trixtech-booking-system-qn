@@ -52,7 +52,7 @@ export default function Services() {
     }
     // Default to today if no saved date
     const today = new Date();
-    return today.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   });
   const [availabilityData, setAvailabilityData] = useState<{[key: string]: {available: boolean, availableQuantity: number, reason?: string}}>({});
   const [checkingAvailability, setCheckingAvailability] = useState(false);

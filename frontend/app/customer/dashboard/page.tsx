@@ -113,7 +113,7 @@ export default function CustomerDashboard() {
 
   const handleDateClick = (date: Date) => {
     // Store selected date and redirect to equipment browsing
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     localStorage.setItem('selectedReservationDate', dateStr);
     router.push(`/customer/services?date=${dateStr}`);
   };
@@ -227,7 +227,7 @@ export default function CustomerDashboard() {
             const isCurrentMonth = date.getMonth() === month;
             const isToday = date.toDateString() === new Date().toDateString();
             const isPastDate = date < new Date(new Date().setHours(0, 0, 0, 0));
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
             const isBooked = bookedDates.has(dateStr);
 
             return (
