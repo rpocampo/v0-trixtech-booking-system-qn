@@ -120,141 +120,152 @@ export default function CustomerLayout({
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[var(--background)] to-[var(--surface-secondary)]" data-theme="customer">
         {/* Navigation */}
-        <nav className="bg-gradient-to-r from-white via-[var(--surface)] to-white border-b border-[var(--border)] sticky top-0 z-50 shadow-lg backdrop-blur-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex justify-between items-center">
+        <nav className="bg-gradient-to-r from-[var(--nav-bg)] via-[var(--surface)] to-[var(--nav-bg)] border-b border-[var(--nav-border)] sticky top-0 z-50 shadow-xl backdrop-blur-md">
+          <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex items-center">
             <Link href="/" className="flex items-center group hover:scale-105 transition-all duration-300">
               <div className="relative">
                 <img
                   src="/logo.png"
                   alt="TRIXTECH"
-                  className="h-10 w-auto transition-transform group-hover:scale-110"
+                  className="h-8 sm:h-10 w-auto transition-transform group-hover:scale-110"
                 />
                 <div className="absolute -inset-2 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
               </div>
-              <div className="ml-3">
-                <span className="text-2xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent">TRIXTECH</span>
-                <div className="text-xs text-[var(--muted)] font-medium -mt-1">Event Equipment Rental</div>
+              <div className="ml-2 sm:ml-3">
+                <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent">TRIXTECH</span>
+                <div className="text-xs text-[var(--nav-text-secondary)] font-medium -mt-1 hidden sm:block">Event Equipment Rental</div>
               </div>
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-2">
-            <Link
-              href="/customer/dashboard"
-              className={`group px-6 py-3 rounded-xl text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-300 font-semibold hover:scale-105 ${pathname === '/customer/dashboard' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-lg' : ''}`}
-            >
-              <span className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z" />
-                </svg>
-                My Dashboard
-              </span>
-            </Link>
-            <Link
-              href="/customer/services"
-              className={`group px-6 py-3 rounded-xl text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-300 font-semibold hover:scale-105 ${pathname === '/customer/services' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-lg' : ''}`}
-            >
-              <span className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-                Browse Equipment
-              </span>
-            </Link>
-            <Link
-              href="/customer/suggestions"
-              className={`group px-6 py-3 rounded-xl text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-300 font-semibold hover:scale-105 ${pathname === '/customer/suggestions' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-lg' : ''}`}
-            >
-              <span className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-                Smart Suggestions
-              </span>
-            </Link>
-            <Link
-              href="/customer/notifications"
-              className={`group relative px-6 py-3 rounded-xl text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-300 font-semibold hover:scale-105 ${pathname === '/customer/notifications' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-lg' : ''}`}
-            >
-              <span className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4.868 12.683A17.925 17.925 0 012 21h13.78a3 3 0 002.553-1.658c.69-1.396.69-3.132 0-4.528A17.925 17.925 0 0112.078 5c-1.944 0-3.814.482-5.526 1.355-.86.43-1.538 1.236-1.73 2.151-.228.966.234 1.944 1.099 2.51z" />
-                </svg>
-                Notifications
-              </span>
-              {unreadNotifications > 0 && (
-                <span className="absolute -top-2 -right-2 bg-gradient-to-r from-[var(--accent)] to-red-500 text-white text-xs font-bold rounded-full min-w-[1.5rem] h-6 flex items-center justify-center px-2 shadow-lg animate-pulse">
-                  {unreadNotifications > 99 ? '99+' : unreadNotifications}
-                </span>
-              )}
-            </Link>
-
-            <CartIcon />
-
-            {/* User Menu Dropdown */}
-            <div className="relative ml-2">
-              <button
-                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-[var(--nav-border)] text-[var(--nav-text)] hover:bg-[var(--nav-hover)] transition-all duration-200"
+            <div className="hidden lg:flex flex-1 justify-center items-center gap-3">
+              <Link
+                href="/customer/dashboard"
+                className={`group px-5 py-3 rounded-xl text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-300 font-semibold hover:scale-105 ${pathname === '/customer/dashboard' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-lg' : ''}`}
               >
-                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 text-sm font-semibold">
-                  {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                </div>
-                <svg className={`w-4 h-4 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z" />
+                  </svg>
+                  My Dashboard
+                </span>
+              </Link>
+              <Link
+                href="/customer/services"
+                className={`group px-5 py-3 rounded-xl text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-300 font-semibold hover:scale-105 ${pathname === '/customer/services' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-lg' : ''}`}
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  Browse Equipment
+                </span>
+              </Link>
+              <Link
+                href="/customer/suggestions"
+                className={`group px-5 py-3 rounded-xl text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-300 font-semibold hover:scale-105 ${pathname === '/customer/suggestions' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-lg' : ''}`}
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                  Smart Suggestions
+                </span>
+              </Link>
+              <Link
+                href="/customer/notifications"
+                className={`group relative px-5 py-3 rounded-xl text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-300 font-semibold hover:scale-105 ${pathname === '/customer/notifications' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-lg' : ''}`}
+              >
+                <span className="flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4.868 12.683A17.925 17.925 0 012 21h13.78a3 3 0 002.553-1.658c.69-1.396.69-3.132 0-4.528A17.925 17.925 0 0112.078 5c-1.944 0-3.814.482-5.526 1.355-.86.43-1.538 1.236-1.73 2.151-.228.966.234 1.944 1.099 2.51z" />
+                  </svg>
+                  Notifications
+                </span>
+                {unreadNotifications > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-gradient-to-r from-[var(--accent)] to-red-500 text-white text-xs font-bold rounded-full min-w-[1.5rem] h-6 flex items-center justify-center px-2 shadow-lg animate-pulse">
+                    {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                  </span>
+                )}
+              </Link>
+            </div>
 
-              {isUserMenuOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
-                  <div className="p-4 border-b border-slate-200">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-semibold flex-shrink-0">
-                        {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-slate-900 truncate">{user?.name}</p>
-                        <p className="text-sm text-slate-500 truncate">{user?.email}</p>
+            {/* Right side items */}
+            <div className="flex items-center gap-3">
+              <CartIcon />
+
+              {/* User Menu Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center gap-3 px-4 py-2 rounded-xl border border-[var(--nav-border)] text-[var(--nav-text)] hover:bg-[var(--nav-hover)] transition-all duration-200 hover:shadow-md"
+                >
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-sm font-semibold shadow-sm">
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </div>
+                  <div className="hidden xl:block text-left">
+                    <div className="text-sm font-semibold text-[var(--nav-text)]">{user?.name?.split(' ')[0] || 'User'}</div>
+                    <div className="text-xs text-[var(--nav-text-secondary)]">Customer</div>
+                  </div>
+                  <svg className={`w-4 h-4 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                {isUserMenuOpen && (
+                  <div className="absolute right-0 mt-3 w-72 bg-[var(--surface)] rounded-2xl shadow-2xl border border-[var(--border)] z-50 backdrop-blur-md">
+                    <div className="p-5 border-b border-[var(--border)]">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-lg">
+                          {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-[var(--foreground)] truncate text-lg">{user?.name}</p>
+                          <p className="text-sm text-[var(--muted)] truncate">{user?.email}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="w-2 h-2 bg-[var(--success)] rounded-full"></div>
+                            <span className="text-xs text-[var(--success)] font-medium">Active Customer</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
+                    <div className="py-3">
+                      <Link
+                        href="/customer/profile"
+                        className="flex items-center gap-4 px-5 py-4 text-[var(--foreground)] hover:bg-[var(--surface-hover)] hover:text-[var(--primary)] transition-all duration-200 rounded-lg mx-2"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        <span className="font-medium">Profile Settings</span>
+                      </Link>
+                      <button
+                        onClick={() => {
+                          logout();
+                          router.push('/');
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="w-full flex items-center gap-4 px-5 py-4 text-red-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200 rounded-lg mx-2"
+                      >
+                        <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        <span className="font-medium">Logout</span>
+                      </button>
+                    </div>
                   </div>
-                  <div className="py-2">
-                    <Link
-                      href="/customer/profile"
-                      className="flex items-center gap-3 px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors"
-                      onClick={() => setIsUserMenuOpen(false)}
-                    >
-                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                      <span className="truncate">Profile Settings</span>
-                    </Link>
-                    <button
-                      onClick={() => {
-                        logout();
-                        router.push('/');
-                        setIsUserMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
-                    >
-                      <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                      </svg>
-                      <span className="truncate">Logout</span>
-                    </button>
-                  </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center gap-2">
+          <div className="lg:hidden flex items-center gap-3">
             <CartIcon />
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-lg border border-[var(--nav-border)] text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-200"
+              className="p-3 rounded-xl border border-[var(--nav-border)] text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-200 shadow-sm"
               aria-label="Toggle menu"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,17 +277,21 @@ export default function CustomerLayout({
 
         {/* Mobile Dropdown Menu */}
         {isMenuOpen && (
-          <div className="md:hidden bg-[var(--nav-bg)] border-t border-[var(--nav-border)]">
-            <div className="px-4 py-4 space-y-1">
+          <div className="lg:hidden bg-[var(--nav-bg)] border-t border-[var(--nav-border)] shadow-2xl">
+            <div className="px-6 py-6 space-y-2">
               {/* User Info */}
               {user && (
-                <div className="flex items-center gap-3 p-3 mb-4 bg-slate-50 rounded-lg">
-                  <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-semibold">
+                <div className="flex items-center gap-4 p-4 mb-6 bg-gradient-to-r from-[var(--primary)]/5 to-[var(--accent)]/5 rounded-2xl border border-[var(--border)]">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-semibold shadow-lg">
                     {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-900 text-sm">{user?.name}</p>
-                    <p className="text-xs text-slate-500">{user?.email}</p>
+                    <p className="font-bold text-[var(--nav-text)] text-base">{user?.name}</p>
+                    <p className="text-sm text-[var(--nav-text-secondary)]">{user?.email}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="w-2 h-2 bg-[var(--success)] rounded-full"></div>
+                      <span className="text-xs text-[var(--success)] font-medium">Active Customer</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -284,38 +299,38 @@ export default function CustomerLayout({
               {/* Navigation Links */}
               <Link
                 href="/customer/dashboard"
-                className={`flex items-center gap-3 px-3 py-3 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-lg transition-all duration-200 ${pathname === '/customer/dashboard' ? 'bg-[var(--nav-active)] text-[var(--primary)]' : ''}`}
+                className={`flex items-center gap-4 px-4 py-4 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium ${pathname === '/customer/dashboard' ? 'bg-[var(--nav-active)] text-[var(--primary)] border-l-4 border-[var(--primary)]' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z" />
                 </svg>
-                Dashboard
+                My Dashboard
               </Link>
               <Link
                 href="/customer/services"
-                className={`flex items-center gap-3 px-3 py-3 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-lg transition-all duration-200 ${pathname === '/customer/services' ? 'bg-[var(--nav-active)] text-[var(--primary)]' : ''}`}
+                className={`flex items-center gap-4 px-4 py-4 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium ${pathname === '/customer/services' ? 'bg-[var(--nav-active)] text-[var(--primary)] border-l-4 border-[var(--primary)]' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
-                Equipment
+                Browse Equipment
               </Link>
               <Link
                 href="/customer/suggestions"
-                className={`flex items-center gap-3 px-3 py-3 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-lg transition-all duration-200 ${pathname === '/customer/suggestions' ? 'bg-[var(--nav-active)] text-[var(--primary)]' : ''}`}
+                className={`flex items-center gap-4 px-4 py-4 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium ${pathname === '/customer/suggestions' ? 'bg-[var(--nav-active)] text-[var(--primary)] border-l-4 border-[var(--primary)]' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
-                Suggestions
+                Smart Suggestions
               </Link>
               <Link
                 href="/customer/notifications"
-                className={`relative flex items-center gap-3 px-3 py-3 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-lg transition-all duration-200 ${pathname === '/customer/notifications' ? 'bg-[var(--nav-active)] text-[var(--primary)]' : ''}`}
+                className={`relative flex items-center gap-4 px-4 py-4 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium ${pathname === '/customer/notifications' ? 'bg-[var(--nav-active)] text-[var(--primary)] border-l-4 border-[var(--primary)]' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,23 +338,23 @@ export default function CustomerLayout({
                 </svg>
                 Notifications
                 {unreadNotifications > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1">
+                  <span className="absolute -top-2 -right-2 bg-gradient-to-r from-[var(--accent)] to-red-500 text-white text-xs font-bold rounded-full min-w-[1.5rem] h-6 flex items-center justify-center px-2 shadow-lg animate-pulse">
                     {unreadNotifications > 99 ? '99+' : unreadNotifications}
                   </span>
                 )}
               </Link>
 
-              <div className="border-t border-[var(--nav-border)] my-3"></div>
+              <div className="border-t border-[var(--nav-border)] my-4"></div>
 
               <Link
                 href="/customer/profile"
-                className="flex items-center gap-3 px-3 py-3 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-lg transition-all duration-200"
+                className="flex items-center gap-4 px-4 py-4 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
-                Profile
+                Profile Settings
               </Link>
               <button
                 onClick={() => {
@@ -347,7 +362,7 @@ export default function CustomerLayout({
                   router.push('/');
                   setIsMenuOpen(false);
                 }}
-                className="w-full flex items-center gap-3 px-3 py-3 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
+                className="w-full flex items-center gap-4 px-4 py-4 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 font-medium"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -361,29 +376,7 @@ export default function CustomerLayout({
 
       {/* Main Content */}
       <main className="flex-1 w-full bg-gradient-to-br from-[var(--background)] via-[var(--surface-secondary)] to-[var(--background)] min-h-screen">
-        <div className="w-full px-2 py-4">
-          {/* Welcome header */}
-          <div className="mb-8">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent mb-3">
-                Welcome to TRIXTECH
-              </h1>
-              <p className="text-xl text-[var(--foreground-secondary)] max-w-2xl mx-auto">
-                Discover premium event equipment and create unforgettable moments for your special occasions
-              </p>
-              <div className="mt-6 flex justify-center gap-4">
-                <div className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] rounded-full px-6 py-2 text-white text-sm font-semibold shadow-lg">
-                  ✨ Premium Quality Equipment
-                </div>
-                <div className="bg-gradient-to-r from-[var(--accent)] to-[var(--primary)] rounded-full px-6 py-2 text-white text-sm font-semibold shadow-lg">
-                  🎉 Easy Booking Process
-                </div>
-                <div className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] rounded-full px-6 py-2 text-white text-sm font-semibold shadow-lg">
-                  💝 Exceptional Service
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           {children}
         </div>
       </main>

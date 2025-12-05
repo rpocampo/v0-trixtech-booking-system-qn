@@ -139,156 +139,156 @@
   --bg-celebration-tertiary: #f0f0f0;
 }
 
-/* ADMIN THEME - Professional, Data-Focused */
+/* ADMIN THEME - Professional Dashboard */
 [data-theme="admin"] {
-  /* MODERN PROFESSIONAL DESIGN - CHARCOAL & DATA BLUE */
-  --background: #0f172a;
-  --background-secondary: #1e293b;
-  --foreground: #f8fafc;
-  --foreground-secondary: #cbd5e1;
+  /* PROFESSIONAL DARK THEME - SLATE & TEAL */
+  --background: #0a0f1c;
+  --background-secondary: #111827;
+  --foreground: #f9fafb;
+  --foreground-secondary: #d1d5db;
 
-  /* PRIMARY BRAND COLORS - DATA BLUE */
-  --primary: #3b82f6;
-  --primary-light: #60a5fa;
-  --primary-dark: #2563eb;
-  --primary-50: #eff6ff;
-  --primary-100: #dbeafe;
-  --primary-500: #3b82f6;
-  --primary-600: #2563eb;
-  --primary-700: #1d4ed8;
+  /* PRIMARY BRAND COLORS - PROFESSIONAL TEAL */
+  --primary: #0d9488;
+  --primary-light: #14b8a6;
+  --primary-dark: #0f766e;
+  --primary-50: #f0fdfa;
+  --primary-100: #ccfbf1;
+  --primary-500: #0d9488;
+  --primary-600: #0f766e;
+  --primary-700: #115e59;
 
-  /* SECONDARY COLORS - CHARCOAL GRAY */
+  /* SECONDARY COLORS - SLATE GRAY */
   --secondary: #64748b;
   --secondary-light: #94a3b8;
   --secondary-dark: #475569;
 
-  /* ACCENT COLORS - ANALYTICS PURPLE */
-  --accent: #8b5cf6;
-  --accent-light: #a78bfa;
-  --accent-dark: #7c3aed;
+  /* ACCENT COLORS - DATA VIZ BLUE */
+  --accent: #3b82f6;
+  --accent-light: #60a5fa;
+  --accent-dark: #2563eb;
 
-  /* STATUS COLORS - DATA VIZ FRIENDLY */
-  --success: #10b981;
-  --success-light: #34d399;
-  --success-dark: #059669;
-  --warning: #f59e0b;
-  --warning-light: #fbbf24;
-  --warning-dark: #d97706;
-  --danger: #ef4444;
-  --danger-light: #f87171;
-  --danger-dark: #dc2626;
+  /* STATUS COLORS - PROFESSIONAL */
+  --success: #059669;
+  --success-light: #10b981;
+  --success-dark: #047857;
+  --warning: #d97706;
+  --warning-light: #f59e0b;
+  --warning-dark: #b45309;
+  --danger: #dc2626;
+  --danger-light: #ef4444;
+  --danger-dark: #b91c1c;
 
   /* PROFESSIONAL BORDERS & SURFACES */
-  --border: #334155;
-  --border-light: #475569;
-  --border-focus: #3b82f6;
-  --muted: #64748b;
-  --muted-light: #94a3b8;
-
-  /* PROFESSIONAL SURFACE COLORS */
-  --surface: #1e293b;
-  --surface-secondary: #334155;
-  --surface-hover: #475569;
-  --surface-celebration: rgba(59, 130, 246, 0.05);
-
-  /* PROFESSIONAL SHADOWS */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
-  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4);
-  --shadow-celebration: 0 0 20px rgb(59, 130, 246 / 0.2);
-
-  /* PROFESSIONAL GRADIENTS */
-  --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-  --gradient-accent: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
-  --gradient-success: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-  --gradient-celebration: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%);
-  --gradient-party: linear-gradient(45deg, #3b82f6, #8b5cf6, #f59e0b, #10b981);
-
-  /* ADMIN SIDEBAR COLORS - DARK PROFESSIONAL */
-  --sidebar-bg: #0f172a;
-  --sidebar-text: #f8fafc;
-  --sidebar-text-secondary: #cbd5e1;
-  --sidebar-hover: #1e293b;
-  --sidebar-active: #334155;
-  --sidebar-border: #1e293b;
-}
-
-/* CUSTOMER THEME - Friendly, Welcoming Design */
-[data-theme="customer"] {
-  /* FRIENDLY LIGHT DESIGN - WARM WHITE & SOFT GRAYS */
-  --background: #fefefe;
-  --background-secondary: #f8fafc;
-  --foreground: #1f2937;
-  --foreground-secondary: #6b7280;
-
-  /* PRIMARY BRAND COLORS - WARM BLUE */
-  --primary: #3b82f6;
-  --primary-light: #60a5fa;
-  --primary-dark: #2563eb;
-  --primary-50: #eff6ff;
-  --primary-100: #dbeafe;
-  --primary-500: #3b82f6;
-  --primary-600: #2563eb;
-  --primary-700: #1d4ed8;
-
-  /* SECONDARY COLORS - WARM GRAY */
-  --secondary: #6b7280;
-  --secondary-light: #9ca3af;
-  --secondary-dark: #4b5563;
-
-  /* ACCENT COLORS - CHEERFUL CORAL */
-  --accent: #f97316;
-  --accent-light: #fb923c;
-  --accent-dark: #ea580c;
-
-  /* STATUS COLORS - FRIENDLY */
-  --success: #10b981;
-  --success-light: #34d399;
-  --success-dark: #059669;
-  --warning: #f59e0b;
-  --warning-light: #fbbf24;
-  --warning-dark: #d97706;
-  --danger: #ef4444;
-  --danger-light: #f87171;
-  --danger-dark: #dc2626;
-
-  /* FRIENDLY BORDERS & SURFACES */
-  --border: #e5e7eb;
-  --border-light: #f3f4f6;
-  --border-focus: #3b82f6;
+  --border: #374151;
+  --border-light: #4b5563;
+  --border-focus: #0d9488;
   --muted: #6b7280;
   --muted-light: #9ca3af;
 
+  /* PROFESSIONAL SURFACE COLORS */
+  --surface: #1f2937;
+  --surface-secondary: #374151;
+  --surface-hover: #4b5563;
+  --surface-celebration: rgba(13, 148, 136, 0.08);
+
+  /* PROFESSIONAL SHADOWS */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.5), 0 1px 2px -1px rgb(0 0 0 / 0.5);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 8px 10px -6px rgb(0 0 0 / 0.5);
+  --shadow-celebration: 0 0 20px rgb(13, 148, 136 / 0.3);
+
+  /* PROFESSIONAL GRADIENTS */
+  --gradient-primary: linear-gradient(135deg, #0d9488 0%, #3b82f6 100%);
+  --gradient-accent: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+  --gradient-success: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  --gradient-celebration: linear-gradient(135deg, #0a0f1c 0%, #111827 50%, #1f2937 100%);
+  --gradient-party: linear-gradient(45deg, #0d9488, #3b82f6, #059669, #d97706);
+
+  /* ADMIN SIDEBAR COLORS - PROFESSIONAL DARK */
+  --sidebar-bg: #0a0f1c;
+  --sidebar-text: #f9fafb;
+  --sidebar-text-secondary: #d1d5db;
+  --sidebar-hover: #1f2937;
+  --sidebar-active: #374151;
+  --sidebar-border: #111827;
+}
+
+/* CUSTOMER THEME - Friendly, Mobile-First Design */
+[data-theme="customer"] {
+  /* FRIENDLY LIGHT DESIGN - WARM CREAM & SOFT GRAYS */
+  --background: #fefcfb;
+  --background-secondary: #f7f6f4;
+  --foreground: #1c1917;
+  --foreground-secondary: #78716c;
+
+  /* PRIMARY BRAND COLORS - WARM INDIGO */
+  --primary: #6366f1;
+  --primary-light: #818cf8;
+  --primary-dark: #4f46e5;
+  --primary-50: #eef2ff;
+  --primary-100: #e0e7ff;
+  --primary-500: #6366f1;
+  --primary-600: #4f46e5;
+  --primary-700: #4338ca;
+
+  /* SECONDARY COLORS - WARM STONE */
+  --secondary: #78716c;
+  --secondary-light: #a8a29e;
+  --secondary-dark: #57534e;
+
+  /* ACCENT COLORS - CHEERFUL PINK */
+  --accent: #ec4899;
+  --accent-light: #f472b6;
+  --accent-dark: #db2777;
+
+  /* STATUS COLORS - FRIENDLY & WARM */
+  --success: #16a34a;
+  --success-light: #22c55e;
+  --success-dark: #15803d;
+  --warning: #ea580c;
+  --warning-light: #f97316;
+  --warning-dark: #c2410c;
+  --danger: #dc2626;
+  --danger-light: #ef4444;
+  --danger-dark: #b91c1c;
+
+  /* FRIENDLY BORDERS & SURFACES */
+  --border: #e7e5e4;
+  --border-light: #f5f5f4;
+  --border-focus: #6366f1;
+  --muted: #78716c;
+  --muted-light: #a8a29e;
+
   /* FRIENDLY SURFACE COLORS */
   --surface: #ffffff;
-  --surface-secondary: #f9fafb;
-  --surface-hover: #f3f4f6;
-  --surface-celebration: rgba(249, 115, 22, 0.03);
+  --surface-secondary: #fafaf9;
+  --surface-hover: #f5f5f4;
+  --surface-celebration: rgba(236, 72, 153, 0.04);
 
-  /* FRIENDLY SHADOWS */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.08);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.08);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.08);
-  --shadow-celebration: 0 0 20px rgb(249, 115, 22 / 0.1);
+  /* FRIENDLY SHADOWS - SOFT & WARM */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.06), 0 4px 6px -4px rgb(0 0 0 / 0.06);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.06), 0 8px 10px -6px rgb(0 0 0 / 0.06);
+  --shadow-celebration: 0 0 20px rgb(236, 72, 153 / 0.15);
 
   /* FRIENDLY GRADIENTS */
-  --gradient-primary: linear-gradient(135deg, #3b82f6 0%, #f97316 100%);
-  --gradient-accent: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
-  --gradient-success: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-  --gradient-celebration: linear-gradient(135deg, #fefefe 0%, #f8fafc 50%, #fef3c7 100%);
-  --gradient-party: linear-gradient(45deg, #3b82f6, #f97316, #10b981, #f59e0b);
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #ec4899 100%);
+  --gradient-accent: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
+  --gradient-success: linear-gradient(135deg, #16a34a 0%, #22c55e 100%);
+  --gradient-celebration: linear-gradient(135deg, #fefcfb 0%, #f7f6f4 50%, #fef3c7 100%);
+  --gradient-party: linear-gradient(45deg, #6366f1, #ec4899, #16a34a, #ea580c);
 
-  /* CUSTOMER NAVIGATION COLORS - WARM LIGHT */
+  /* CUSTOMER NAVIGATION COLORS - WARM CREAM */
   --nav-bg: #ffffff;
-  --nav-text: #374151;
-  --nav-text-secondary: #6b7280;
+  --nav-text: #1c1917;
+  --nav-text-secondary: #78716c;
   --nav-hover: #fef3c7;
   --nav-active: #fef3c7;
-  --nav-border: #e5e7eb;
+  --nav-border: #e7e5e4;
 }
 
 .dark {
@@ -400,7 +400,7 @@ body {
   position: relative;
 }
 
-/* MODERN CLEAN BACKGROUND */
+/* MODERN CLEAN BACKGROUND - BASE */
 body::before {
   content: '';
   position: fixed;
@@ -413,7 +413,7 @@ body::before {
   pointer-events: none;
 }
 
-/* Subtle geometric pattern overlay */
+/* Subtle geometric pattern overlay - BASE */
 body::after {
   content: '';
   position: fixed;
@@ -426,6 +426,28 @@ body::after {
     radial-gradient(circle at 75% 75%, rgba(6, 182, 212, 0.02) 0%, transparent 50%);
   pointer-events: none;
   z-index: -1;
+}
+
+/* ADMIN THEME BACKGROUND */
+[data-theme="admin"] body::before {
+  background: linear-gradient(135deg, #0a0f1c 0%, #111827 100%);
+}
+
+[data-theme="admin"] body::after {
+  background:
+    radial-gradient(circle at 25% 25%, rgba(13, 148, 136, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(59, 130, 246, 0.03) 0%, transparent 50%);
+}
+
+/* CUSTOMER THEME BACKGROUND */
+[data-theme="customer"] body::before {
+  background: linear-gradient(135deg, #fefcfb 0%, #f7f6f4 100%);
+}
+
+[data-theme="customer"] body::after {
+  background:
+    radial-gradient(circle at 25% 25%, rgba(99, 102, 241, 0.02) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(236, 72, 153, 0.02) 0%, transparent 50%);
 }
 
 @keyframes celebration-float {

@@ -35,6 +35,8 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
+let activeUsers = 0;
+
 const io = socketIo(server, {
   cors: {
     origin: "http://localhost:3000",
@@ -108,6 +110,9 @@ app.all('/', (req, res) => {
 
 // Socket.IO connection handling
 io.on('connection', (socket) => {
+  activeUsers++;
+  global.activeUsers = activeUsers;
+
   // Join user-specific room for targeted updates
   socket.on('join', (userId) => {
     socket.join(`user_${userId}`);
@@ -116,6 +121,11 @@ io.on('connection', (socket) => {
   // Join admin room for admin-specific updates
   socket.on('join-admin', () => {
     socket.join('admin');
+  });
+
+  socket.on('disconnect', () => {
+    activeUsers--;
+    global.activeUsers = activeUsers;
   });
 });
 

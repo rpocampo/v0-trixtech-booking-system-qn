@@ -144,6 +144,10 @@ router.get('/backup', healthCheckMiddleware, async (req, res) => {
   }
 });
 
+router.get('/active-users', healthCheckMiddleware, (req, res) => {
+  res.json({ count: global.activeUsers || 0 });
+});
+
 // Health check functions
 async function performBasicHealthCheck() {
   return {
