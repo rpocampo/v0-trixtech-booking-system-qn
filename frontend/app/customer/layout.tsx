@@ -265,7 +265,7 @@ export default function CustomerLayout({
             <CartIcon />
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-3 rounded-xl border border-[var(--nav-border)] text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-200 shadow-sm"
+              className="p-4 min-h-[44px] min-w-[44px] rounded-xl border border-[var(--nav-border)] text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] transition-all duration-200 shadow-sm active:scale-95"
               aria-label="Toggle menu"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -299,10 +299,10 @@ export default function CustomerLayout({
               {/* Navigation Links */}
               <Link
                 href="/customer/dashboard"
-                className={`flex items-center gap-4 px-4 py-4 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium ${pathname === '/customer/dashboard' ? 'bg-[var(--nav-active)] text-[var(--primary)] border-l-4 border-[var(--primary)]' : ''}`}
+                className={`flex items-center gap-4 px-4 py-5 min-h-[48px] text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium active:scale-95 ${pathname === '/customer/dashboard' ? 'bg-[var(--nav-active)] text-[var(--primary)] border-l-4 border-[var(--primary)]' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v2H8V5z" />
                 </svg>
@@ -310,30 +310,30 @@ export default function CustomerLayout({
               </Link>
               <Link
                 href="/customer/services"
-                className={`flex items-center gap-4 px-4 py-4 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium ${pathname === '/customer/services' ? 'bg-[var(--nav-active)] text-[var(--primary)] border-l-4 border-[var(--primary)]' : ''}`}
+                className={`flex items-center gap-4 px-4 py-5 min-h-[48px] text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium active:scale-95 ${pathname === '/customer/services' ? 'bg-[var(--nav-active)] text-[var(--primary)] border-l-4 border-[var(--primary)]' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
                 Browse Equipment
               </Link>
               <Link
                 href="/customer/suggestions"
-                className={`flex items-center gap-4 px-4 py-4 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium ${pathname === '/customer/suggestions' ? 'bg-[var(--nav-active)] text-[var(--primary)] border-l-4 border-[var(--primary)]' : ''}`}
+                className={`flex items-center gap-4 px-4 py-5 min-h-[48px] text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium active:scale-95 ${pathname === '/customer/suggestions' ? 'bg-[var(--nav-active)] text-[var(--primary)] border-l-4 border-[var(--primary)]' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
                 Smart Suggestions
               </Link>
               <Link
                 href="/customer/notifications"
-                className={`relative flex items-center gap-4 px-4 py-4 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium ${pathname === '/customer/notifications' ? 'bg-[var(--nav-active)] text-[var(--primary)] border-l-4 border-[var(--primary)]' : ''}`}
+                className={`relative flex items-center gap-4 px-4 py-5 min-h-[48px] text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium active:scale-95 ${pathname === '/customer/notifications' ? 'bg-[var(--nav-active)] text-[var(--primary)] border-l-4 border-[var(--primary)]' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5zM4.868 12.683A17.925 17.925 0 012 21h13.78a3 3 0 002.553-1.658c.69-1.396.69-3.132 0-4.528A17.925 17.925 0 0112.078 5c-1.944 0-3.814.482-5.526 1.355-.86.43-1.538 1.236-1.73 2.151-.228.966.234 1.944 1.099 2.51z" />
                 </svg>
                 Notifications
@@ -348,10 +348,10 @@ export default function CustomerLayout({
 
               <Link
                 href="/customer/profile"
-                className="flex items-center gap-4 px-4 py-4 text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium"
+                className="flex items-center gap-4 px-4 py-5 min-h-[48px] text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium active:scale-95"
                 onClick={() => setIsMenuOpen(false)}
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 Profile Settings
@@ -362,9 +362,9 @@ export default function CustomerLayout({
                   router.push('/');
                   setIsMenuOpen(false);
                 }}
-                className="w-full flex items-center gap-4 px-4 py-4 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 font-medium"
+                className="w-full flex items-center gap-4 px-4 py-5 min-h-[48px] text-red-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all duration-200 font-medium active:scale-95"
               >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                 </svg>
                 Logout

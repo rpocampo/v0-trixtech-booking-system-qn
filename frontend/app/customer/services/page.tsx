@@ -242,7 +242,57 @@ export default function Services() {
     };
   }, [socket, fetchServices]); // Add fetchServices as dependency
 
-  if (loading) return <div>Loading services...</div>;
+  if (loading) return (
+    <div className="animate-fade-in w-full min-h-screen flex flex-col">
+      {/* Hero Section Skeleton */}
+      <div className="text-center mb-4 sm:mb-6 px-2 sm:px-4 lg:px-6">
+        <div className="h-8 sm:h-10 lg:h-12 bg-gray-200 rounded-lg mb-4 animate-pulse mx-auto max-w-md"></div>
+        <div className="h-4 sm:h-5 bg-gray-200 rounded mb-2 animate-pulse mx-auto max-w-lg"></div>
+        <div className="h-4 sm:h-5 bg-gray-200 rounded animate-pulse mx-auto max-w-md"></div>
+      </div>
+
+      {/* Search/Filter Bar Skeleton */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 mx-2 sm:mx-4 lg:mx-6">
+        <div className="flex flex-col lg:flex-row gap-4 items-center">
+          <div className="flex-1 w-full lg:w-auto">
+            <div className="h-12 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
+          <div className="flex gap-2 flex-wrap w-full lg:w-auto">
+            <div className="h-12 w-32 bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Filter Skeleton */}
+      <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-3 sm:mb-4 px-2 sm:px-4 lg:px-6">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <div key={i} className="h-10 w-20 sm:w-24 bg-gray-200 rounded-full animate-pulse"></div>
+        ))}
+      </div>
+
+      {/* Services Grid Skeleton */}
+      <div className="w-full min-h-screen flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 w-full px-2 sm:px-4 lg:px-6">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden animate-pulse">
+              {/* Image skeleton */}
+              <div className="aspect-[4/3] sm:aspect-[16/9] bg-gray-200"></div>
+              {/* Content skeleton */}
+              <div className="p-4 sm:p-6">
+                <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded mb-4"></div>
+                <div className="space-y-2">
+                  <div className="h-3 bg-gray-200 rounded"></div>
+                  <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                </div>
+                <div className="mt-4 h-10 bg-gray-200 rounded-lg"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   // Location permission and checking
   const requestLocationPermission = () => {
@@ -414,14 +464,14 @@ export default function Services() {
       </div>
 
       {/* Hero Section */}
-      <div className="text-center mb-4 sm:mb-6 px-2 sm:px-4 lg:px-6">
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent">
+      <header className="text-center mb-4 sm:mb-6 px-2 sm:px-4 lg:px-6" role="banner">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent leading-tight">
           Available Equipments
         </h1>
-        <p className="text-lg sm:text-xl text-[var(--muted)] max-w-2xl mx-auto leading-relaxed">
+        <p className="text-base sm:text-lg md:text-xl text-[var(--muted)] max-w-2xl mx-auto leading-relaxed px-2">
           Discover our comprehensive range of equipment rentals designed to make your special occasions unforgettable
         </p>
-      </div>
+      </header>
 
       {/* Date Selection and Search/Filter Bar */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 mx-2 sm:mx-4 lg:mx-6">
@@ -429,25 +479,25 @@ export default function Services() {
         <div className="mb-4">
           <div className="flex items-center gap-4">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Reservation Date <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="date"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // Tomorrow minimum
-                value={selectedDate}
-                onChange={(e) => {
-                  const newDate = e.target.value;
-                  setSelectedDate(newDate);
-                  localStorage.setItem('selectedReservationDate', newDate);
-                  // Refetch services with new date
-                  fetchServices();
-                }}
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">Select date to check equipment availability</p>
-            </div>
+             <label className="block text-sm font-medium text-gray-700 mb-2">
+               Reservation Date <span className="text-red-500">*</span>
+             </label>
+             <input
+               type="date"
+               className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[48px]"
+               min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // Tomorrow minimum
+               value={selectedDate}
+               onChange={(e) => {
+                 const newDate = e.target.value;
+                 setSelectedDate(newDate);
+                 localStorage.setItem('selectedReservationDate', newDate);
+                 // Refetch services with new date
+                 fetchServices();
+               }}
+               required
+             />
+             <p className="text-xs text-gray-500 mt-1">Select date to check equipment availability</p>
+           </div>
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <span>📅</span>
               <span>Selected: {new Date(selectedDate).toLocaleDateString('en-US', {
@@ -461,39 +511,41 @@ export default function Services() {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-4 items-center">
-          {/* Search Input */}
-          <div className="flex-1 w-full lg:w-auto">
-            <input
-              type="text"
-              placeholder="Search equipment..."
-              value={pendingFilters.search}
-              onChange={(e) => setPendingFilters(prev => ({ ...prev, search: e.target.value }))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
+           {/* Search Input */}
+           <div className="flex-1 w-full lg:w-auto">
+             <input
+               type="text"
+               placeholder="Search equipment..."
+               value={pendingFilters.search}
+               onChange={(e) => setPendingFilters(prev => ({ ...prev, search: e.target.value }))}
+               className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[48px]"
+               autoComplete="off"
+             />
+           </div>
 
-          {/* Quick Filters */}
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
-            >
-              <span>🔍</span>
-              {showFilters ? 'Hide Filters' : 'More Filters'}
-            </button>
-          </div>
-        </div>
+           {/* Quick Filters */}
+           <div className="flex gap-2 flex-wrap w-full lg:w-auto">
+             <button
+               onClick={() => setShowFilters(!showFilters)}
+               className="flex items-center justify-center gap-2 px-4 py-3 min-h-[48px] border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200 active:scale-95 flex-1 lg:flex-none"
+             >
+               <span>🔍</span>
+               <span className="hidden sm:inline">{showFilters ? 'Hide Filters' : 'More Filters'}</span>
+               <span className="sm:hidden">{showFilters ? 'Hide' : 'Filters'}</span>
+             </button>
+           </div>
+         </div>
 
         {/* Advanced Filters */}
         {showFilters && (
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Event Type</label>
                 <select
                   value={pendingFilters.category}
                   onChange={(e) => setPendingFilters(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[48px]"
                 >
                   <option value="">All Categories</option>
                   <option value="equipment">Equipment</option>
@@ -512,7 +564,8 @@ export default function Services() {
                   placeholder="0"
                   value={pendingFilters.minPrice}
                   onChange={(e) => setPendingFilters(prev => ({ ...prev, minPrice: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[48px]"
+                  inputMode="numeric"
                 />
               </div>
 
@@ -523,7 +576,8 @@ export default function Services() {
                   placeholder="No limit"
                   value={pendingFilters.maxPrice}
                   onChange={(e) => setPendingFilters(prev => ({ ...prev, maxPrice: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[48px]"
+                  inputMode="numeric"
                 />
               </div>
 
@@ -533,7 +587,7 @@ export default function Services() {
                   <select
                     value={pendingFilters.sortBy}
                     onChange={(e) => setPendingFilters(prev => ({ ...prev, sortBy: e.target.value }))}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-3 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[48px]"
                   >
                     <option value="name">Name</option>
                     <option value="price">Price</option>
@@ -542,7 +596,7 @@ export default function Services() {
                   <select
                     value={pendingFilters.sortOrder}
                     onChange={(e) => setPendingFilters(prev => ({ ...prev, sortOrder: e.target.value }))}
-                    className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-20 px-3 py-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[48px]"
                   >
                     <option value="asc">↑</option>
                     <option value="desc">↓</option>
@@ -597,29 +651,33 @@ export default function Services() {
 
           {/* Services Grid - Maximized Screen Usage */}
           <div className="w-full min-h-screen flex-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 w-full" role="main" aria-label="Equipment listings">
               {filteredServices.map((service, index) => (
-                <div
+                <article
                   key={service._id}
                   className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 overflow-hidden border border-gray-200 ${
                     (service.availableQuantity ?? service.quantity ?? 0) <= 0 ? 'opacity-60 grayscale' : ''
                   }`}
+                  role="article"
+                  aria-labelledby={`service-${service._id}-title`}
+                  aria-describedby={`service-${service._id}-description`}
                 >
                 {/* Service Image */}
-                <div className="relative overflow-hidden">
+                <div className="relative overflow-hidden aspect-[4/3] sm:aspect-[16/9]">
                   {service.image ? (
                     <img
                       src={service.image.startsWith('/uploads/') ? `http://localhost:5000${service.image}` : service.image}
                       alt={service.name}
-                      className="w-full h-48 object-cover transition-transform duration-300 hover:scale-105"
+                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                       loading="lazy"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       onError={(e) => {
                         e.currentTarget.src = 'https://via.placeholder.com/400x240?text=Service+Image';
                       }}
                     />
                   ) : (
-                    <div className="w-full h-48 flex items-center justify-center bg-gray-100">
-                      <div className="text-4xl text-gray-400">
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                      <div className="text-3xl sm:text-4xl text-gray-400">
                         {service.category === 'party' ? '🎉' :
                          service.category === 'wedding' ? '💒' :
                          service.category === 'corporate' ? '🏢' :
@@ -662,12 +720,12 @@ export default function Services() {
                 </div>
 
                 {/* Service Content */}
-                <div className="p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
+                <div className="p-4 sm:p-6">
+                  <h3 id={`service-${service._id}-title`} className="text-base sm:text-lg font-semibold text-gray-900 mb-2 line-clamp-2 leading-tight">
                     {service.name}
                   </h3>
 
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2 leading-relaxed">
+                  <p id={`service-${service._id}-description`} className="text-gray-600 text-xs sm:text-sm mb-4 line-clamp-2 leading-relaxed">
                     {service.description}
                   </p>
 
@@ -740,7 +798,7 @@ export default function Services() {
                     )}
                   </div>
                 </div>
-              </div>
+              </article>
             ))}
             </div>
           </div>

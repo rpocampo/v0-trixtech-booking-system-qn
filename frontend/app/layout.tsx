@@ -5,6 +5,7 @@ import SocketProvider from '../components/SocketProvider';
 import NotificationProvider from '../components/NotificationProvider';
 import { CartProvider } from '../components/CartContext';
 import { UserProvider } from '../components/UserContext';
+import ServiceWorker from '../components/ServiceWorker';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -13,7 +14,11 @@ export const metadata: Metadata = {
   description: 'Book your events and services with TRIXTECH - Professional event management and equipment rental system',
   keywords: 'events, booking, services, equipment rental, party planning, TRIXTECH',
   authors: [{ name: 'TRIXTECH Team' }],
-  viewport: 'width=device-width, initial-scale=1',
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
   themeColor: '#2563eb',
 };
 
@@ -47,6 +52,7 @@ export default function RootLayout({
           <NotificationProvider>
             <UserProvider>
               <CartProvider>
+                <ServiceWorker />
                 <div id="main-content" role="main" tabIndex={-1}>
                   {children}
                 </div>

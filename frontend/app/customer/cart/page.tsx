@@ -223,10 +223,10 @@ export default function CartPage() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-[var(--foreground)] mb-2">Reservation Cart</h1>
-          <p className="text-[var(--muted)]">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[var(--foreground)] mb-2 leading-tight">Reservation Cart</h1>
+          <p className="text-sm sm:text-base text-[var(--muted)]">
             {totalItems} {totalItems === 1 ? 'item' : 'items'} in your reservation
           </p>
         </div>
@@ -245,12 +245,13 @@ export default function CartPage() {
             <div key={item.id} className="card p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 {/* Item Image */}
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 flex items-center justify-center text-xl sm:text-2xl self-center sm:self-auto">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 flex items-center justify-center text-lg sm:text-xl md:text-2xl self-center sm:self-auto flex-shrink-0">
                   {item.image ? (
                     <img
                       src={item.image.startsWith('/uploads/') ? `http://localhost:5000${item.image}` : item.image}
                       alt={item.name}
                       className="w-full h-full object-cover rounded-lg"
+                      loading="lazy"
                       onError={(e) => {
                         e.currentTarget.src = 'https://via.placeholder.com/80x80?text=IMG';
                       }}
@@ -300,8 +301,9 @@ export default function CartPage() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                          className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-semibold"
+                          className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-semibold active:scale-95 transition-transform"
                           disabled={item.quantity <= 1}
+                          aria-label="Decrease quantity"
                         >
                           -
                         </button>
@@ -311,12 +313,14 @@ export default function CartPage() {
                           max={item.maxOrder || 999}
                           value={item.quantity}
                           onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
-                          className="w-16 text-center border rounded px-2 py-1"
+                          className="w-16 text-center border rounded px-2 py-2 min-h-[40px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          aria-label="Quantity"
                         />
                         <button
                           onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                          className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-semibold"
+                          className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-semibold active:scale-95 transition-transform"
                           disabled={item.maxOrder ? item.quantity >= item.maxOrder : false}
+                          aria-label="Increase quantity"
                         >
                           +
                         </button>
