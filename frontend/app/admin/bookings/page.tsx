@@ -983,29 +983,17 @@ export default function AdminBookings() {
                     <td className="px-6 py-3 text-sm">{new Date(booking.bookingDate).toLocaleDateString()}</td>
                     <td className="px-6 py-3 font-semibold">₱{booking.totalPrice}</td>
                     <td className="px-6 py-3">
-                      <select
-                        value={booking.status}
-                        onChange={(e) => updateBooking(booking._id, e.target.value, booking.paymentStatus)}
-                        className={`px-3 py-1 rounded text-sm font-semibold ${getStatusColor(booking.status)}`}
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="confirmed">Confirmed</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                      </select>
+                      <span className={`px-3 py-1 rounded text-sm font-semibold ${getStatusColor(booking.status)}`}>
+                        {booking.status} <span className="text-xs opacity-75">(Auto-managed)</span>
+                      </span>
                     </td>
                     <td className="px-6 py-3">
-                      <select
-                        value={booking.paymentStatus}
-                        onChange={(e) => updateBooking(booking._id, booking.status, e.target.value)}
-                        className={`px-3 py-1 rounded text-sm font-semibold border ${
-                          booking.paymentStatus === 'paid' ? 'bg-green-100 text-gray-900 border-green-300' :
-                          'bg-yellow-100 text-gray-900 border-yellow-300'
-                        }`}
-                      >
-                        <option value="unpaid">Unpaid</option>
-                        <option value="paid">Paid</option>
-                      </select>
+                      <span className={`px-3 py-1 rounded text-sm font-semibold border ${
+                        booking.paymentStatus === 'paid' ? 'bg-green-100 text-gray-900 border-green-300' :
+                        'bg-yellow-100 text-gray-900 border-yellow-300'
+                      }`}>
+                        {booking.paymentStatus} <span className="text-xs opacity-75">(Auto-managed)</span>
+                      </span>
                     </td>
                     <td className="px-6 py-3">
                       <button
@@ -1041,29 +1029,9 @@ export default function AdminBookings() {
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-2xl font-bold">Reservation Details</h3>
                     <div className="flex gap-2">
-                      {!isEditingBooking ? (
-                        <button
-                          onClick={startEditingBooking}
-                          className="btn-primary text-sm px-4 py-2"
-                        >
-                          ✏️ Edit Reservation Details
-                        </button>
-                      ) : (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={saveBookingChanges}
-                            className="btn-primary text-sm px-4 py-2"
-                          >
-                            💾 Save Changes
-                          </button>
-                          <button
-                            onClick={cancelEditingBooking}
-                            className="btn-secondary text-sm px-4 py-2"
-                          >
-                            ❌ Cancel
-                          </button>
-                        </div>
-                      )}
+                      <div className="text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-lg">
+                        📊 Reservation details are automatically managed by the system
+                      </div>
                       <button
                         onClick={() => setShowBookingModal(false)}
                         className="text-gray-500 hover:text-gray-700 text-2xl ml-2"
@@ -1250,37 +1218,23 @@ export default function AdminBookings() {
                         <div>
                           <span className="text-sm text-gray-600">Reservation Status:</span>
                           <div className="mt-1">
-                            <select
-                              value={selectedBooking.status}
-                              onChange={(e) => updateBooking(selectedBooking._id, e.target.value, selectedBooking.paymentStatus)}
-                              className={`px-3 py-1 rounded text-sm font-semibold ${getStatusColor(selectedBooking.status)}`}
-                            >
-                              <option value="pending">Pending</option>
-                              <option value="confirmed">Confirmed</option>
-                              <option value="completed">Completed</option>
-                              <option value="cancelled">Cancelled</option>
-                            </select>
+                            <span className={`px-3 py-1 rounded text-sm font-semibold ${getStatusColor(selectedBooking.status)}`}>
+                              {selectedBooking.status} <span className="text-xs opacity-75">(Auto-managed)</span>
+                            </span>
                           </div>
                         </div>
                         <div>
                           <span className="text-sm text-gray-600">Payment Status:</span>
                           <div className="mt-1">
-                            <select
-                              value={selectedBooking.paymentStatus}
-                              onChange={(e) => updateBooking(selectedBooking._id, selectedBooking.status, e.target.value)}
-                              className={`px-3 py-1 rounded text-sm font-semibold border ${
-                                selectedBooking.paymentStatus === 'paid' ? 'bg-green-100 text-gray-900 border-green-300' :
-                                selectedBooking.paymentStatus === 'processing' ? 'bg-blue-100 text-gray-900 border-blue-300' :
-                                selectedBooking.paymentStatus === 'failed' ? 'bg-red-100 text-gray-900 border-red-300' :
-                                selectedBooking.paymentStatus === 'unpaid' ? 'bg-yellow-100 text-gray-900 border-yellow-300' :
-                                'bg-gray-100 text-gray-900 border-gray-300'
-                              }`}
-                            >
-                              <option value="unpaid">Unpaid</option>
-                              <option value="processing">Processing</option>
-                              <option value="paid">Paid</option>
-                              <option value="failed">Failed</option>
-                            </select>
+                            <span className={`px-3 py-1 rounded text-sm font-semibold border ${
+                              selectedBooking.paymentStatus === 'paid' ? 'bg-green-100 text-gray-900 border-green-300' :
+                              selectedBooking.paymentStatus === 'processing' ? 'bg-blue-100 text-gray-900 border-blue-300' :
+                              selectedBooking.paymentStatus === 'failed' ? 'bg-red-100 text-gray-900 border-red-300' :
+                              selectedBooking.paymentStatus === 'unpaid' ? 'bg-yellow-100 text-gray-900 border-yellow-300' :
+                              'bg-gray-100 text-gray-900 border-gray-300'
+                            }`}>
+                              {selectedBooking.paymentStatus} <span className="text-xs opacity-75">(Auto-managed)</span>
+                            </span>
                           </div>
                         </div>
                         <div>
@@ -1315,23 +1269,22 @@ export default function AdminBookings() {
                             <h5 className="text-sm font-medium text-gray-700 flex items-center gap-2">
                               <span>📦</span>
                               Included Items & Equipment
+                              <span className="text-xs text-blue-600">(Auto-managed)</span>
                             </h5>
 
                             {selectedBooking.serviceId.includedEquipment.map((equipment, index) => {
-                              const currentQuantity = editFormData.itemQuantities?.[equipment.name] || (selectedBooking.itemQuantities?.[equipment.name] || equipment.quantity);
+                              const currentQuantity = selectedBooking.itemQuantities?.[equipment.name] || equipment.quantity;
                               const inventoryLevel = inventoryLevels[equipment.equipmentId] || 0;
                               const isLowStock = inventoryLevel <= 5 && inventoryLevel > 0;
                               const isOutOfStock = inventoryLevel <= 0;
 
                               return (
-                                <div key={index} className={`flex items-center justify-between p-3 rounded-lg border ${
-                                  isEditingBooking ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200'
-                                } ${isOutOfStock ? 'border-red-300 bg-red-50' : ''} ${isLowStock ? 'border-yellow-300 bg-yellow-50' : ''}`}>
+                                <div key={index} className={`flex items-center justify-between p-3 rounded-lg border bg-gray-50 border-gray-200 ${isOutOfStock ? 'border-red-300 bg-red-50' : ''} ${isLowStock ? 'border-yellow-300 bg-yellow-50' : ''}`}>
                                   <div className="flex-1">
                                     <p className="font-medium text-sm">{equipment.name}</p>
                                     <div className="flex items-center gap-4 mt-1">
                                       <span className="text-xs text-gray-500">
-                                        Current: {currentQuantity} item{currentQuantity !== 1 ? 's' : ''}
+                                        Quantity: {currentQuantity} item{currentQuantity !== 1 ? 's' : ''}
                                       </span>
                                       {inventoryLevel > 0 && (
                                         <span className={`text-xs flex items-center gap-1 ${
@@ -1350,41 +1303,11 @@ export default function AdminBookings() {
                                     </div>
                                   </div>
 
-                                  {isEditingBooking ? (
-                                    <div className="flex items-center gap-2">
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        max={inventoryLevel || 100}
-                                        value={currentQuantity}
-                                        onChange={(e) => {
-                                          const newQuantity = parseInt(e.target.value) || 0;
-                                          setEditFormData(prev => ({
-                                            ...prev,
-                                            itemQuantities: {
-                                              ...prev.itemQuantities,
-                                              [equipment.name]: newQuantity
-                                            }
-                                          }));
-                                        }}
-                                        className={`input-field w-20 text-center ${
-                                          currentQuantity > inventoryLevel && inventoryLevel > 0
-                                            ? 'border-red-300 focus:border-red-500'
-                                            : ''
-                                        }`}
-                                      />
-                                      <span className="text-sm text-gray-600">items</span>
-                                      {currentQuantity > inventoryLevel && inventoryLevel > 0 && (
-                                        <span className="text-xs text-red-600">⚠️ Exceeds stock</span>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div className="text-right">
-                                      <span className="text-lg font-semibold text-[var(--primary)]">
-                                        {currentQuantity}
-                                      </span>
-                                    </div>
-                                  )}
+                                  <div className="text-right">
+                                    <span className="text-lg font-semibold text-[var(--primary)]">
+                                      {currentQuantity}
+                                    </span>
+                                  </div>
                                 </div>
                               );
                             })}

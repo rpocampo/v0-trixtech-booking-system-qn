@@ -324,32 +324,9 @@ export default function DeliveryManagement() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        {delivery.status === 'scheduled' && (
-                          <button
-                            onClick={() => updateDeliveryStatus(delivery._id, 'in_progress')}
-                            className="text-blue-600 hover:text-blue-900"
-                          >
-                            Start
-                          </button>
-                        )}
-                        {delivery.status === 'in_progress' && (
-                          <button
-                            onClick={() => updateDeliveryStatus(delivery._id, 'completed')}
-                            className="text-green-600 hover:text-green-900"
-                          >
-                            Complete
-                          </button>
-                        )}
-                        {(delivery.status === 'scheduled' || delivery.status === 'in_progress') && (
-                          <button
-                            onClick={() => updateDeliveryStatus(delivery._id, 'cancelled')}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Cancel
-                          </button>
-                        )}
-                      </div>
+                      <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                        Auto-managed
+                      </span>
                     </td>
                   </tr>
                 ))}

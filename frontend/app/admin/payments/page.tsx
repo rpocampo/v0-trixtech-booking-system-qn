@@ -174,8 +174,8 @@ export default function AdminPaymentsPage() {
           <div>
             <h1 className="text-2xl font-bold text-gray-800">All Payments</h1>
             <p className="text-gray-600">View all payment transactions including OCR-verified ones</p>
-            <p className="text-xs text-gray-500 mt-1">
-              💡 Click "Refresh" to see the latest payment updates and receipt images
+            <p className="text-xs text-blue-600 mt-1">
+              💡 Payments are automatically reviewed and processed by the system
             </p>
           </div>
           <button
@@ -332,12 +332,9 @@ export default function AdminPaymentsPage() {
                       </button>
                     )}
                     {isPendingReview && (
-                      <button
-                        onClick={() => setSelectedPayment(payment)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-medium"
-                      >
-                        Review
-                      </button>
+                      <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                        Auto-reviewed by system
+                      </span>
                     )}
                   </div>
                 </div>
