@@ -48,6 +48,8 @@ export default function BookingPage() {
     quantity: 1,
     bookingDate: '',
     deliveryTime: '',
+    pickupDate: '',
+    pickupTime: '',
     notes: '',
     extendRental: false,
     extendedDays: 0,
@@ -100,6 +102,7 @@ export default function BookingPage() {
   const [showBookingSummary, setShowBookingSummary] = useState(savedData?.showBookingSummary || false);
   const [bookingSummaryData, setBookingSummaryData] = useState<any>(savedData?.bookingSummaryData || null);
   const [showTimeConfirmation, setShowTimeConfirmation] = useState(false);
+  const [calculatedPickupDateTime, setCalculatedPickupDateTime] = useState<Date | null>(null);
 
   // Save booking data to localStorage whenever it changes
   useEffect(() => {
@@ -206,6 +209,11 @@ export default function BookingPage() {
     }
   }, [serviceId]);
 
+  // Calculate pick-up date/time when delivery date/time or extension changes
+  useEffect(() => {
+    calculatePickupDateTime();
+  }, [booking.bookingDate, booking.extendRental, booking.extendedDays, booking.extendedHours]);
+
   const openDateTimePicker = () => {
     setShowDateTimePicker(true);
   };
@@ -282,6 +290,36 @@ export default function BookingPage() {
     } catch (error) {
       console.error('Error calculating price:', error);
     }
+  };
+
+  const calculatePickupDateTime = () => {
+    if (!booking.bookingDate) {
+      setCalculatedPickupDateTime(null);
+      setBooking((prev: any) => ({ ...prev, pickupDate: '', pickupTime: '' }));
+      return;
+    }
+
+    const deliveryDateTime = new Date(booking.bookingDate);
+    const pickupDateTime = new Date(deliveryDateTime);
+
+    // Base rental is 1 day, plus extended days and hours
+    const totalDays = 1 + (booking.extendRental ? (booking.extendedDays || 0) : 0);
+    const totalHours = booking.extendRental ? (booking.extendedHours || 0) : 0;
+
+    pickupDateTime.setDate(pickupDateTime.getDate() + totalDays);
+    pickupDateTime.setHours(pickupDateTime.getHours() + totalHours);
+
+    setCalculatedPickupDateTime(pickupDateTime);
+
+    // Update booking state with formatted pickup date and time
+    const pickupDate = pickupDateTime.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const pickupTime = pickupDateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); // HH:MM format
+
+    setBooking((prev: any) => ({
+      ...prev,
+      pickupDate,
+      pickupTime
+    }));
   };
 
   const handleDateSelect = (date: Date) => {
@@ -508,6 +546,8 @@ export default function BookingPage() {
           quantity: booking.quantity,
           bookingDate: booking.bookingDate,
           deliveryTime: booking.deliveryTime,
+          pickupDate: booking.pickupDate,
+          pickupTime: booking.pickupTime,
           notes: booking.notes,
           extendRental: booking.extendRental,
           extendedDays: booking.extendedDays,
@@ -558,6 +598,8 @@ export default function BookingPage() {
           quantity: booking.quantity,
           bookingDate: booking.bookingDate,
           deliveryTime: booking.deliveryTime,
+          pickupDate: booking.pickupDate,
+          pickupTime: booking.pickupTime,
           notes: booking.notes,
           extendRental: booking.extendRental,
           extendedDays: booking.extendedDays,
@@ -732,6 +774,29 @@ export default function BookingPage() {
               )}
             </div>
 
+            {/* Pick-up Date & Time - Auto-filled */}
+            {booking.bookingDate && (
+              <div>
+                <label className="block text-sm font-medium mb-2">Pick-up Date & Time</label>
+                <div className="input-field bg-gray-50 border-gray-300 cursor-not-allowed">
+                  {booking.pickupDate && booking.pickupTime ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-blue-600">📦</span>
+                      <div>
+                        <div className="font-medium">{new Date(booking.pickupDate).toLocaleDateString()}</div>
+                        <div className="text-sm text-gray-600">{booking.pickupTime}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-gray-500">Calculating pick-up time...</div>
+                  )}
+                </div>
+                <p className="text-sm text-blue-600 mt-1 flex items-center gap-1">
+                  <span>🔄</span> Automatically calculated based on delivery time and rental duration
+                </p>
+              </div>
+            )}
+
             {/* Rental Duration Extension - Only show for equipment/services that require delivery */}
             {availabilityStatus?.requiresDelivery && (
               <div>
@@ -855,13 +920,23 @@ export default function BookingPage() {
                 )}
                 {/* Rental Duration Display */}
                 {availabilityStatus?.requiresDelivery && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-600">Rental Duration:</span>
-                    <span className="font-medium text-gray-800">
-                      {booking.extendRental ? `${1 + (booking.extendedDays || 0)} days` : '1 day'}
-                      {booking.extendRental && booking.extendedHours ? ` + ${booking.extendedHours} hours` : ''}
-                    </span>
-                  </div>
+                  <>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">Rental Duration:</span>
+                      <span className="font-medium text-gray-800">
+                        {booking.extendRental ? `${1 + (booking.extendedDays || 0)} days` : '1 day'}
+                        {booking.extendRental && booking.extendedHours ? ` + ${booking.extendedHours} hours` : ''}
+                      </span>
+                    </div>
+                    {calculatedPickupDateTime && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Pick-up Date & Time:</span>
+                        <span className="font-medium text-gray-800">
+                          {calculatedPickupDateTime.toLocaleDateString()} at {calculatedPickupDateTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                        </span>
+                      </div>
+                    )}
+                  </>
                 )}
                 {pricingInfo && pricingInfo.discount > 0 && (
                   <div className="flex justify-between items-center text-green-600">
@@ -1113,6 +1188,14 @@ export default function BookingPage() {
                         <span className="font-medium text-gray-900">
                           {1 + (bookingSummaryData.booking.extendedDays || 0)} days
                           {bookingSummaryData.booking.extendedHours ? ` + ${bookingSummaryData.booking.extendedHours} hours` : ''}
+                        </span>
+                      </div>
+                    )}
+                    {bookingSummaryData.booking.pickupDate && bookingSummaryData.booking.pickupTime && (
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Pick-up Date & Time:</span>
+                        <span className="font-medium text-gray-900">
+                          {new Date(bookingSummaryData.booking.pickupDate).toLocaleDateString()} at {bookingSummaryData.booking.pickupTime}
                         </span>
                       </div>
                     )}

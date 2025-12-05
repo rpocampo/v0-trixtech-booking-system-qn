@@ -200,6 +200,30 @@ export default function CheckoutPage() {
     localStorage.setItem('cartScheduledItems', JSON.stringify(scheduledItems));
   }, [scheduledItems]);
 
+  // Auto-calculate pick-up dates when delivery dates or extension settings change
+  useEffect(() => {
+    setScheduledItems(prev => {
+      const updated = { ...prev };
+      let hasChanges = false;
+
+      Object.keys(updated).forEach(itemId => {
+        const item = updated[itemId];
+        if (item.date && item.extendDuration) {
+          const calculatedPickup = calculatePickupDateTime(item.date, item.extendDuration, item.extendedDays || 1);
+          if (calculatedPickup && calculatedPickup !== item.pickupDate) {
+            updated[itemId] = {
+              ...item,
+              pickupDate: calculatedPickup
+            };
+            hasChanges = true;
+          }
+        }
+      });
+
+      return hasChanges ? updated : prev;
+    });
+  }, [scheduledItems]);
+
   // Auto-redirect to dashboard when payment incorrect error is shown
   useEffect(() => {
     if (receiptError && receiptError.includes('Payment Incorrect') && receiptError.includes('09127607860')) {
@@ -351,6 +375,23 @@ export default function CheckoutPage() {
     });
   };
 
+
+  const calculatePickupDateTime = (deliveryDate: string, extendDuration: boolean = false, extendedDays: number = 0): string | undefined => {
+    if (!deliveryDate) return undefined;
+
+    const delivery = parseLocalDate(deliveryDate);
+    if (!delivery) return undefined;
+
+    const pickupDateTime = new Date(delivery);
+
+    // Base rental is 1 day, plus extended days
+    const totalDays = 1 + (extendDuration ? extendedDays : 0);
+
+    pickupDateTime.setDate(pickupDateTime.getDate() + totalDays);
+    pickupDateTime.setHours(18, 0, 0, 0); // Set to 6:00 PM
+
+    return formatForDatetimeLocal(pickupDateTime);
+  };
 
   const calculateNumberOfDays = () => {
     // Get the earliest delivery date from scheduled items
@@ -835,12 +876,16 @@ export default function CheckoutPage() {
                               // Apply to all synchronized items
                               const synchronizedItems = checkoutItems.filter(i => scheduledItems[i.id]?.sameDateTime);
                               synchronizedItems.forEach(syncItem => {
+                                const deliveryDate = scheduledItems[syncItem.id]?.date;
+                                const pickupDateTime = isChecked && deliveryDate ? calculatePickupDateTime(deliveryDate, isChecked, scheduledItems[syncItem.id]?.extendedDays || 1) : undefined;
+ 
                                 setScheduledItems(prev => ({
                                   ...prev,
                                   [syncItem.id]: {
                                     ...prev[syncItem.id],
                                     extendDuration: isChecked,
                                     extendedDays: isChecked ? (prev[syncItem.id]?.extendedDays || 1) : 0,
+                                    pickupDate: pickupDateTime || undefined,
                                   }
                                 }));
 
@@ -964,65 +1009,39 @@ export default function CheckoutPage() {
                     <>
                       <div>
                         <label className="block text-sm font-medium text-blue-800 mb-2">
-                          Pick-up Date & Time {!scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate && <span className="text-red-500">*</span>}
+                          Pick-up Date & Time
                         </label>
-                        <input
-                          type="datetime-local"
-                          className={`input-field ${
-                            !scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate
-                              ? 'border-red-300 focus:border-red-500'
-                              : 'border-green-300 focus:border-green-500'
-                          }`}
-                          min={(() => {
-                            const deliveryDate = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date;
-                            const baseDate = deliveryDate ? parseLocalDate(deliveryDate) : new Date(Date.now() + 60 * 60 * 1000);
-                            return baseDate ? formatForDatetimeLocal(new Date(baseDate.getTime() + 60 * 60 * 1000)) : formatForDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000));
-                          })()}
-                          value={(() => {
-                            const pickupDate = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate;
-                            if (pickupDate) return pickupDate;
+                        <div className="relative">
+                          <input
+                            type="datetime-local"
+                            className="input-field bg-gray-50 border-gray-300 cursor-not-allowed text-gray-700"
+                            value={(() => {
+                              const pickupDate = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate;
+                              if (pickupDate) return pickupDate;
 
-                            // Auto-calculate pickup date (24 hours after delivery)
-                            const deliveryDate = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date;
-                            if (deliveryDate) {
-                              const delivery = parseLocalDate(deliveryDate);
-                              if (delivery) {
-                                return formatForDatetimeLocal(new Date(delivery.getTime() + 24 * 60 * 60 * 1000));
+                              // Auto-calculate pickup date based on delivery + extension
+                              const deliveryDate = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.date;
+                              const extendDuration = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.extendDuration;
+                              const extendedDays = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.extendedDays || 1;
+
+                              if (deliveryDate) {
+                                return calculatePickupDateTime(deliveryDate, extendDuration, extendedDays) || '';
                               }
-                            }
 
-                            // Fallback to reservation date + 24 hours
-                            const reservationDate = localStorage.getItem('selectedReservationDate');
-                            if (reservationDate) {
-                              const delivery = new Date(reservationDate);
-                              return formatForDatetimeLocal(new Date(delivery.getTime() + 24 * 60 * 60 * 1000));
-                            }
-                            return '';
-                          })()}
-                          onChange={(e) => {
-                            const pickupDate = e.target.value;
-                            // Update all synchronized items
-                            const synchronizedItems = checkoutItems.filter(item => scheduledItems[item.id]?.sameDateTime);
-                            synchronizedItems.forEach(item => {
-                              const deliveryDate = scheduledItems[item.id]?.date;
-                              setScheduledItems(prev => ({
-                                ...prev,
-                                [item.id]: {
-                                  ...prev[item.id],
-                                  pickupDate,
-                                  pickupNotes: prev[item.id]?.pickupNotes || ''
-                                }
-                              }));
-                              // Auto-calculate duration for this item
-                              calculateItemDuration(item.id, deliveryDate, pickupDate);
-                            });
-                            calculateNumberOfDays();
-                          }}
-                          required
-                        />
-                        {!scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.pickupDate && (
-                          <p className="text-xs text-red-600 mt-1">Please select a pick-up date and time</p>
-                        )}
+                              return '';
+                            })()}
+                            readOnly
+                            disabled
+                          />
+                          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                              Auto-calculated
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-blue-600 mt-1">
+                          Automatically calculated based on delivery time and rental duration
+                        </p>
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-blue-800 mb-2">Pick-up Notes (Optional)</label>
@@ -1068,12 +1087,16 @@ export default function CheckoutPage() {
                       <span className="text-sm font-medium">
                         Pick-up scheduled for: {(() => {
                           const dateStr = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || ''].date;
-                          const deliveryDate = parseLocalDate(dateStr);
-                          if (!deliveryDate) return 'Invalid date';
-                          const pickupDate = new Date(deliveryDate);
-                          pickupDate.setDate(pickupDate.getDate() + 1);
-                          pickupDate.setHours(18, 0, 0, 0);
-                          return pickupDate.toLocaleString();
+                          const extendDuration = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.extendDuration;
+                          const extendedDays = scheduledItems[checkoutItems.find(item => scheduledItems[item.id]?.sameDateTime)?.id || '']?.extendedDays || 1;
+                          if (dateStr) {
+                            const pickupDateTime = calculatePickupDateTime(dateStr, extendDuration, extendedDays);
+                            if (pickupDateTime) {
+                              const pickupDate = parseLocalDate(pickupDateTime);
+                              return pickupDate ? pickupDate.toLocaleString() : 'Invalid date';
+                            }
+                          }
+                          return 'Invalid date';
                         })()}
                       </span>
                     </div>
@@ -1135,13 +1158,16 @@ export default function CheckoutPage() {
                             checked={scheduledItems[item.id]?.extendDuration || false}
                             onChange={(e) => {
                               const isChecked = e.target.checked;
+                              const deliveryDate = scheduledItems[item.id]?.date;
+                              const pickupDateTime = isChecked && deliveryDate ? calculatePickupDateTime(deliveryDate, isChecked, scheduledItems[item.id]?.extendedDays || 1) : undefined;
+
                               setScheduledItems(prev => ({
                                 ...prev,
                                 [item.id]: {
                                   ...prev[item.id],
                                   extendDuration: isChecked,
                                   extendedDays: isChecked ? (prev[item.id]?.extendedDays || 1) : 0,
-                                  pickupDate: isChecked ? prev[item.id]?.pickupDate : undefined,
+                                  pickupDate: pickupDateTime || undefined,
                                   pickupNotes: isChecked ? prev[item.id]?.pickupNotes : undefined,
                                 }
                               }));
@@ -1263,13 +1289,15 @@ export default function CheckoutPage() {
                                 type="datetime-local"
                                 className="input-field bg-gray-50 border-gray-300 cursor-not-allowed text-gray-700"
                                 value={(() => {
-                                  const deliveryDate = parseLocalDate(scheduledItems[item.id].date);
-                                  if (!deliveryDate) return '';
-                                  // Add 1 day and set to 6:00 PM
-                                  const pickupDate = new Date(deliveryDate);
-                                  pickupDate.setDate(pickupDate.getDate() + 1);
-                                  pickupDate.setHours(18, 0, 0, 0);
-                                  return formatForDatetimeLocal(pickupDate);
+                                  const deliveryDate = scheduledItems[item.id]?.date;
+                                  const extendDuration = scheduledItems[item.id]?.extendDuration;
+                                  const extendedDays = scheduledItems[item.id]?.extendedDays || 1;
+
+                                  if (deliveryDate) {
+                                    return calculatePickupDateTime(deliveryDate, extendDuration, extendedDays) || '';
+                                  }
+
+                                  return '';
                                 })()}
                                 readOnly
                                 disabled
@@ -1301,61 +1329,39 @@ export default function CheckoutPage() {
                           <>
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Pick-up Date & Time {!scheduledItems[item.id]?.pickupDate && <span className="text-red-500">*</span>}
+                                Pick-up Date & Time
                               </label>
-                              <input
-                                type="datetime-local"
-                                className={`input-field ${
-                                  !scheduledItems[item.id]?.pickupDate
-                                    ? 'border-red-300 focus:border-red-500'
-                                    : 'border-green-300 focus:border-green-500'
-                                }`}
-                                min={(() => {
-                                  const deliveryDate = scheduledItems[item.id]?.date;
-                                  const baseDate = deliveryDate ? parseLocalDate(deliveryDate) : new Date(Date.now() + 60 * 60 * 1000);
-                                  return baseDate ? formatForDatetimeLocal(new Date(baseDate.getTime() + 60 * 60 * 1000)) : formatForDatetimeLocal(new Date(Date.now() + 60 * 60 * 1000));
-                                })()}
-                                value={(() => {
-                                  const pickupDate = scheduledItems[item.id]?.pickupDate;
-                                  if (pickupDate) return pickupDate;
+                              <div className="relative">
+                                <input
+                                  type="datetime-local"
+                                  className="input-field bg-gray-50 border-gray-300 cursor-not-allowed text-gray-700"
+                                  value={(() => {
+                                    const pickupDate = scheduledItems[item.id]?.pickupDate;
+                                    if (pickupDate) return pickupDate;
 
-                                  // Auto-calculate pickup date (24 hours after delivery)
-                                  const deliveryDate = scheduledItems[item.id]?.date;
-                                  if (deliveryDate) {
-                                    const delivery = parseLocalDate(deliveryDate);
-                                    if (delivery) {
-                                      return formatForDatetimeLocal(new Date(delivery.getTime() + 24 * 60 * 60 * 1000));
-                                    }
-                                  }
+                                    // Auto-calculate pickup date based on delivery + extension
+                                    const deliveryDate = scheduledItems[item.id]?.date;
+                                    const extendDuration = scheduledItems[item.id]?.extendDuration;
+                                    const extendedDays = scheduledItems[item.id]?.extendedDays || 1;
 
-                                  // Fallback to reservation date + 24 hours
-                                  const reservationDate = localStorage.getItem('selectedReservationDate');
-                                  if (reservationDate) {
-                                    const delivery = new Date(reservationDate);
-                                    return formatForDatetimeLocal(new Date(delivery.getTime() + 24 * 60 * 60 * 1000));
-                                  }
-                                  return '';
-                                })()}
-                                onChange={(e) => {
-                                  const pickupDate = e.target.value;
-                                  const deliveryDate = scheduledItems[item.id]?.date;
-                                  setScheduledItems(prev => ({
-                                    ...prev,
-                                    [item.id]: {
-                                      ...prev[item.id],
-                                      pickupDate,
-                                      pickupNotes: prev[item.id]?.pickupNotes || ''
+                                    if (deliveryDate) {
+                                      return calculatePickupDateTime(deliveryDate, extendDuration, extendedDays) || '';
                                     }
-                                  }));
-                                  // Auto-calculate duration for this item
-                                  calculateItemDuration(item.id, deliveryDate, pickupDate);
-                                  calculateNumberOfDays();
-                                }}
-                                required
-                              />
-                              {!scheduledItems[item.id]?.pickupDate && (
-                                <p className="text-xs text-red-600 mt-1">Please select a pick-up date and time</p>
-                              )}
+
+                                    return '';
+                                  })()}
+                                  readOnly
+                                  disabled
+                                />
+                                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                    Auto-calculated
+                                  </span>
+                                </div>
+                              </div>
+                              <p className="text-xs text-gray-600 mt-1">
+                                Automatically calculated based on delivery time and rental duration
+                              </p>
                             </div>
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">Pick-up Notes (Optional)</label>
@@ -1398,12 +1404,19 @@ export default function CheckoutPage() {
                               <div>
                                 <span className="text-sm font-medium">
                                   Pick-up scheduled for: {(() => {
-                                    const deliveryDate = parseLocalDate(scheduledItems[item.id].date);
-                                    if (!deliveryDate) return 'Invalid date';
-                                    const pickupDate = new Date(deliveryDate);
-                                    pickupDate.setDate(pickupDate.getDate() + 1);
-                                    pickupDate.setHours(18, 0, 0, 0);
-                                    return pickupDate.toLocaleString();
+                                    const deliveryDate = scheduledItems[item.id]?.date;
+                                    const extendDuration = scheduledItems[item.id]?.extendDuration;
+                                    const extendedDays = scheduledItems[item.id]?.extendedDays || 1;
+
+                                    if (deliveryDate) {
+                                      const pickupDateTime = calculatePickupDateTime(deliveryDate, extendDuration, extendedDays);
+                                      if (pickupDateTime) {
+                                        const pickupDate = parseLocalDate(pickupDateTime);
+                                        return pickupDate ? pickupDate.toLocaleString() : 'Invalid date';
+                                      }
+                                    }
+
+                                    return 'Invalid date';
                                   })()}
                                 </span>
                                 <p className="text-xs text-blue-700 mt-1">Auto-calculated: 1 day after delivery at 6:00 PM</p>
@@ -1555,13 +1568,15 @@ export default function CheckoutPage() {
                   <p className="font-medium text-blue-900">
                     {(() => {
                       const dateStr = scheduledItems[checkoutItems[0]?.id]?.date;
+                      const extendDuration = scheduledItems[checkoutItems[0]?.id]?.extendDuration;
+                      const extendedDays = scheduledItems[checkoutItems[0]?.id]?.extendedDays || 1;
                       if (!dateStr) return 'Not set';
-                      const deliveryDate = parseLocalDate(dateStr);
-                      if (!deliveryDate) return 'Invalid date';
-                      const pickupDate = new Date(deliveryDate);
-                      pickupDate.setDate(pickupDate.getDate() + 1);
-                      pickupDate.setHours(18, 0, 0, 0);
-                      return pickupDate.toLocaleString();
+                      const pickupDateTime = calculatePickupDateTime(dateStr, extendDuration, extendedDays);
+                      if (pickupDateTime) {
+                        const pickupDate = parseLocalDate(pickupDateTime);
+                        return pickupDate ? pickupDate.toLocaleString() : 'Invalid date';
+                      }
+                      return 'Invalid date';
                     })()}
                   </p>
                 </div>
