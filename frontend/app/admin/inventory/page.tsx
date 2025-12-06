@@ -807,13 +807,13 @@ export default function InventoryManagement() {
 
       {/* Stock History Modal */}
       {showStockHistory && stockHistory && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-[var(--surface)] rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto border border-gray-600">
             <div className="p-6">
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
                 <div>
-                  <h3 className="text-2xl font-bold text-[var(--foreground)]">Date-to-Date Stock Monitoring</h3>
-                  <p className="text-[var(--muted)] mt-1">
+                  <h3 className="text-2xl font-bold text-gray-100">Date-to-Date Stock Monitoring</h3>
+                  <p className="text-gray-400 mt-1">
                     {new Date(historyDateRange.startDate).toLocaleDateString()} - {new Date(historyDateRange.endDate).toLocaleDateString()}
                   </p>
                 </div>
@@ -852,21 +852,21 @@ export default function InventoryManagement() {
 
               {/* Stock History Summary */}
               <div className="grid md:grid-cols-4 gap-4 mb-6">
-                <div className="stat-box">
-                  <div className="stat-label">Total Transactions</div>
-                  <div className="stat-value text-[var(--primary)]">{stockHistory.summary?.totalTransactions || 0}</div>
+                <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
+                  <div className="text-gray-200 text-sm font-medium">Total Transactions</div>
+                  <div className="text-blue-200 text-2xl font-bold mt-1">{stockHistory.summary?.totalTransactions || 0}</div>
                 </div>
-                <div className="stat-box">
-                  <div className="stat-label">Stock Added</div>
-                  <div className="stat-value text-green-600">{stockHistory.summary?.totalStockAdded || 0}</div>
+                <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
+                  <div className="text-gray-200 text-sm font-medium">Stock Added</div>
+                  <div className="text-green-200 text-2xl font-bold mt-1">{stockHistory.summary?.totalStockAdded || 0}</div>
                 </div>
-                <div className="stat-box">
-                  <div className="stat-label">Stock Reduced</div>
-                  <div className="stat-value text-red-600">{stockHistory.summary?.totalStockReduced || 0}</div>
+                <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
+                  <div className="text-gray-200 text-sm font-medium">Stock Reduced</div>
+                  <div className="text-red-200 text-2xl font-bold mt-1">{stockHistory.summary?.totalStockReduced || 0}</div>
                 </div>
-                <div className="stat-box">
-                  <div className="stat-label">Net Change</div>
-                  <div className={`stat-value ${(stockHistory.summary?.netChange || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
+                  <div className="text-gray-200 text-sm font-medium">Net Change</div>
+                  <div className={`text-2xl font-bold mt-1 ${(stockHistory.summary?.netChange || 0) >= 0 ? 'text-green-200' : 'text-red-200'}`}>
                     {(stockHistory.summary?.netChange || 0) >= 0 ? '+' : ''}{stockHistory.summary?.netChange || 0}
                   </div>
                 </div>
@@ -876,20 +876,20 @@ export default function InventoryManagement() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--border)]">
-                      <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Date</th>
-                      <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Item</th>
-                      <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">Type</th>
-                      <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">Previous Stock</th>
-                      <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">Change</th>
-                      <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">New Stock</th>
-                      <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Reason</th>
+                    <tr className="border-b border-gray-600">
+                      <th className="text-left py-3 px-4 font-semibold text-gray-100">Date</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-100">Item</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-100">Type</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-100">Previous Stock</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-100">Change</th>
+                      <th className="text-center py-3 px-4 font-semibold text-gray-100">New Stock</th>
+                      <th className="text-left py-3 px-4 font-semibold text-gray-100">Reason</th>
                     </tr>
                   </thead>
                   <tbody>
                     {stockHistory.transactions?.map((transaction: any, index: number) => (
-                      <tr key={index} className="border-b border-[var(--border)] hover:bg-[var(--surface-hover)]">
-                        <td className="py-3 px-4">
+                      <tr key={index} className="border-b border-gray-600 hover:bg-gray-700">
+                        <td className="py-3 px-4 text-gray-100">
                           {new Date(transaction.date).toLocaleDateString()}
                         </td>
                         <td className="py-3 px-4">
@@ -904,40 +904,40 @@ export default function InventoryManagement() {
                                 }}
                               />
                             ) : (
-                              <div className="w-6 h-6 rounded bg-[var(--surface-secondary)] flex items-center justify-center text-xs">📦</div>
+                              <div className="w-6 h-6 rounded bg-gray-600 flex items-center justify-center text-xs">📦</div>
                             )}
-                            <span className="font-medium">{transaction.itemName}</span>
+                            <span className="font-medium text-gray-100">{transaction.itemName}</span>
                           </div>
                         </td>
                         <td className="py-3 px-4 text-center">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            transaction.type === 'addition' ? 'bg-green-100 text-green-800' :
-                            transaction.type === 'reduction' ? 'bg-red-100 text-red-800' :
-                            'bg-blue-100 text-blue-800'
+                            transaction.type === 'addition' ? 'bg-green-700 text-white' :
+                            transaction.type === 'reduction' ? 'bg-red-700 text-white' :
+                            'bg-blue-700 text-white'
                           }`}>
                             {transaction.type}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-center font-medium">
+                        <td className="py-3 px-4 text-center font-medium text-gray-100">
                           {transaction.previousStock}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <span className={`font-semibold ${
-                            transaction.change > 0 ? 'text-green-600' : 'text-red-600'
+                            transaction.change > 0 ? 'text-green-300' : 'text-red-300'
                           }`}>
                             {transaction.change > 0 ? '+' : ''}{transaction.change}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-center font-medium">
+                        <td className="py-3 px-4 text-center font-medium text-gray-100">
                           {transaction.newStock}
                         </td>
-                        <td className="py-3 px-4 text-sm text-[var(--muted)]">
+                        <td className="py-3 px-4 text-sm text-gray-200">
                           {transaction.reason || 'Manual update'}
                         </td>
                       </tr>
                     )) || (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
+                        <td colSpan={7} className="py-8 text-center text-gray-300">
                           No stock transactions found for the selected date range.
                         </td>
                       </tr>

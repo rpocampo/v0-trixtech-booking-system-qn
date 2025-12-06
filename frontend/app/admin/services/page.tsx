@@ -480,7 +480,7 @@ export default function AdminServices() {
             <div className="grid md:grid-cols-2 gap-6">
               {/* Service Name */}
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-2 text-gray-700">
+                <label className="block text-sm font-medium mb-2 text-gray-900">
                   Service Name *
                 </label>
                 <input
@@ -495,7 +495,7 @@ export default function AdminServices() {
 
               {/* Service Type */}
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">
+                <label className="block text-sm font-medium mb-2 text-gray-900">
                   Service Type *
                 </label>
                 <select
@@ -503,7 +503,7 @@ export default function AdminServices() {
                   onChange={(e) => setFormData({ ...formData, serviceType: e.target.value })}
                   className="input-field"
                 >
-                  <option value="service">Service (Professional Service)</option>
+                  <option value="service">Event (Professional Service)</option>
                   <option value="equipment">Equipment (Rental Item)</option>
                   <option value="supply">Supply (Consumable Item)</option>
                 </select>
@@ -514,7 +514,7 @@ export default function AdminServices() {
 
               {/* Category */}
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">
+                <label className="block text-sm font-medium mb-2 text-gray-900">
                   Category
                 </label>
                 <select
@@ -534,7 +534,7 @@ export default function AdminServices() {
               {/* Location - Auto-detected for equipment */}
               {(formData.serviceType === 'equipment' || formData.serviceType === 'supply') && (
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                  <label className="block text-sm font-medium mb-2 text-gray-900">
                     Location (Auto-detected)
                   </label>
                   <div className="flex items-center gap-2">
@@ -578,7 +578,7 @@ export default function AdminServices() {
 
               {/* Price */}
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">
+                <label className="block text-sm font-medium mb-2 text-gray-900">
                   Price (₱) *
                 </label>
                 <input
@@ -600,7 +600,7 @@ export default function AdminServices() {
 
               {/* Duration */}
               <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">
+                <label className="block text-sm font-medium mb-2 text-gray-900">
                   Duration (Days) *
                 </label>
                 <input
@@ -617,7 +617,7 @@ export default function AdminServices() {
               {/* Maximum Guests - Only for professional services */}
               {formData.serviceType === 'service' && (
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                  <label className="block text-sm font-medium mb-2 text-gray-900">
                     Maximum Guests *
                   </label>
                   <input
@@ -637,7 +637,7 @@ export default function AdminServices() {
             {formData.serviceType !== 'equipment' && (
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-900">
                     What's Included
                   </label>
                   <button
@@ -688,7 +688,7 @@ export default function AdminServices() {
             {formData.serviceType === 'service' && (
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-900">
                     Included Equipment
                   </label>
                   <button
@@ -763,7 +763,7 @@ export default function AdminServices() {
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700">
+              <label className="block text-sm font-medium mb-2 text-gray-900">
                 Description *
               </label>
               <textarea
@@ -778,7 +778,7 @@ export default function AdminServices() {
 
             {/* Image Upload */}
             <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700">
+              <label className="block text-sm font-medium mb-2 text-gray-900">
                 Service Image
               </label>
               <input

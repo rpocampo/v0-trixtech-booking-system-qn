@@ -1276,13 +1276,48 @@ export default function AdminBookings() {
                       </h4>
 
                       <div className="space-y-4">
+                        {/* Guest Quantity */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">👥</span>
+                              <span className="text-sm font-medium text-blue-800">Number of Guests</span>
+                            </div>
+                            <span className="text-lg font-bold text-blue-600">{selectedBooking.serviceId?.maxOrder || 1}</span>
+                          </div>
+                        </div>
 
-                        {/* Items/Equipment Quantities */}
-                        {selectedBooking.serviceId && selectedBooking.serviceId.includedEquipment && selectedBooking.serviceId.includedEquipment.length > 0 && (
+                        {/* Item Quantities Breakdown */}
+                        {selectedBooking.itemQuantities && Object.keys(selectedBooking.itemQuantities).length > 0 && (
                           <div className="space-y-3">
                             <h5 className="text-sm font-medium text-gray-700 flex items-center gap-2">
                               <span>📦</span>
-                              Included Items & Equipment
+                              Item Quantities
+                              <span className="text-xs text-blue-600">(Auto-managed)</span>
+                            </h5>
+
+                            {Object.entries(selectedBooking.itemQuantities).map(([itemName, quantity]) => (
+                              <div key={itemName} className="flex items-center justify-between p-3 rounded-lg border bg-gray-50 border-gray-200">
+                                <div className="flex-1">
+                                  <p className="font-medium text-sm">{itemName}</p>
+                                  <span className="text-xs text-gray-500">Booked quantity</span>
+                                </div>
+                                <div className="text-right">
+                                  <span className="text-lg font-semibold text-[var(--primary)]">
+                                    {quantity}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Included Equipment */}
+                        {selectedBooking.serviceId && selectedBooking.serviceId.includedEquipment && selectedBooking.serviceId.includedEquipment.length > 0 && (
+                          <div className="space-y-3">
+                            <h5 className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                              <span>🔧</span>
+                              Included Equipment
                               <span className="text-xs text-blue-600">(Auto-managed)</span>
                             </h5>
 
@@ -1298,14 +1333,14 @@ export default function AdminBookings() {
                                     <p className="font-medium text-sm">{equipment.name}</p>
                                     <div className="flex items-center gap-4 mt-1">
                                       <span className="text-xs text-gray-500">
-                                        Quantity: {currentQuantity} item{currentQuantity !== 1 ? 's' : ''}
+                                        Required: {currentQuantity} item{currentQuantity !== 1 ? 's' : ''}
                                       </span>
                                       {inventoryLevel > 0 && (
                                         <span className={`text-xs flex items-center gap-1 ${
                                           isLowStock ? 'text-yellow-600' : 'text-green-600'
                                         }`}>
                                           <span>📊</span>
-                                          {inventoryLevel} in stock
+                                          {inventoryLevel} available
                                         </span>
                                       )}
                                       {isOutOfStock && (
@@ -1328,9 +1363,11 @@ export default function AdminBookings() {
                           </div>
                         )}
 
-                        {(!selectedBooking.serviceId || !selectedBooking.serviceId.includedEquipment || selectedBooking.serviceId.includedEquipment.length === 0) && (
+                        {/* No additional details */}
+                        {(!selectedBooking.itemQuantities || Object.keys(selectedBooking.itemQuantities).length === 0) &&
+                         (!selectedBooking.serviceId || !selectedBooking.serviceId.includedEquipment || selectedBooking.serviceId.includedEquipment.length === 0) && (
                           <div className="text-center py-4 text-gray-500 text-sm bg-gray-50 rounded-lg">
-                            No specific equipment listed for this service
+                            No additional guest or item details for this booking
                           </div>
                         )}
                       </div>

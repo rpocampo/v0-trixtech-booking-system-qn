@@ -1106,15 +1106,37 @@ select.input-field {
   color: var(--foreground);
 }
 
+/* Admin theme input field styling */
+[data-theme="admin"] .input-field {
+  color: #1f2937; /* Dark gray text for visibility */
+  background-color: white;
+  border-color: #d1d5db;
+}
+
+[data-theme="admin"] .input-field:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+[data-theme="admin"] .input-field::placeholder {
+  color: #9ca3af; /* Medium gray for placeholder text */
+}
+
 /* Admin theme select styling */
 [data-theme="admin"] select.input-field {
-  background-color: var(--surface);
-  border-color: var(--border);
+  background-color: white;
+  color: #1f2937;
+  border-color: #d1d5db;
+}
+
+[data-theme="admin"] select.input-field:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 [data-theme="admin"] select.input-field option {
-  background-color: var(--surface);
-  color: var(--foreground);
+  background-color: white;
+  color: #1f2937;
 }
 
 /* Textarea */
