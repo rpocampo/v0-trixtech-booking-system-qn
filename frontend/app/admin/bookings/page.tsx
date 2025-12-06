@@ -186,23 +186,48 @@ export default function AdminBookings() {
   };
 
   const viewBooking = async (booking: Booking) => {
-    setSelectedBooking(booking);
     setShowBookingModal(true);
     setIsEditingBooking(false);
     setUpdateMessage('');
     setUpdateMessageType('');
 
-    // Initialize edit form data
-    setEditFormData({
-      quantity: booking.quantity,
-      itemQuantities: booking.itemQuantities || {},
-    });
+    try {
+      const token = localStorage.getItem('token');
 
-    // Fetch inventory levels for the service and all included equipment
-    if (booking.serviceId && booking.serviceId._id) {
-      try {
-        const token = localStorage.getItem('token');
+      // Fetch the latest booking details from the server
+      const bookingResponse = await fetch(`http://localhost:5000/api/bookings/${booking._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
+      if (bookingResponse.ok) {
+        const bookingData = await bookingResponse.json();
+        if (bookingData.success) {
+          setSelectedBooking(bookingData.booking);
+
+          // Initialize edit form data with fresh data
+          setEditFormData({
+            quantity: bookingData.booking.quantity,
+            itemQuantities: bookingData.booking.itemQuantities || {},
+          });
+        } else {
+          // Fallback to the list data if fetch fails
+          setSelectedBooking(booking);
+          setEditFormData({
+            quantity: booking.quantity,
+            itemQuantities: booking.itemQuantities || {},
+          });
+        }
+      } else {
+        // Fallback to the list data if fetch fails
+        setSelectedBooking(booking);
+        setEditFormData({
+          quantity: booking.quantity,
+          itemQuantities: booking.itemQuantities || {},
+        });
+      }
+
+      // Fetch inventory levels for the service and all included equipment
+      if (booking.serviceId && booking.serviceId._id) {
         // Fetch inventory for main service
         const mainServiceResponse = await fetch(`http://localhost:5000/api/services/${booking.serviceId._id}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -211,7 +236,7 @@ export default function AdminBookings() {
         if (mainServiceData.success) {
           setInventoryLevels(prev => ({
             ...prev,
-            [booking.serviceId._id]: mainServiceData.service.quantity || 0
+            [booking.serviceId!._id]: mainServiceData.service.quantity || 0
           }));
         }
 
@@ -234,9 +259,15 @@ export default function AdminBookings() {
             }
           }
         }
-      } catch (error) {
-        console.error('Failed to fetch inventory levels:', error);
       }
+    } catch (error) {
+      console.error('Failed to fetch booking details:', error);
+      // Fallback to the list data if fetch fails
+      setSelectedBooking(booking);
+      setEditFormData({
+        quantity: booking.quantity,
+        itemQuantities: booking.itemQuantities || {},
+      });
     }
   };
 

@@ -3839,6 +3839,8 @@ const createPackageBooking = async (userId, intent, paymentId) => {
       status: 'confirmed',
       paymentStatus: 'paid',
       paymentId: paymentId,
+      amountPaid: totalPackagePrice, // Set to total price since payment is completed
+      remainingBalance: 0, // No remaining balance since fully paid
       notes: intent.notes || '',
       isPackageBooking: true,
       packageId: pkg._id,

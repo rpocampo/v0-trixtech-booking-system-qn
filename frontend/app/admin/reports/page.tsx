@@ -137,7 +137,7 @@ export default function Reports() {
                 <tr className="border-b border-[var(--border)]">
                   <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Equipment</th>
                   <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Total Stock</th>
-                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Booked</th>
+                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Reserved</th>
                   <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Available</th>
                   <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Utilization</th>
                 </tr>
