@@ -34,14 +34,17 @@ export default function Reports() {
   const [deliverySchedules, setDeliverySchedules] = useState<DeliverySchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dateRange, setDateRange] = useState({
+    startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days ago
+    endDate: new Date().toISOString().split('T')[0] // Today
+  });
 
   const fetchReports = async () => {
     try {
       const token = localStorage.getItem('token');
 
-      // Fetch inventory reports
-      const inventoryResponse = await fetch('http://localhost:5000/api/analytics/inventory', {
+      // Fetch inventory reports with date range filter
+      const inventoryResponse = await fetch(`http://localhost:5000/api/analytics/inventory?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const inventoryData = await inventoryResponse.json();
@@ -59,11 +62,10 @@ export default function Reports() {
     }
   };
 
-  const fetchDeliverySchedules = async (date?: string) => {
+  const fetchDeliverySchedules = async () => {
     try {
       const token = localStorage.getItem('token');
-      const dateParam = date || selectedDate;
-      const response = await fetch(`http://localhost:5000/api/bookings/admin/delivery-schedules?date=${dateParam}`, {
+      const response = await fetch(`http://localhost:5000/api/bookings/admin/delivery-schedules?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await response.json();
@@ -79,6 +81,14 @@ export default function Reports() {
   useEffect(() => {
     fetchReports();
   }, []);
+
+  // Refetch reports when dateRange changes
+  useEffect(() => {
+    if (dateRange.startDate && dateRange.endDate) {
+      fetchReports();
+      fetchDeliverySchedules();
+    }
+  }, [dateRange]);
 
   // Real-time updates
   useEffect(() => {
@@ -129,7 +139,29 @@ export default function Reports() {
       <p className="text-[var(--muted)] mb-8">Track inventory, delivery schedules, and truck availability</p>
 
       <div className="card p-6">
-        <h2 className="section-title">Equipment Inventory Status</h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="section-title">Equipment Inventory Status</h2>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">From:</label>
+              <input
+                className="input-field"
+                type="date"
+                value={dateRange.startDate}
+                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">To:</label>
+              <input
+                className="input-field"
+                type="date"
+                value={dateRange.endDate}
+                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
+              />
+            </div>
+          </div>
+        </div>
         {inventoryReport.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -179,17 +211,8 @@ export default function Reports() {
       <div className="card p-6 mt-8">
         <div className="flex justify-between items-center mb-6">
           <h2 className="section-title">📅 Delivery Schedules</h2>
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium">Date:</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => {
-                setSelectedDate(e.target.value);
-                fetchDeliverySchedules(e.target.value);
-              }}
-              className="input-field"
-            />
+          <div className="text-sm text-[var(--muted)]">
+            {new Date(dateRange.startDate).toLocaleDateString()} - {new Date(dateRange.endDate).toLocaleDateString()}
           </div>
         </div>
 

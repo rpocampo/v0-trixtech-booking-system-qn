@@ -652,7 +652,7 @@ class AutoInventoryService {
 
       // Get cost of goods sold (from transactions)
       const soldTransactions = await InventoryTransaction.find({
-        transactionType: 'booking_deduction',
+        transactionType: 'booking_reservation',
         createdAt: { $gte: ninetyDaysAgo }
       });
 

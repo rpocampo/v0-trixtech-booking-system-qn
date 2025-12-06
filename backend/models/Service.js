@@ -99,6 +99,11 @@ const serviceSchema = new mongoose.Schema(
         return this.serviceType === 'equipment' || this.serviceType === 'supply';
       },
     },
+    reserved: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     location: {
       type: String,
       enum: ['indoor', 'outdoor', 'both'],
@@ -453,6 +458,44 @@ serviceSchema.methods.getBatchInventoryDetails = function() {
     expiringBatches,
     expiredBatches
   };
+};
+
+// Instance method to increase reserved quantity
+serviceSchema.methods.increaseReserved = async function(reserveQuantity) {
+  if (reserveQuantity <= 0) return;
+
+  const available = this.quantity - this.reserved;
+  if (reserveQuantity > available) {
+    throw new Error(`Cannot reserve ${reserveQuantity} items. Only ${available} available.`);
+  }
+
+  this.reserved += reserveQuantity;
+  await this.save();
+  return this.reserved;
+};
+
+// Instance method to decrease reserved quantity
+serviceSchema.methods.decreaseReserved = async function(unreserveQuantity) {
+  if (unreserveQuantity <= 0) return;
+
+  if (unreserveQuantity > this.reserved) {
+    throw new Error(`Cannot unreserve ${unreserveQuantity} items. Only ${this.reserved} reserved.`);
+  }
+
+  this.reserved -= unreserveQuantity;
+  await this.save();
+  return this.reserved;
+};
+
+// Instance method to get available quantity
+serviceSchema.methods.getAvailable = function() {
+  return Math.max(0, this.quantity - this.reserved);
+};
+
+// Instance method to get utilization percentage
+serviceSchema.methods.getUtilization = function() {
+  if (this.quantity <= 0) return 0;
+  return Math.round((this.reserved / this.quantity) * 100 * 100) / 100; // Round to 2 decimal places
 };
 
 // Static method to get inventory summary across all services

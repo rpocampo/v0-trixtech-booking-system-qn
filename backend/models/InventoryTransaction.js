@@ -13,7 +13,7 @@ const inventoryTransactionSchema = new mongoose.Schema(
     },
     transactionType: {
       type: String,
-      enum: ['booking_deduction', 'booking_cancellation', 'manual_adjustment', 'restock'],
+      enum: ['booking_reservation', 'booking_cancellation', 'manual_adjustment', 'restock'],
       required: true,
     },
     quantity: {

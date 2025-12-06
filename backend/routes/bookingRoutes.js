@@ -97,7 +97,10 @@ router.get('/check-availability/:serviceId', authMiddleware, async (req, res, ne
       }
 
       if (service.category === 'equipment') {
-        // For equipment, check total booked quantity on this date (only paid bookings)
+        // For equipment, check total available quantity and date-specific bookings
+        const totalAvailable = service.getAvailable(); // quantity - reserved
+
+        // Check existing bookings for this date (only confirmed/paid bookings)
         const existingBookings = await Booking.find({
           serviceId,
           bookingDate: {
@@ -108,8 +111,10 @@ router.get('/check-availability/:serviceId', authMiddleware, async (req, res, ne
           paymentStatus: { $in: ['partial', 'paid'] },
         });
 
-        const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
-        availableQuantity = Math.max(0, service.quantity - totalBooked);
+        const totalBookedForDate = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+
+        // Available for this date is the minimum of total available and (total available - already booked for this date)
+        availableQuantity = Math.max(0, Math.min(totalAvailable, totalAvailable - totalBookedForDate));
 
         if (availableQuantity < requestedQuantity) {
           isAvailable = false;
@@ -162,6 +167,14 @@ router.get('/check-availability/:serviceId', authMiddleware, async (req, res, ne
   }
 });
 
+// Helper function to check if current time is within booking hours (7 AM - 5 PM)
+const isWithinBookingHours = () => {
+  const now = new Date();
+  const currentHour = now.getHours();
+  // Allow bookings between 7:00 AM (7) and 5:00 PM (17)
+  return currentHour >= 7 && currentHour < 17;
+};
+
 // Create booking (customers only)
 router.post('/', authMiddleware, async (req, res, next) => {
   try {
@@ -169,6 +182,20 @@ router.post('/', authMiddleware, async (req, res, next) => {
 
     if (!serviceId || !bookingDate) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    // Check if current time is within booking hours (7 AM - 5 PM)
+    if (!isWithinBookingHours()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reservations can only be made between 7:00 AM and 5:00 PM.',
+        bookingHours: '7:00 AM - 5:00 PM',
+        currentTime: new Date().toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+      });
     }
 
     // Handle package bookings
@@ -276,25 +303,27 @@ router.post('/', authMiddleware, async (req, res, next) => {
         await serviceBooking.save();
         packageBookings.push(serviceBooking);
 
-        // Deduct inventory for included service
+        // Reserve inventory for included service
         if (includedService.serviceType === 'equipment' || includedService.serviceType === 'supply') {
-          const previousStock = includedService.quantity;
-          await includedService.reduceBatchQuantity(inclusion.quantity);
-          const newStock = includedService.quantity;
+          const previousReserved = includedService.reserved;
+          await includedService.increaseReserved(inclusion.quantity);
+          const newReserved = includedService.reserved;
 
           await InventoryTransaction.logTransaction({
             serviceId: inclusion.serviceId,
             bookingId: serviceBooking._id,
-            transactionType: 'booking_deduction',
-            quantity: -inclusion.quantity,
-            previousStock,
-            newStock,
-            reason: `Package booking deduction for service: ${includedService.name} (from package: ${pkg.name})`,
+            transactionType: 'booking_reservation',
+            quantity: inclusion.quantity,
+            previousStock: includedService.quantity,
+            newStock: includedService.quantity, // Total stock unchanged
+            reason: `Package booking reservation for service: ${includedService.name} (from package: ${pkg.name})`,
             metadata: {
               customerId: req.user.id,
               bookingDate: bookingDateObj,
               packageId: pkg._id,
               packageName: pkg.name,
+              previousReserved,
+              newReserved,
             }
           });
         }
@@ -631,30 +660,47 @@ router.post('/', authMiddleware, async (req, res, next) => {
           );
 
           if (shouldDeductMainServiceInventory) {
-            const previousStock = service.quantity;
-            // Use batch tracking for inventory reduction (FIFO)
-            await service.reduceBatchQuantity(requestedQuantity);
-            const newStock = service.quantity;
+            const previousReserved = service.reserved;
+            // Reserve inventory instead of reducing total stock
+            await service.increaseReserved(requestedQuantity);
+            const newReserved = service.reserved;
 
             // Log inventory transaction
             await InventoryTransaction.logTransaction({
               serviceId,
               bookingId: booking._id,
-              transactionType: 'booking_deduction',
-              quantity: -requestedQuantity, // Negative for deduction
-              previousStock,
-              newStock,
-              reason: `Booking deduction for service: ${service.name}`,
+              transactionType: 'booking_reservation',
+              quantity: requestedQuantity, // Positive for reservation
+              previousStock: service.quantity, // Total stock unchanged
+              newStock: service.quantity,
+              reason: `Booking reservation for service: ${service.name}`,
               metadata: {
                 customerId: req.user.id,
                 bookingDate: bookingDateTime,
                 serviceName: service.name,
                 serviceCategory: service.category,
-                serviceType: service.serviceType
+                serviceType: service.serviceType,
+                previousReserved,
+                newReserved,
               }
             });
 
-            // Trigger low stock alert check
+            // Emit real-time inventory update
+            const io = global.io;
+            if (io) {
+              io.to('admin').emit('inventory-updated', {
+                serviceId,
+                serviceName: service.name,
+                previousReserved,
+                newReserved,
+                quantity: service.quantity,
+                available: service.getAvailable(),
+                change: requestedQuantity,
+                reason: 'booking_reservation'
+              });
+            }
+
+            // Trigger low stock alert check (now based on available = quantity - reserved)
             try {
               await triggerLowStockCheck(serviceId);
             } catch (alertError) {
@@ -663,31 +709,33 @@ router.post('/', authMiddleware, async (req, res, next) => {
             }
           }
 
-          // Decrease inventory for included equipment in any service that has includedEquipment
+          // Reserve inventory for included equipment in any service that has includedEquipment
           if (service.includedEquipment && service.includedEquipment.length > 0) {
             for (const equipmentItem of service.includedEquipment) {
               try {
                 const equipmentService = await Service.findById(equipmentItem.equipmentId);
                 if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
-                  const previousStock = equipmentService.quantity;
-                  // Use batch tracking for inventory reduction (FIFO)
-                  await equipmentService.reduceBatchQuantity(equipmentItem.quantity);
-                  const newStock = equipmentService.quantity;
+                  const previousReserved = equipmentService.reserved;
+                  // Reserve inventory instead of reducing total stock
+                  await equipmentService.increaseReserved(equipmentItem.quantity);
+                  const newReserved = equipmentService.reserved;
 
                   // Log inventory transaction for included equipment
                   await InventoryTransaction.logTransaction({
                     serviceId: equipmentItem.equipmentId,
                     bookingId: booking._id,
-                    transactionType: 'booking_deduction',
-                    quantity: -equipmentItem.quantity, // Negative for deduction
-                    previousStock,
-                    newStock,
-                    reason: `Booking confirmation deduction for included equipment: ${equipmentService.name} (from service: ${service.name})`,
+                    transactionType: 'booking_reservation',
+                    quantity: equipmentItem.quantity, // Positive for reservation
+                    previousStock: equipmentService.quantity, // Total stock unchanged
+                    newStock: equipmentService.quantity,
+                    reason: `Booking reservation for included equipment: ${equipmentService.name} (from service: ${service.name})`,
                     metadata: {
                       customerId: req.user.id,
-                      bookingDate: new Date(bookingIntent.bookingDate),
+                      bookingDate: bookingDateTime,
                       mainServiceName: service.name,
-                      equipmentName: equipmentService.name
+                      equipmentName: equipmentService.name,
+                      previousReserved,
+                      newReserved,
                     }
                   });
 
@@ -700,8 +748,8 @@ router.post('/', authMiddleware, async (req, res, next) => {
                   }
                 }
               } catch (equipmentError) {
-                console.error('Error reducing equipment inventory:', equipmentError);
-                // Don't fail the booking if equipment inventory reduction fails
+                console.error('Error reserving equipment inventory:', equipmentError);
+                // Don't fail the booking if equipment inventory reservation fails
               }
             }
           }
@@ -1292,33 +1340,50 @@ router.put('/:id/cancel', authMiddleware, async (req, res, next) => {
         );
 
         if (shouldRestoreMainServiceInventory) {
-          const previousStock = service.quantity;
-          // Use batch tracking for inventory restoration (reverse of reduceBatchQuantity)
-          await service.restoreBatchQuantity(booking.quantity);
-          const newStock = service.quantity;
+          const previousReserved = service.reserved;
+          // Decrease reserved quantity instead of restoring total stock
+          await service.decreaseReserved(booking.quantity);
+          const newReserved = service.reserved;
 
-          // Log inventory transaction for restoration
+          // Log inventory transaction for unreservation
           await InventoryTransaction.logTransaction({
             serviceId: service._id,
             bookingId: booking._id,
             transactionType: 'booking_cancellation',
-            quantity: booking.quantity, // Positive for restoration
-            previousStock,
-            newStock,
-            reason: `Booking cancellation inventory restoration for service: ${service.name}`,
+            quantity: -booking.quantity, // Negative for unreservation
+            previousStock: service.quantity, // Total stock unchanged
+            newStock: service.quantity,
+            reason: `Booking cancellation inventory unreservation for service: ${service.name}`,
             metadata: {
               customerId: booking.customerId,
               bookingDate: booking.bookingDate,
               serviceName: service.name,
               serviceCategory: service.category,
-              serviceType: service.serviceType
+              serviceType: service.serviceType,
+              previousReserved,
+              newReserved,
             }
           });
 
-          console.log('Inventory restored after booking cancellation for service:', service.name);
-        }
+          console.log('Inventory unreserved after booking cancellation for service:', service.name);
 
-        // Restore inventory for included equipment in professional services
+          // Emit real-time inventory update for main service
+          const io = global.io;
+          if (io) {
+            io.to('admin').emit('inventory-updated', {
+              serviceId: service._id,
+              serviceName: service.name,
+              previousReserved,
+              newReserved,
+              quantity: service.quantity,
+              available: service.getAvailable(),
+              change: -booking.quantity,
+              reason: 'booking_cancellation'
+            });
+          }
+      }
+
+      // Restore inventory for included equipment in professional services
         if (service.includedEquipment && service.includedEquipment.length > 0) {
           for (const equipmentItem of service.includedEquipment) {
             try {
@@ -1332,30 +1397,32 @@ router.put('/:id/cancel', authMiddleware, async (req, res, next) => {
                 );
 
                 if (shouldRestoreEquipmentInventory) {
-                  const previousStock = equipmentService.quantity;
-                  await equipmentService.restoreBatchQuantity(equipmentItem.quantity);
-                  const newStock = equipmentService.quantity;
+                  const previousReserved = equipmentService.reserved;
+                  await equipmentService.decreaseReserved(equipmentItem.quantity);
+                  const newReserved = equipmentService.reserved;
 
-                  // Log inventory transaction for equipment restoration
+                  // Log inventory transaction for equipment unreservation
                   await InventoryTransaction.logTransaction({
                     serviceId: equipmentItem.equipmentId,
                     bookingId: booking._id,
                     transactionType: 'booking_cancellation',
-                    quantity: equipmentItem.quantity, // Positive for restoration
-                    previousStock,
-                    newStock,
-                    reason: `Booking cancellation inventory restoration for included equipment: ${equipmentService.name} (from service: ${service.name})`,
+                    quantity: -equipmentItem.quantity, // Negative for unreservation
+                    previousStock: equipmentService.quantity, // Total stock unchanged
+                    newStock: equipmentService.quantity,
+                    reason: `Booking cancellation inventory unreservation for included equipment: ${equipmentService.name} (from service: ${service.name})`,
                     metadata: {
                       customerId: booking.customerId,
                       bookingDate: booking.bookingDate,
                       mainServiceName: service.name,
                       equipmentName: equipmentService.name,
                       serviceCategory: service.category,
-                      serviceType: service.serviceType
+                      serviceType: service.serviceType,
+                      previousReserved,
+                      newReserved,
                     }
                   });
 
-                  console.log('Inventory restored for included equipment:', equipmentService.name);
+                  console.log('Inventory unreserved for included equipment:', equipmentService.name);
                 }
               }
             } catch (equipmentError) {
@@ -1421,6 +1488,20 @@ router.post('/create-intent', authMiddleware, async (req, res, next) => {
 
     if (!serviceId || !bookingDate) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    // Check if current time is within booking hours (7 AM - 5 PM)
+    if (!isWithinBookingHours()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reservations can only be made between 7:00 AM and 5:00 PM.',
+        bookingHours: '7:00 AM - 5:00 PM',
+        currentTime: new Date().toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+      });
     }
 
     const service = await Service.findById(serviceId);
@@ -1819,39 +1900,41 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
     payment.bookingId = booking._id;
     await payment.save();
 
-    // Decrease inventory for equipment/supply items using batch tracking
+    // Reserve inventory for equipment/supply items
     // Handle both direct equipment bookings and equipment category services
-    const shouldDeductMainServiceInventory = (
+    const shouldReserveMainServiceInventory = (
       bookingService.serviceType === 'equipment' ||
       bookingService.serviceType === 'supply' ||
       (bookingService.category === 'equipment' && bookingService.quantity !== undefined && bookingService.quantity > 0)
     );
 
-    if (shouldDeductMainServiceInventory) {
-      const previousStock = bookingService.quantity;
-      // Use batch tracking for inventory reduction (FIFO)
-      await bookingService.reduceBatchQuantity(bookingIntent.quantity);
-      const newStock = bookingService.quantity;
+    if (shouldReserveMainServiceInventory) {
+      const previousReserved = bookingService.reserved;
+      // Reserve inventory instead of reducing total stock
+      await bookingService.increaseReserved(bookingIntent.quantity);
+      const newReserved = bookingService.reserved;
 
       // Log inventory transaction
       await InventoryTransaction.logTransaction({
         serviceId: bookingIntent.serviceId,
         bookingId: booking._id,
-        transactionType: 'booking_deduction',
-        quantity: -bookingIntent.quantity, // Negative for deduction
-        previousStock,
-        newStock,
-        reason: `Booking confirmation deduction for service: ${bookingService.name}`,
+        transactionType: 'booking_reservation',
+        quantity: bookingIntent.quantity, // Positive for reservation
+        previousStock: bookingService.quantity, // Total stock unchanged
+        newStock: bookingService.quantity,
+        reason: `Booking confirmation reservation for service: ${bookingService.name}`,
         metadata: {
           customerId: req.user.id,
           bookingDate: new Date(bookingIntent.bookingDate),
           serviceName: bookingService.name,
           serviceCategory: bookingService.category,
-          serviceType: bookingService.serviceType
+          serviceType: bookingService.serviceType,
+          previousReserved,
+          newReserved,
         }
       });
 
-      console.log('Inventory update completed using batch tracking for booking confirmation');
+      console.log('Inventory reservation completed for booking confirmation');
 
       // Update inventory reports automatically for main service
       try {
@@ -1871,41 +1954,43 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       }
     }
 
-    // Decrease inventory for included equipment in professional services
+    // Reserve inventory for included equipment in professional services
     if (bookingService.includedEquipment && bookingService.includedEquipment.length > 0) {
       for (const equipmentItem of bookingService.includedEquipment) {
         try {
           const equipmentService = await Service.findById(equipmentItem.equipmentId);
           if (equipmentService) {
-            // Check if equipment service should have inventory deducted
-            const shouldDeductEquipmentInventory = (
+            // Check if equipment service should have inventory reserved
+            const shouldReserveEquipmentInventory = (
               equipmentService.serviceType === 'equipment' ||
               equipmentService.serviceType === 'supply' ||
               (equipmentService.category === 'equipment' && equipmentService.quantity !== undefined && equipmentService.quantity > 0)
             );
 
-            if (shouldDeductEquipmentInventory) {
-              const previousStock = equipmentService.quantity;
-              // Use batch tracking for inventory reduction (FIFO)
-              await equipmentService.reduceBatchQuantity(equipmentItem.quantity);
-              const newStock = equipmentService.quantity;
+            if (shouldReserveEquipmentInventory) {
+              const previousReserved = equipmentService.reserved;
+              // Reserve inventory instead of reducing total stock
+              await equipmentService.increaseReserved(equipmentItem.quantity);
+              const newReserved = equipmentService.reserved;
 
               // Log inventory transaction for included equipment
               await InventoryTransaction.logTransaction({
                 serviceId: equipmentItem.equipmentId,
                 bookingId: booking._id,
-                transactionType: 'booking_deduction',
-                quantity: -equipmentItem.quantity, // Negative for deduction
-                previousStock,
-                newStock,
-                reason: `Booking deduction for included equipment: ${equipmentService.name} (from service: ${bookingService.name})`,
+                transactionType: 'booking_reservation',
+                quantity: equipmentItem.quantity, // Positive for reservation
+                previousStock: equipmentService.quantity, // Total stock unchanged
+                newStock: equipmentService.quantity,
+                reason: `Booking reservation for included equipment: ${equipmentService.name} (from service: ${bookingService.name})`,
                 metadata: {
                   customerId: req.user.id,
                   bookingDate: bookingDateTime,
-                  mainServiceName: service.name,
+                  mainServiceName: bookingService.name,
                   equipmentName: equipmentService.name,
-                  serviceCategory: service.category,
-                  serviceType: service.serviceType
+                  serviceCategory: bookingService.category,
+                  serviceType: bookingService.serviceType,
+                  previousReserved,
+                  newReserved,
                 }
               });
 
@@ -1919,8 +2004,8 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
             }
           }
         } catch (equipmentError) {
-          console.error('Error reducing equipment inventory:', equipmentError);
-          // Don't fail the booking if equipment inventory reduction fails
+          console.error('Error reserving equipment inventory:', equipmentError);
+          // Don't fail the booking if equipment inventory reservation fails
         }
       }
     }
@@ -2182,20 +2267,21 @@ async function recordBookingAnalytics(customerId, currentServiceId, quantity) {
 // Get delivery schedules for admin (shows all delivery bookings)
 router.get('/admin/delivery-schedules', adminMiddleware, async (req, res, next) => {
   try {
-    const { date } = req.query;
+    const { startDate, endDate } = req.query;
     const { getDeliverySchedules } = require('../utils/deliveryService');
 
     // Get schedules from explicit delivery bookings
-    const explicitSchedules = await getDeliverySchedules(date ? new Date(date) : null);
+    const explicitSchedules = await getDeliverySchedules(startDate ? new Date(startDate) : null);
 
     // Always check for bookings that might require delivery based on service type
-    const queryDate = date ? new Date(date) : new Date();
-    const startOfDay = new Date(queryDate);
+    const queryStartDate = startDate ? new Date(startDate) : new Date();
+    const queryEndDate = endDate ? new Date(endDate) : new Date();
+    const startOfDay = new Date(queryStartDate);
     startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(queryDate);
+    const endOfDay = new Date(queryEndDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // Find all confirmed/paid bookings for the date
+    // Find all confirmed/paid bookings for the date range
     const allBookings = await Booking.find({
       status: 'confirmed',
       paymentStatus: { $in: ['partial', 'paid'] },
@@ -2301,10 +2387,10 @@ router.get('/delivery-slots/available', authMiddleware, async (req, res, next) =
 
     const { checkDeliveryTruckAvailability } = require('../utils/deliveryService');
 
-    // Generate time slots from 8 AM to 6 PM (10 hours)
+    // Generate time slots from 7 AM to 5 PM (10 hours) - respecting booking cut-off times
     const timeSlots = [];
-    const startHour = 8; // 8 AM
-    const endHour = 18; // 6 PM
+    const startHour = 7; // 7 AM
+    const endHour = 17; // 5 PM
 
     for (let hour = startHour; hour < endHour; hour++) {
       const timeString = `${hour.toString().padStart(2, '0')}:00`;
@@ -3594,30 +3680,32 @@ const autoCancelExpiredBookings = async () => {
           );
 
           if (shouldRestoreMainServiceInventory) {
-            const previousStock = service.quantity;
-            await service.restoreBatchQuantity(booking.quantity);
-            const newStock = service.quantity;
+            const previousReserved = service.reserved;
+            await service.decreaseReserved(booking.quantity);
+            const newReserved = service.reserved;
 
             // Log inventory transaction
             await InventoryTransaction.logTransaction({
               serviceId: service._id,
               bookingId: booking._id,
               transactionType: 'booking_cancellation',
-              quantity: booking.quantity, // Positive for restoration
-              previousStock,
-              newStock,
-              reason: `Auto-cancellation inventory restoration for expired booking: ${service.name}`,
+              quantity: -booking.quantity, // Negative for unreservation
+              previousStock: service.quantity, // Total stock unchanged
+              newStock: service.quantity,
+              reason: `Auto-cancellation inventory unreservation for expired booking: ${service.name}`,
               metadata: {
                 customerId: booking.customerId?._id,
                 bookingDate: booking.bookingDate,
                 serviceName: service.name,
                 serviceCategory: service.category,
                 serviceType: service.serviceType,
-                autoCancelled: true
+                autoCancelled: true,
+                previousReserved,
+                newReserved,
               }
             });
 
-            console.log('Inventory restored after auto-cancellation for service:', service.name);
+            console.log('Inventory unreserved after auto-cancellation for service:', service.name);
           }
 
           // Restore inventory for included equipment in professional services
@@ -3634,19 +3722,19 @@ const autoCancelExpiredBookings = async () => {
                   );
 
                   if (shouldRestoreEquipmentInventory) {
-                    const previousStock = equipmentService.quantity;
-                    await equipmentService.restoreBatchQuantity(equipmentItem.quantity);
-                    const newStock = equipmentService.quantity;
+                    const previousReserved = equipmentService.reserved;
+                    await equipmentService.decreaseReserved(equipmentItem.quantity);
+                    const newReserved = equipmentService.reserved;
 
-                    // Log inventory transaction for equipment restoration
+                    // Log inventory transaction for equipment unreservation
                     await InventoryTransaction.logTransaction({
                       serviceId: equipmentItem.equipmentId,
                       bookingId: booking._id,
                       transactionType: 'booking_cancellation',
-                      quantity: equipmentItem.quantity, // Positive for restoration
-                      previousStock,
-                      newStock,
-                      reason: `Auto-cancellation inventory restoration for included equipment: ${equipmentService.name} (from service: ${service.name})`,
+                      quantity: -equipmentItem.quantity, // Negative for unreservation
+                      previousStock: equipmentService.quantity, // Total stock unchanged
+                      newStock: equipmentService.quantity,
+                      reason: `Auto-cancellation inventory unreservation for included equipment: ${equipmentService.name} (from service: ${service.name})`,
                       metadata: {
                         customerId: booking.customerId?._id,
                         bookingDate: booking.bookingDate,
@@ -3654,11 +3742,13 @@ const autoCancelExpiredBookings = async () => {
                         equipmentName: equipmentService.name,
                         serviceCategory: service.category,
                         serviceType: service.serviceType,
-                        autoCancelled: true
+                        autoCancelled: true,
+                        previousReserved,
+                        newReserved,
                       }
                     });
 
-                    console.log('Inventory restored for included equipment:', equipmentService.name);
+                    console.log('Inventory unreserved for included equipment:', equipmentService.name);
                   }
                 }
               } catch (equipmentError) {
@@ -3805,25 +3895,27 @@ const createPackageBooking = async (userId, intent, paymentId) => {
       await serviceBooking.save();
       packageBookings.push(serviceBooking);
 
-      // Deduct inventory for included service
+      // Reserve inventory for included service
       if (includedService.serviceType === 'equipment' || includedService.serviceType === 'supply') {
-        const previousStock = includedService.quantity;
-        await includedService.reduceBatchQuantity(inclusion.quantity);
-        const newStock = includedService.quantity;
+        const previousReserved = includedService.reserved;
+        await includedService.increaseReserved(inclusion.quantity);
+        const newReserved = includedService.reserved;
 
         await InventoryTransaction.logTransaction({
           serviceId: inclusion.serviceId,
           bookingId: serviceBooking._id,
-          transactionType: 'booking_deduction',
-          quantity: -inclusion.quantity,
-          previousStock,
-          newStock,
-          reason: `Package booking deduction for service: ${includedService.name} (from package: ${pkg.name})`,
+          transactionType: 'booking_reservation',
+          quantity: inclusion.quantity,
+          previousStock: includedService.quantity, // Total stock unchanged
+          newStock: includedService.quantity,
+          reason: `Package booking reservation for service: ${includedService.name} (from package: ${pkg.name})`,
           metadata: {
             customerId: userId,
             bookingDate: bookingDateObj,
             packageId: pkg._id,
             packageName: pkg.name,
+            previousReserved,
+            newReserved,
           }
         });
       }

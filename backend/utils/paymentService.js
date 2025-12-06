@@ -331,26 +331,26 @@ const cancelPayment = async (paymentId, reason = 'User cancelled') => {
       const bookingIntent = payment.paymentData.bookingIntent;
       const Service = require('../models/Service');
 
-      // Restore inventory for equipment/supply items
+      // Unreserve inventory for equipment/supply items
       const service = await Service.findById(bookingIntent.serviceId);
       if (service && (service.serviceType === 'equipment' || service.serviceType === 'supply')) {
-        service.quantity = Math.min(service.quantity + bookingIntent.quantity, service.quantity); // Restore quantity
+        await service.decreaseReserved(bookingIntent.quantity);
         await service.save();
-        console.log('Inventory restored after payment cancellation for service:', service.name);
+        console.log('Inventory unreserved after payment cancellation for service:', service.name);
       }
 
-      // Restore inventory for included equipment in any service that has includedEquipment
+      // Unreserve inventory for included equipment in any service that has includedEquipment
       if (service && service.includedEquipment && service.includedEquipment.length > 0) {
         for (const equipmentItem of service.includedEquipment) {
           try {
             const equipmentService = await Service.findById(equipmentItem.equipmentId);
             if (equipmentService && (equipmentService.serviceType === 'equipment' || equipmentService.serviceType === 'supply')) {
-              equipmentService.quantity = Math.min(equipmentService.quantity + equipmentItem.quantity, equipmentService.quantity);
+              await equipmentService.decreaseReserved(equipmentItem.quantity);
               await equipmentService.save();
-              console.log('Inventory restored for included equipment:', equipmentService.name);
+              console.log('Inventory unreserved for included equipment:', equipmentService.name);
             }
           } catch (equipmentError) {
-            console.error('Error restoring equipment inventory:', equipmentError);
+            console.error('Error unreserving equipment inventory:', equipmentError);
           }
         }
       }
@@ -467,8 +467,8 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
               paymentStatus: { $in: ['partial', 'paid'] },
             });
 
-            const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
-            const availableQuantity = Math.max(0, service.quantity - totalBooked);
+            const totalBookedForDate = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+            const availableQuantity = Math.max(0, Math.min(service.getAvailable(), service.getAvailable() - totalBookedForDate));
 
             if (availableQuantity < intent.quantity) {
               isAvailable = false;
@@ -537,11 +537,11 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
             await InventoryTransaction.logTransaction({
               serviceId: intent.serviceId,
               bookingId: booking._id,
-              transactionType: 'booking_deduction',
-              quantity: -intent.quantity,
+              transactionType: 'booking_reservation',
+              quantity: intent.quantity,
               previousStock,
               newStock,
-              reason: `Cart payment booking deduction for service: ${service.name}`,
+              reason: `Cart payment booking reservation for service: ${service.name}`,
               metadata: {
                 customerId: payment.userId._id,
                 bookingDate: bookingDateObj,
@@ -564,11 +564,11 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
                   await InventoryTransaction.logTransaction({
                     serviceId: equipmentItem.equipmentId,
                     bookingId: booking._id,
-                    transactionType: 'booking_deduction',
-                    quantity: -equipmentItem.quantity,
+                    transactionType: 'booking_reservation',
+                    quantity: equipmentItem.quantity,
                     previousStock,
                     newStock,
-                    reason: `Cart payment included equipment deduction: ${equipmentService.name}`,
+                    reason: `Cart payment included equipment reservation: ${equipmentService.name}`,
                     metadata: {
                       customerId: payment.userId._id,
                       bookingDate: bookingDateObj,
@@ -696,8 +696,8 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
           paymentStatus: { $in: ['partial', 'paid'] },
         });
 
-        const totalBooked = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
-        const availableQuantity = Math.max(0, service.quantity - totalBooked);
+        const totalBookedForDate = existingBookings.reduce((sum, booking) => sum + booking.quantity, 0);
+        const availableQuantity = Math.max(0, Math.min(service.getAvailable(), service.getAvailable() - totalBookedForDate));
 
         if (availableQuantity < bookingIntent.quantity) {
           isAvailable = false;
@@ -762,9 +762,9 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
       payment.bookingId = booking._id;
       await payment.save();
 
-      // Decrease inventory for equipment/supply items
+      // Reserve inventory for equipment/supply items
       if (service.serviceType === 'equipment' || service.serviceType === 'supply') {
-        service.quantity = Math.max(0, service.quantity - bookingIntent.quantity);
+        await service.increaseReserved(bookingIntent.quantity);
         await service.save();
       }
 

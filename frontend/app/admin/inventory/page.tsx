@@ -311,6 +311,7 @@ export default function InventoryManagement() {
         )}
       </div>
 
+
       {/* Inventory Stats */}
       <div className="grid md:grid-cols-4 gap-6">
         <div className="stat-box hover:shadow-lg transition-shadow duration-300">

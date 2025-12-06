@@ -199,26 +199,128 @@ router.get('/', auth, isAdmin, async (req, res) => {
 
 // Get inventory reports (admin only)
 router.get('/inventory', auth, isAdmin, async (req, res) => {
+  console.log('=== ANALYTICS INVENTORY ROUTE CALLED ===');
+  console.log('Query params:', req.query);
+  console.log('Full URL:', req.url);
+
   try {
+    const { startDate, endDate } = req.query;
+
+    // Validate date range
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (start > end) {
+        console.log('Invalid date range: start > end');
+        return res.status(400).json({
+          success: false,
+          message: 'Start date cannot be after end date'
+        });
+      }
+    }
+
     const services = await Service.find({ category: 'equipment' });
+    console.log(`Found ${services.length} equipment services`);
+
+    // Check total bookings in database
+    const totalBookings = await Booking.countDocuments();
+    const confirmedBookings = await Booking.countDocuments({ status: 'confirmed', paymentStatus: { $in: ['partial', 'paid'] } });
+    console.log(`Database check: ${totalBookings} total bookings, ${confirmedBookings} confirmed/paid bookings`);
 
     const inventoryReport = await Promise.all(
       services.map(async (service) => {
-        const totalBooked = await Booking.aggregate([
-          { $match: { serviceId: service._id, status: 'confirmed', paymentStatus: { $in: ['partial', 'paid'] } } },
-          { $group: { _id: null, totalQuantity: { $sum: '$quantity' } } }
-        ]);
+        // Get all confirmed bookings with payment
+        let allBookings = await Booking.find({
+          status: 'confirmed',
+          paymentStatus: { $in: ['partial', 'paid'] }
+        });
 
-        const bookedQuantity = totalBooked[0]?.totalQuantity || 0;
-        const availableQuantity = Math.max(0, service.quantity - bookedQuantity);
+        console.log(`Service ${service.name}: Found ${allBookings.length} total confirmed/paid bookings`);
+
+        // If date range is provided, filter bookings that are active within the range
+        if (startDate && endDate) {
+          const rangeStart = new Date(startDate);
+          rangeStart.setHours(0, 0, 0, 0);
+          const rangeEnd = new Date(endDate);
+          rangeEnd.setHours(23, 59, 59, 999);
+
+          const originalCount = allBookings.length;
+          allBookings = allBookings.filter(booking => {
+            const bookingStart = new Date(booking.bookingDate);
+            const duration = booking.duration || 1; // Default to 1 day if not set
+            const bookingEnd = new Date(bookingStart);
+            bookingEnd.setDate(bookingEnd.getDate() + duration - 1); // -1 because the booking includes the start date
+            bookingEnd.setHours(23, 59, 59, 999);
+
+            // Check if the booking period overlaps with the date range
+            return bookingStart <= rangeEnd && bookingEnd >= rangeStart;
+          });
+
+          console.log(`Service ${service.name}: After date filtering (${startDate} to ${endDate}): ${allBookings.length} bookings (was ${originalCount})`);
+        }
+
+        // For inventory reports, we show current inventory status, not historical bookings
+        // The "booked" quantity should be the current reserved amount
+        const reserved = service.reserved || 0;
+        const availableQuantity = service.getAvailable();
+        const utilizationRate = service.quantity > 0 ? ((reserved / service.quantity) * 100).toFixed(1) : '0';
+
+        // If date range is provided, also calculate historical bookings for that period
+        let historicalBookedQuantity = 0;
+        if (startDate && endDate) {
+          // Get direct bookings of this equipment within the date range
+          const directBookings = allBookings.filter(booking =>
+            booking.serviceId.toString() === service._id.toString()
+          );
+          const directBookedQuantity = directBookings.reduce((sum, booking) => sum + (booking.quantity || 0), 0);
+
+          // Get bookings from packages that include this equipment
+          const packageBookings = allBookings.filter(booking => {
+            const itemQuantities = booking.itemQuantities || {};
+            return itemQuantities[service._id.toString()] !== undefined;
+          });
+
+          let packageBookedQuantity = 0;
+          packageBookings.forEach(booking => {
+            const itemQuantities = booking.itemQuantities || {};
+            const equipmentId = service._id.toString();
+            if (itemQuantities[equipmentId]) {
+              packageBookedQuantity += itemQuantities[equipmentId] || 0;
+            }
+          });
+
+          // Get bookings of event services that include this equipment
+          const eventServiceBookings = allBookings.filter(booking => {
+            // Check if this booking is for an event service that includes this equipment
+            if (booking.serviceId && booking.serviceId.includedEquipment) {
+              return booking.serviceId.includedEquipment.some(eq => eq.equipmentId.toString() === service._id.toString());
+            }
+            return false;
+          });
+
+          let eventServiceBookedQuantity = 0;
+          eventServiceBookings.forEach(booking => {
+            if (booking.serviceId && booking.serviceId.includedEquipment) {
+              const equipmentItem = booking.serviceId.includedEquipment.find(eq => eq.equipmentId.toString() === service._id.toString());
+              if (equipmentItem) {
+                eventServiceBookedQuantity += (equipmentItem.quantity || 0) * (booking.quantity || 1);
+              }
+            }
+          });
+
+          historicalBookedQuantity = directBookedQuantity + packageBookedQuantity + eventServiceBookedQuantity;
+          console.log(`Service ${service.name}: Historical booked quantity (${startDate} to ${endDate}): ${historicalBookedQuantity}`);
+        }
 
         return {
           serviceId: service._id,
           name: service.name,
           totalStock: service.quantity,
-          bookedQuantity,
+          reserved, // Current reserved quantity
+          bookedQuantity: reserved, // For display, show current reserved as "booked"
           availableQuantity,
-          utilizationRate: service.quantity > 0 ? ((bookedQuantity / service.quantity) * 100).toFixed(1) : 0,
+          utilizationRate,
+          historicalBookedQuantity: historicalBookedQuantity || 0, // Historical bookings in date range
         };
       })
     );

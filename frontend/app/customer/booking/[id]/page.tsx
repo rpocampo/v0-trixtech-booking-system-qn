@@ -104,6 +104,13 @@ export default function BookingPage() {
   const [showTimeConfirmation, setShowTimeConfirmation] = useState(false);
   const [calculatedPickupDateTime, setCalculatedPickupDateTime] = useState<Date | null>(null);
 
+  // Helper function to check if current time is within booking hours (7 AM - 5 PM)
+  const isWithinBookingHours = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    return currentHour >= 7 && currentHour < 17;
+  };
+
   // Save booking data to localStorage whenever it changes
   useEffect(() => {
     const dataToSave = {
@@ -686,6 +693,29 @@ export default function BookingPage() {
         Back
       </Button>
 
+      {/* Booking Hours Notice */}
+      {!isWithinBookingHours() && (
+        <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <div className="text-yellow-600 text-xl">⏰</div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-yellow-800">Outside Booking Hours</h3>
+              <p className="text-sm text-yellow-700 mt-1">
+                Reservations can only be made between 7:00 AM and 5:00 PM.
+                Current time: {new Date().toLocaleTimeString('en-US', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true
+                })}
+              </p>
+              <p className="text-xs text-yellow-600 mt-2">
+                Please return during business hours to make a reservation.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <h1 className="text-2xl sm:text-3xl font-bold mb-2">{service.name}</h1>
       <p className="text-[var(--muted)] mb-6 sm:mb-8 text-sm sm:text-base">{service.description}</p>
 
@@ -968,8 +998,14 @@ export default function BookingPage() {
               </div>
             </div>
 
-            <Button type="submit" loading={submitting} size="lg" fullWidth>
-              {submitting ? 'Processing...' : 'Review & Confirm Booking'}
+            <Button
+              type="submit"
+              loading={submitting}
+              size="lg"
+              fullWidth
+              disabled={!isWithinBookingHours()}
+            >
+              {submitting ? 'Processing...' : !isWithinBookingHours() ? 'Outside Booking Hours' : 'Review & Confirm Booking'}
             </Button>
           </form>
         </div>
