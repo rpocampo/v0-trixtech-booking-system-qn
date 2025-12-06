@@ -63,7 +63,22 @@ class AutoRentalCompletionService {
     try {
       // Update booking status to completed
       booking.status = 'completed';
+      // Now that rental is completed, mark payment as fully paid
+      if (booking.paymentStatus === 'provisionally_paid') {
+        booking.paymentStatus = 'paid';
+      }
       await booking.save();
+
+      // Update payment status to fully completed if it was provisionally completed
+      if (booking.paymentId) {
+        const Payment = require('../models/Payment');
+        const payment = await Payment.findById(booking.paymentId);
+        if (payment && payment.status === 'provisionally_completed') {
+          payment.status = 'completed';
+          await payment.save();
+          console.log(`Payment ${payment._id} marked as fully completed after rental completion`);
+        }
+      }
 
       // Restore inventory
       const service = await Service.findById(booking.serviceId);
@@ -81,7 +96,8 @@ class AutoRentalCompletionService {
           completionDate: new Date(),
           quantity: booking.quantity,
           inventoryRestored: true,
-          rentalCompleted: true
+          rentalCompleted: true,
+          paymentFullyCredited: true
         }
       });
 
@@ -89,7 +105,8 @@ class AutoRentalCompletionService {
         success: true,
         bookingId: booking._id,
         inventoryRestored: true,
-        notificationSent: true
+        notificationSent: true,
+        paymentFullyCredited: true
       };
     } catch (error) {
       console.error('Error completing rental:', error);

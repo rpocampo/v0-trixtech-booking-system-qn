@@ -379,8 +379,17 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
       return { success: true, message: 'Payment already completed', payment };
     }
 
-    // Update payment status - preserve receiptVerification data
-    payment.status = 'completed';
+    // Check if this payment is for a rental booking that requires completion
+    let isRentalBooking = false;
+    if (payment.bookingId && payment.bookingId.serviceId) {
+      const service = payment.bookingId.serviceId;
+      isRentalBooking = service.serviceType === 'equipment' || service.serviceType === 'supply';
+    }
+
+    // For rental bookings, set status to 'provisionally_completed' until rental is fully completed
+    // For service bookings, set to 'completed' immediately
+    const finalPaymentStatus = isRentalBooking ? 'provisionally_completed' : 'completed';
+    payment.status = finalPaymentStatus;
     payment.completedAt = new Date();
 
     // Merge receiptVerification data - preserve existing data and merge with new data
@@ -491,6 +500,9 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
           const appliedMultiplier = service.basePrice > 0 ? calculatedPrice / service.basePrice : 1.0;
 
           // Create the booking
+          // Check if this is a rental booking
+          const isIntentRentalBooking = service.serviceType === 'equipment' || service.serviceType === 'supply';
+
           const booking = new Booking({
             customerId: payment.userId,
             serviceId: intent.serviceId,
@@ -501,7 +513,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
             daysBeforeCheckout,
             totalPrice: intent.totalPrice,
             status: 'confirmed',
-            paymentStatus: 'paid',
+            paymentStatus: isIntentRentalBooking ? 'provisionally_paid' : 'paid', // For rentals, payment is provisionally credited
             paymentId: payment._id,
             notes: intent.notes || '',
             requiresDelivery: service.deliveryRequired || false,
@@ -725,6 +737,9 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
         return { success: false, error: 'Service is no longer available for the selected date and time.' };
       }
 
+      // Check if this is a rental booking
+      const isCreateIntentRentalBooking = service.serviceType === 'equipment' || service.serviceType === 'supply';
+
       // Create the actual booking now that payment is confirmed
       const booking = new Booking({
         customerId: payment.userId,
@@ -734,7 +749,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
         basePrice: service.basePrice,
         totalPrice: bookingIntent.totalPrice,
         status: 'confirmed',
-        paymentStatus: 'paid',
+        paymentStatus: isCreateIntentRentalBooking ? 'provisionally_paid' : 'paid', // For rentals, payment is provisionally credited
         paymentId: payment._id,
         notes: bookingIntent.notes,
       });
@@ -838,13 +853,18 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
     // Update the booking based on payment type (for existing bookings)
     const booking = payment.bookingId;
     if (booking) {
+      // Check if this is a rental booking
+      const service = booking.serviceId;
+      const isExistingRentalBooking = service && (service.serviceType === 'equipment' || service.serviceType === 'supply');
+
       // Update payment tracking - all payments are now full payments
       booking.amountPaid = payment.amount;
       booking.paymentType = 'full';
 
-      // Full payment - booking is confirmed and fully paid
+      // Full payment - booking is confirmed
       booking.status = 'confirmed';
-      booking.paymentStatus = 'paid';
+      // For rentals, payment is provisionally credited until rental completion
+      booking.paymentStatus = isExistingRentalBooking ? 'provisionally_paid' : 'paid';
       booking.remainingBalance = 0;
 
       await booking.save();

@@ -641,7 +641,10 @@ router.get('/all', authMiddleware, async (req, res) => {
     }
 
     const Payment = require('../models/Payment');
-    const allPayments = await Payment.find({})
+    // Only show fully completed payments to admin - filter out provisionally_completed payments
+    const allPayments = await Payment.find({
+      status: { $in: ['completed', 'failed', 'cancelled', 'refunded', 'pending_review'] }
+    })
     .populate('bookingId')
     .populate('userId', 'name email')
     .sort({ createdAt: -1 });
