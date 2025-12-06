@@ -1099,7 +1099,21 @@ export default function AdminBookings() {
                           </div>
                           <div>
                             <span className="text-sm text-gray-600">Unit Price:</span>
-                            <p className="font-medium">₱{selectedBooking.serviceId?.price || 0}</p>
+                            <p className="font-medium">₱{(() => {
+                              // For rentals, show daily rate if available
+                              if (selectedBooking.dailyRate && selectedBooking.dailyRate > 0) {
+                                return selectedBooking.dailyRate;
+                              }
+                              // For services with equipment, calculate from total price
+                              if (selectedBooking.serviceId?.price && selectedBooking.serviceId.price > 0) {
+                                return selectedBooking.serviceId.price;
+                              }
+                              // Fallback: calculate from total price and quantity
+                              if (selectedBooking.totalPrice && selectedBooking.quantity) {
+                                return (selectedBooking.totalPrice / selectedBooking.quantity).toFixed(2);
+                              }
+                              return '0.00';
+                            })()}</p>
                           </div>
                           <div>
                             <span className="text-sm text-gray-600">Quantity:</span>
@@ -1264,7 +1278,7 @@ export default function AdminBookings() {
                       <div className="space-y-4">
 
                         {/* Items/Equipment Quantities */}
-                        {selectedBooking.serviceId.includedEquipment && selectedBooking.serviceId.includedEquipment.length > 0 && (
+                        {selectedBooking.serviceId && selectedBooking.serviceId.includedEquipment && selectedBooking.serviceId.includedEquipment.length > 0 && (
                           <div className="space-y-3">
                             <h5 className="text-sm font-medium text-gray-700 flex items-center gap-2">
                               <span>📦</span>
@@ -1314,7 +1328,7 @@ export default function AdminBookings() {
                           </div>
                         )}
 
-                        {(!selectedBooking.serviceId.includedEquipment || selectedBooking.serviceId.includedEquipment.length === 0) && (
+                        {(!selectedBooking.serviceId || !selectedBooking.serviceId.includedEquipment || selectedBooking.serviceId.includedEquipment.length === 0) && (
                           <div className="text-center py-4 text-gray-500 text-sm bg-gray-50 rounded-lg">
                             No specific equipment listed for this service
                           </div>
