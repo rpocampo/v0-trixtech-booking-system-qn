@@ -206,15 +206,29 @@ export default function Services() {
     setShowFilters(false); // Close the panel after applying
   };
 
-  // Filter services by category
+  // Filter and sort services by category
   useEffect(() => {
+    let filtered = services;
+
     if (selectedCategory === 'all') {
-      setFilteredServices(services);
+      // Define category priority order (equipment first, then events)
+      const categoryOrder = ['equipment', 'party', 'wedding', 'corporate', 'funeral', 'birthday'];
+
+      // Sort services by category priority
+      filtered = [...services].sort((a, b) => {
+        const aIndex = categoryOrder.indexOf(a.category);
+        const bIndex = categoryOrder.indexOf(b.category);
+        const aPriority = aIndex === -1 ? categoryOrder.length : aIndex;
+        const bPriority = bIndex === -1 ? categoryOrder.length : bIndex;
+        return aPriority - bPriority;
+      });
     } else {
       // Map frontend category names to backend category names
       const backendCategory = selectedCategory === 'graduation' ? 'graduation party' : selectedCategory;
-      setFilteredServices(services.filter(service => service.category === backendCategory));
+      filtered = services.filter(service => service.category === backendCategory);
     }
+
+    setFilteredServices(filtered);
   }, [services, selectedCategory]);
 
   // Real-time updates
@@ -677,7 +691,7 @@ export default function Services() {
 
                   {/* Service Type Badge */}
                   <div className="absolute top-3 left-3 flex flex-col gap-1">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                    <span className={`px-2 py-1 text-xs font-semibold rounded-full flex items-center justify-center ${
                       service.serviceType === 'service' ? 'bg-blue-500 text-white' :
                       service.serviceType === 'equipment' ? 'bg-green-500 text-white' :
                       'bg-purple-500 text-white'
