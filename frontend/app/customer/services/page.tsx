@@ -635,7 +635,7 @@ export default function Services() {
         <>
           {/* Category Filter */}
           <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-3 sm:mb-4 px-2 sm:px-4 lg:px-6">
-            {['all', 'equipment', 'corporate', 'wedding', 'birthday', 'funeral', 'graduation'].map((category) => (
+            {['all', 'equipment', 'corporate', 'wedding', 'birthday', 'funeral'].map((category) => (
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}

@@ -73,7 +73,7 @@ export default function Bookings() {
         case 'success':
           setPaymentMessage({
             type: 'success',
-            message: 'Payment completed successfully! Your booking has been confirmed.'
+            message: 'Payment completed successfully! Your reservation has been confirmed.'
           });
           break;
         case 'failed':
@@ -250,7 +250,7 @@ export default function Bookings() {
       {updating && (
         <div className="fixed top-4 right-4 z-50 bg-[var(--primary)] text-white px-4 py-2 rounded-lg shadow-lg animate-slide-in flex items-center gap-2">
           <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-          <span className="text-sm font-medium">New booking added!</span>
+          <span className="text-sm font-medium">New reservation added!</span>
         </div>
       )}
 
@@ -413,7 +413,7 @@ export default function Bookings() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-[var(--primary)]">{calendarEvents.length}</div>
-              <div className="text-sm text-[var(--muted)]">Total Bookings</div>
+              <div className="text-sm text-[var(--muted)]">Total Reservations</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-green-600">

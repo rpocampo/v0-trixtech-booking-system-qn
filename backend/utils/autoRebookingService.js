@@ -267,7 +267,7 @@ class AutoRebookingService {
 
       // Send notification
       await sendTemplateNotification(customerId, 'AUTO_REBOOKING_CREATED', {
-        message: `We've automatically rebooked ${service.name} for you based on your booking pattern.`,
+        message: `We've automatically reserved ${service.name} for you based on your reservation pattern.`,
         metadata: {
           bookingId: booking._id,
           serviceId: service._id,

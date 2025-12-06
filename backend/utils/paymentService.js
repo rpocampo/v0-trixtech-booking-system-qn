@@ -608,7 +608,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
         const totalAmount = createdBookings.reduce((sum, booking) => sum + booking.totalPrice, 0);
 
         await sendTemplateNotification(payment.userId._id, 'BOOKING_CONFIRMED', {
-          message: `Your cart booking has been confirmed! ${createdBookings.length} item(s) booked for a total of ₱${totalAmount.toFixed(2)}`,
+          message: `Your cart reservation has been confirmed! ${createdBookings.length} item(s) reserved for a total of ₱${totalAmount.toFixed(2)}`,
           metadata: {
             bookingIds: createdBookings.map(b => b._id),
             totalAmount,
@@ -621,7 +621,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
         const adminUsers = await User.find({ role: 'admin' });
         for (const admin of adminUsers) {
           await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
-            message: `New cart booking confirmed: ${createdBookings.length} item(s) for ₱${totalAmount.toFixed(2)}`,
+            message: `New cart reservation confirmed: ${createdBookings.length} item(s) for ₱${totalAmount.toFixed(2)}`,
             metadata: {
               bookingIds: createdBookings.map(b => b._id),
               totalAmount,
@@ -782,7 +782,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
       // Send confirmation notifications
       try {
         await sendTemplateNotification(payment.userId._id, 'BOOKING_CONFIRMED', {
-          message: `Your booking for ${service.name} has been confirmed! Total amount: ₱${booking.totalPrice.toFixed(2)}`,
+          message: `Your reservation for ${service.name} has been confirmed! Total amount: ₱${booking.totalPrice.toFixed(2)}`,
           metadata: {
             bookingId: booking._id,
             serviceId: service._id,
@@ -795,7 +795,7 @@ const verifyQRPayment = async (referenceNumber, paymentData = {}) => {
         const adminUsers = await User.find({ role: 'admin' });
         for (const admin of adminUsers) {
           await sendTemplateNotification(admin._id, 'NEW_BOOKING_ADMIN', {
-            message: `New confirmed booking from customer for ${service.name}. Amount: ₱${booking.totalPrice.toFixed(2)}`,
+            message: `New confirmed reservation from customer for ${service.name}. Amount: ₱${booking.totalPrice.toFixed(2)}`,
             metadata: {
               bookingId: booking._id,
               serviceId: service._id,

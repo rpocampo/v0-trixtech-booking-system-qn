@@ -197,8 +197,8 @@ export default function SuggestionsPage() {
     <div className="max-w-7xl mx-auto p-6">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-800 mb-2">📊 Booking Suggestions</h1>
-        <p className="text-gray-600 text-lg">See what other customers added to their bookings</p>
+        <h1 className="text-4xl font-bold text-gray-800 mb-2">📊 Reservation Suggestions</h1>
+        <p className="text-gray-600 text-lg">See what other customers added to their reservation</p>
       </div>
 
 
@@ -209,10 +209,10 @@ export default function SuggestionsPage() {
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
             </svg>
-            <h2 className="text-2xl font-bold">📦 Booking Suggestions from Other Customers</h2>
+            <h2 className="text-2xl font-bold">📦 Reservation Suggestions from Other Customers</h2>
           </div>
           <p className="text-gray-600 mb-6">
-            Complete packages with equipment add-ons that other customers frequently booked together
+            Complete packages with equipment add-ons that other customers frequently reserved together
           </p>
 
           {/* Filters for Predictive Suggestions */}

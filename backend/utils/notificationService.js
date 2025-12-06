@@ -144,32 +144,32 @@ const cleanupOldNotifications = async (daysOld = 30) => {
 // Notification templates
 const NOTIFICATION_TEMPLATES = {
   BOOKING_CONFIRMED: {
-    title: 'Booking Confirmed',
-    message: 'Your booking has been confirmed successfully.',
+    title: 'Reservation Confirmed',
+    message: 'Your reservation has been confirmed successfully.',
     type: 'booking',
     priority: 'medium',
     channels: ['in-app', 'email', 'sms'],
   },
 
   BOOKING_CANCELLED: {
-    title: 'Booking Cancelled',
-    message: 'Your booking has been cancelled.',
+    title: 'Reservation Cancelled',
+    message: 'Your reservation has been cancelled.',
     type: 'booking',
     priority: 'medium',
     channels: ['in-app', 'email', 'sms'],
   },
 
   BOOKING_CANCELLED_ADMIN: {
-    title: 'Booking Cancelled',
-    message: 'A customer booking has been cancelled.',
+    title: 'Reservation Cancelled',
+    message: 'A customer reservation has been cancelled.',
     type: 'admin',
     priority: 'medium',
     channels: ['in-app', 'email'],
   },
 
   BOOKING_COMPLETED: {
-    title: 'Booking Completed',
-    message: 'Your booking has been completed successfully.',
+    title: 'Reservation Completed',
+    message: 'Your reservation has been completed successfully.',
     type: 'booking',
     priority: 'medium',
     channels: ['in-app', 'email', 'sms'],
@@ -177,15 +177,15 @@ const NOTIFICATION_TEMPLATES = {
 
   BOOKING_PAYMENT_CONFIRMED: {
     title: 'Payment Confirmed',
-    message: 'Your payment has been confirmed. Your booking is now confirmed.',
+    message: 'Your payment has been confirmed. Your reservation is now confirmed.',
     type: 'booking',
     priority: 'medium',
     channels: ['in-app', 'email', 'sms'],
   },
 
   BOOKING_PENDING: {
-    title: 'Booking Created - Payment Required',
-    message: 'Your booking has been created and is pending payment confirmation.',
+    title: 'Reservation Created - Payment Required',
+    message: 'Your reservation has been created and is pending payment confirmation.',
     type: 'booking',
     priority: 'medium',
     channels: ['in-app', 'email'],
@@ -200,8 +200,8 @@ const NOTIFICATION_TEMPLATES = {
   },
 
   BOOKING_UPDATED: {
-    title: 'Booking Updated',
-    message: 'Your booking status has been updated.',
+    title: 'Reservation Updated',
+    message: 'Your reservation status has been updated.',
     type: 'booking',
     priority: 'medium',
     channels: ['in-app'],
@@ -216,16 +216,16 @@ const NOTIFICATION_TEMPLATES = {
   },
 
   NEW_BOOKING_ADMIN: {
-    title: 'New Booking Received',
-    message: 'A new booking has been made.',
+    title: 'New Reservation Received',
+    message: 'A new reservation has been made.',
     type: 'admin',
     priority: 'high',
     channels: ['in-app', 'email', 'sms'],
   },
 
   NEW_PENDING_BOOKING_ADMIN: {
-    title: 'New Pending Booking',
-    message: 'A new booking is pending payment confirmation.',
+    title: 'New Pending Reservation',
+    message: 'A new reservation is pending payment confirmation.',
     type: 'admin',
     priority: 'medium',
     channels: ['in-app', 'email'],
@@ -256,24 +256,24 @@ const NOTIFICATION_TEMPLATES = {
   },
 
   BOOKING_REMINDER_24H: {
-    title: 'Booking Reminder - 24 Hours',
-    message: 'Your booking is scheduled for tomorrow. Please review the details.',
+    title: 'Reservation Reminder - 24 Hours',
+    message: 'Your reservation is scheduled for tomorrow. Please review the details.',
     type: 'booking',
     priority: 'medium',
     channels: ['in-app', 'email', 'sms'],
   },
 
   BOOKING_REMINDER_1H: {
-    title: 'Booking Reminder - 1 Hour',
-    message: 'Your booking starts in 1 hour. Please be prepared.',
+    title: 'Reservation Reminder - 1 Hour',
+    message: 'Your reservation starts in 1 hour. Please be prepared.',
     type: 'booking',
     priority: 'high',
     channels: ['in-app', 'email', 'sms'],
   },
 
   BOOKING_REMINDER_15M: {
-    title: 'Booking Reminder - 15 Minutes',
-    message: 'Your booking starts in 15 minutes. Please arrive on time.',
+    title: 'Reservation Reminder - 15 Minutes',
+    message: 'Your reservation starts in 15 minutes. Please arrive on time.',
     type: 'booking',
     priority: 'high',
     channels: ['in-app', 'sms'],

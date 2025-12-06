@@ -143,9 +143,9 @@ const sendBookingConfirmation = async (email, bookingDetails) => {
   const mailOptions = {
     from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
     to: email,
-    subject: 'Booking Confirmation - TRIXTECH',
+    subject: 'Reservation Confirmation - TRIXTECH',
     html: `
-      <h2>Your booking has been confirmed!</h2>
+      <h2>Your reservation has been confirmed!</h2>
       <p><strong>Service:</strong> ${bookingDetails.serviceName}</p>
       ${bookingDetails.quantity > 1 ? `<p><strong>Quantity:</strong> ${bookingDetails.quantity}</p>` : ''}
       <p><strong>Date:</strong> ${new Date(bookingDetails.date).toLocaleDateString()}</p>
@@ -162,7 +162,7 @@ const sendBookingConfirmation = async (email, bookingDetails) => {
         const msg = {
           to: email,
           from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
-          subject: 'Booking Confirmation - TRIXTECH',
+          subject: 'Reservation Confirmation - TRIXTECH',
           html: mailOptions.html,
         };
         await sgMail.send(msg);
@@ -203,9 +203,9 @@ const sendCancellationEmail = async (email, bookingDetails) => {
   const mailOptions = {
     from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
     to: email,
-    subject: 'Booking Cancelled - TRIXTECH',
+    subject: 'Reservation Cancelled - TRIXTECH',
     html: `
-      <h2>Your booking has been cancelled</h2>
+      <h2>Your reservation has been cancelled</h2>
       <p><strong>Service:</strong> ${bookingDetails.serviceName}</p>
       ${bookingDetails.quantity > 1 ? `<p><strong>Quantity:</strong> ${bookingDetails.quantity}</p>` : ''}
       <p><strong>Date:</strong> ${new Date(bookingDetails.date).toLocaleDateString()}</p>
@@ -238,9 +238,9 @@ const sendAdminBookingNotification = async (bookingDetails, customerDetails) => 
   const mailOptions = {
     from: process.env.SENDER_EMAIL || 'noreply@trixtech.com',
     to: process.env.ADMIN_EMAIL,
-    subject: 'New Booking Received - TRIXTECH',
+    subject: 'New Reservation Received - TRIXTECH',
     html: `
-      <h2>New Booking Alert!</h2>
+      <h2>New Reservation Alert!</h2>
       <p><strong>Customer:</strong> ${customerDetails.name} (${customerDetails.email})</p>
       <p><strong>Service:</strong> ${bookingDetails.serviceName}</p>
       ${bookingDetails.quantity > 1 ? `<p><strong>Quantity:</strong> ${bookingDetails.quantity}</p>` : ''}

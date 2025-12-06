@@ -287,7 +287,7 @@ class AutoCompletionService {
             type: 'repeat_booking',
             service,
             title: `Book ${service.name} again`,
-            description: `You've booked this ${bookingCount} times before`,
+            description: `You've reserved this ${bookingCount} times before`,
             confidence: Math.min(0.9, bookingCount / 10), // Increase confidence with more bookings
             prefilledData: {
               quantity: userHistory.preferredQuantities[1] || 1,

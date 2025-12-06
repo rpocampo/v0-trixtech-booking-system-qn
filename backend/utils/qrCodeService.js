@@ -246,7 +246,7 @@ const generatePaymentInstructions = (paymentData) => {
     amount: paymentData.amount,
     reference: paymentData.referenceNumber,
     merchant: paymentData.merchantName || 'TRIXTECH',
-    note: 'Payment details are embedded in the QR code. Payment will be automatically verified and your booking will be confirmed.'
+    note: 'Payment details are embedded in the QR code. Payment will be automatically verified and your reservation will be confirmed.'
   };
 };
 

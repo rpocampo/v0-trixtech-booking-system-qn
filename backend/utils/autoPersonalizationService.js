@@ -487,7 +487,7 @@ class AutoPersonalizationService {
             type: 'repeat',
             service,
             title: `Book ${service.name} again`,
-            description: `Your most booked service (${mostBookedService[1]} times)`,
+            description: `Your most reserved service (${mostBookedService[1]} times)`,
             prefilledData: {
               quantity: history.preferredQuantities[1] || 1,
               bookingDate: this.getPreferredBookingDate(service, null, history)

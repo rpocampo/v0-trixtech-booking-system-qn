@@ -210,7 +210,7 @@ export default function NotificationsPage() {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-3xl font-bold text-[var(--foreground)]">Notifications</h1>
-          <p className="text-[var(--muted)] mt-2">Stay updated with your bookings and account activity</p>
+          <p className="text-[var(--muted)] mt-2">Stay updated with your reservations and account activity</p>
         </div>
 
         {unreadCount > 0 && (
