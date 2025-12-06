@@ -357,7 +357,7 @@ export default function CustomerDashboard() {
           fetch('http://localhost:5000/api/bookings', {
             headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch('http://localhost:5000/api/services?limit=8&sortBy=name&sortOrder=asc', {
+          fetch('http://localhost:5000/api/services?limit=9&sortBy=name&sortOrder=asc', {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ]);
@@ -407,7 +407,7 @@ export default function CustomerDashboard() {
         const servicesData = await servicesRes.json();
         if (servicesData.success && servicesData.services) {
           // Transform services to match the expected interface
-          const transformedServices = servicesData.services.slice(0, 8).map((service: any) => ({
+          const transformedServices = servicesData.services.slice(0, 9).map((service: any) => ({
             _id: service._id,
             name: service.name,
             description: service.description,
@@ -463,7 +463,7 @@ export default function CustomerDashboard() {
                 const itemsPerSlide = 3;
 
                 // Define category priority order (equipment first, then events)
-                const categoryOrder = ['equipment', 'party', 'wedding', 'corporate', 'funeral', 'birthday'];
+                const categoryOrder = ['equipment', 'wedding', 'corporate', 'funeral', 'birthday'];
 
                 // Sort services by category priority
                 const sortedServices = [...featuredServices].sort((a, b) => {
