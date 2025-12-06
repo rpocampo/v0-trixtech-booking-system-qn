@@ -6,7 +6,7 @@ import { useSocket } from '../../../components/SocketProvider';
 interface Booking {
   _id: string;
   customerId: { name: string; email: string };
-  serviceId: {
+  serviceId?: {
     _id: string;
     name: string;
     price: number;
@@ -19,7 +19,8 @@ interface Booking {
     }>;
     quantity?: number;
     serviceType?: string;
-    requiresDelivery?: boolean
+    requiresDelivery?: boolean;
+    maxOrder?: number;
   };
   bookingDate: string;
   status: string;
@@ -42,6 +43,11 @@ interface Booking {
   deliveryDuration?: number;
   downPaymentPercentage?: number;
   notes?: string;
+  // Package booking fields
+  isPackageBooking?: boolean;
+  packageId?: string;
+  packageName?: string;
+  includedBookings?: string[];
 }
 
 export default function AdminBookings() {
@@ -979,7 +985,16 @@ export default function AdminBookings() {
                         <p className="text-xs text-[var(--muted)]">{booking.customerId?.email || 'N/A'}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-3">{booking.serviceId?.name || 'Unknown Service'}</td>
+                    <td className="px-6 py-3">
+                      {booking.isPackageBooking ? (
+                        <div>
+                          <p className="font-medium">{booking.packageName || 'Package Booking'}</p>
+                          <p className="text-xs text-gray-500">📦 Event Package</p>
+                        </div>
+                      ) : (
+                        booking.serviceId?.name || 'Unknown Service'
+                      )}
+                    </td>
                     <td className="px-6 py-3 text-sm">{new Date(booking.bookingDate).toLocaleDateString()}</td>
                     <td className="px-6 py-3 font-semibold">₱{booking.totalPrice}</td>
                     <td className="px-6 py-3">
@@ -1080,23 +1095,41 @@ export default function AdminBookings() {
                         </div>
                       </div>
 
-                      {/* Service Information */}
+                      {/* Service/Package Information */}
                       <div className="card p-4">
-                        <h4 className="font-semibold mb-3">Service Information</h4>
+                        <h4 className="font-semibold mb-3">
+                          {selectedBooking.isPackageBooking ? 'Package Information' : 'Service Information'}
+                        </h4>
                         <div className="space-y-2">
-                          <div>
-                            <span className="text-sm text-gray-600">Service:</span>
-                            <p className="font-medium">{selectedBooking.serviceId?.name || 'Unknown Service'}</p>
-                            {selectedBooking.serviceId?.includedEquipment && selectedBooking.serviceId.includedEquipment.length > 0 && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Includes: {selectedBooking.serviceId.includedEquipment.map(eq => eq.name).join(', ')}
-                              </p>
-                            )}
-                          </div>
-                          <div>
-                            <span className="text-sm text-gray-600">Category:</span>
-                            <p className="font-medium capitalize">{selectedBooking.serviceId?.category || 'N/A'}</p>
-                          </div>
+                          {selectedBooking.isPackageBooking ? (
+                            <>
+                              <div>
+                                <span className="text-sm text-gray-600">Package:</span>
+                                <p className="font-medium">{selectedBooking.packageName || 'Unknown Package'}</p>
+                                <p className="text-xs text-blue-600 mt-1">📦 Event Package</p>
+                              </div>
+                              <div>
+                                <span className="text-sm text-gray-600">Package ID:</span>
+                                <p className="font-medium font-mono text-sm">{selectedBooking.packageId}</p>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div>
+                                <span className="text-sm text-gray-600">Service:</span>
+                                <p className="font-medium">{selectedBooking.serviceId?.name || 'Unknown Service'}</p>
+                                {selectedBooking.serviceId?.includedEquipment && selectedBooking.serviceId.includedEquipment.length > 0 && (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Includes: {selectedBooking.serviceId.includedEquipment.map(eq => eq.name).join(', ')}
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <span className="text-sm text-gray-600">Category:</span>
+                                <p className="font-medium capitalize">{selectedBooking.serviceId?.category || 'N/A'}</p>
+                              </div>
+                            </>
+                          )}
                           <div>
                             <span className="text-sm text-gray-600">Unit Price:</span>
                             <p className="font-medium">₱{(() => {
@@ -1224,6 +1257,25 @@ export default function AdminBookings() {
                         )}
                       </div>
                     </div>
+
+                    {/* Package Included Bookings */}
+                    {selectedBooking.isPackageBooking && selectedBooking.includedBookings && selectedBooking.includedBookings.length > 0 && (
+                      <div className="card p-4">
+                        <h4 className="font-semibold mb-3">📦 Package Contents</h4>
+                        <p className="text-sm text-gray-600 mb-4">This package includes the following services:</p>
+                        <div className="space-y-3">
+                          {selectedBooking.includedBookings.map((bookingId, index) => (
+                            <div key={bookingId} className="border rounded-lg p-3 bg-gray-50">
+                              <p className="text-sm font-medium">Service #{index + 1}</p>
+                              <p className="text-xs text-gray-500">Booking ID: {bookingId}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-xs text-blue-600 mt-3">
+                          💡 Individual service bookings are grouped under this package for simplified management
+                        </p>
+                      </div>
+                    )}
 
                     {/* Status Information */}
                     <div className="card p-4">

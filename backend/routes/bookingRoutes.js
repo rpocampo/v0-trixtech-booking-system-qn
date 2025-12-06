@@ -1108,6 +1108,16 @@ router.get('/admin/all', adminMiddleware, async (req, res, next) => {
       query = query.where('status').equals('pending_admin_review');
     }
 
+    // Exclude individual package service bookings - only show main package bookings
+    // Main package bookings have isPackageBooking: true AND includedBookings array
+    // Individual package service bookings have isPackageBooking: true but NO includedBookings
+    query = query.where({
+      $or: [
+        { isPackageBooking: { $ne: true } }, // Non-package bookings
+        { isPackageBooking: true, includedBookings: { $exists: true, $ne: [] } } // Main package bookings
+      ]
+    });
+
     // Get total count before applying limit
     const totalCount = await Booking.countDocuments(query.getFilter());
 
