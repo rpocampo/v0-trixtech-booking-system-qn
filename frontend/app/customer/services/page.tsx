@@ -211,8 +211,8 @@ export default function Services() {
     let filtered = services;
 
     if (selectedCategory === 'all') {
-      // Define category priority order (equipment first, then events)
-      const categoryOrder = ['equipment', 'party', 'wedding', 'corporate', 'funeral', 'birthday'];
+      // Define category priority order (events first, then equipment)
+      const categoryOrder = ['wedding', 'corporate', 'birthday', 'funeral', 'party', 'equipment'];
 
       // Sort services by category priority
       filtered = [...services].sort((a, b) => {
@@ -364,8 +364,8 @@ export default function Services() {
 
     const distance = calculateDistance(lat, lng, businessLat, businessLng);
 
-    // Allow bookings within 100km of business location
-    if (distance > 100) {
+    // Allow bookings within 30km of business location
+    if (distance > 30) {
       alert(`You are ${distance.toFixed(1)}km away from our service area. Equipment delivery may not be available in your location. Please contact us for special arrangements.`);
     }
   };

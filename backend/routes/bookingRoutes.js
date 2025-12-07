@@ -768,7 +768,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
                 try {
                   // Customer notification for pending booking
                   await sendTemplateNotification(req.user.id, 'BOOKING_PENDING', {
-                    message: `Your booking for ${service.name} has been created and is pending payment.`,
+                    message: `Your reservation for ${service.name} has been created and is pending payment.`,
                     metadata: {
                       bookingId: booking._id,
                       serviceId: service._id,
@@ -783,7 +783,7 @@ router.post('/', authMiddleware, async (req, res, next) => {
                   for (const admin of adminUsers) {
                     console.log('Sending pending booking notification to admin:', admin._id);
                     await sendTemplateNotification(admin._id, 'NEW_PENDING_BOOKING_ADMIN', {
-                      message: `New pending booking received from customer for ${service.name}.`,
+                      message: `New pending reservation received from customer for ${service.name}.`,
                       metadata: {
                         bookingId: booking._id,
                         serviceId: service._id,
@@ -1449,7 +1449,7 @@ router.put('/:id/cancel', authMiddleware, async (req, res, next) => {
     try {
       // Customer notification
       await sendTemplateNotification(booking.customerId, 'BOOKING_CANCELLED', {
-        message: `Your booking for ${booking.serviceId?.name || 'Unknown Service'} has been cancelled.`,
+        message: `Your reservation for ${booking.serviceId?.name || 'Unknown Service'} has been cancelled.`,
         metadata: {
           bookingId: booking._id,
           serviceId: booking.serviceId?._id,
@@ -1462,7 +1462,7 @@ router.put('/:id/cancel', authMiddleware, async (req, res, next) => {
       const adminUsers = await User.find({ role: 'admin' });
       for (const admin of adminUsers) {
         await sendTemplateNotification(admin._id, 'BOOKING_CANCELLED_ADMIN', {
-          message: `A booking for ${booking.serviceId?.name || 'Unknown Service'} has been cancelled.`,
+          message: `A reservation for ${booking.serviceId?.name || 'Unknown Service'} has been cancelled.`,
           metadata: {
             bookingId: booking._id,
             serviceId: booking.serviceId?._id,
@@ -2015,7 +2015,7 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       if (shouldAutoConfirm) {
         // Auto-confirmed booking notifications
         await sendTemplateNotification(req.user.id, 'BOOKING_AUTO_CONFIRMED', {
-          message: `🎉 Your booking for ${service.name} has been automatically confirmed! No admin review needed.`,
+          message: `🎉 Your reservation for ${service.name} has been automatically confirmed! No admin review needed.`,
           metadata: {
             bookingId: booking._id,
             serviceId: service._id,
@@ -2054,7 +2054,7 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
       } else {
         // Manual review required notifications
         await sendTemplateNotification(req.user.id, 'BOOKING_PENDING_REVIEW', {
-          message: `Your booking for ${service.name} has been received and is pending admin review.`,
+          message: `Your reservation for ${service.name} has been received and is pending admin review.`,
           metadata: {
             bookingId: booking._id,
             serviceId: service._id,
@@ -2068,7 +2068,7 @@ router.post('/confirm', authMiddleware, async (req, res, next) => {
         const adminUsers = await User.find({ role: 'admin' });
         for (const admin of adminUsers) {
           await sendTemplateNotification(admin._id, 'BOOKING_NEEDS_REVIEW_ADMIN', {
-            message: `📋 New booking from customer for ${service.name} requires manual review.`,
+            message: `📋 New reservation from customer for ${service.name} requires manual review.`,
             metadata: {
               bookingId: booking._id,
               serviceId: service._id,
@@ -3762,7 +3762,7 @@ const autoCancelExpiredBookings = async () => {
         if (booking.customerId) {
           try {
             await sendTemplateNotification(booking.customerId._id, 'BOOKING_CANCELLED', {
-              message: `Your booking for ${service.name} has been automatically cancelled due to non-payment within 24 hours.`,
+              message: `Your reservation for ${service.name} has been automatically cancelled due to non-payment within 24 hours.`,
               metadata: {
                 bookingId: booking._id,
                 serviceId: service._id,
@@ -3781,7 +3781,7 @@ const autoCancelExpiredBookings = async () => {
           const adminUsers = await User.find({ role: 'admin' });
           for (const admin of adminUsers) {
             await sendTemplateNotification(admin._id, 'BOOKING_CANCELLED_ADMIN', {
-              message: `Booking for ${service.name} was automatically cancelled due to non-payment.`,
+              message: `Reservation for ${service.name} was automatically cancelled due to non-payment.`,
               metadata: {
                 bookingId: booking._id,
                 serviceId: service._id,

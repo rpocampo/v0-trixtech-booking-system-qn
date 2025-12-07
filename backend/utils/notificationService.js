@@ -587,7 +587,7 @@ const sendBookingReminders = async () => {
         if (!existingReminder) {
           try {
             await sendTemplateNotification(booking.customerId._id, reminder.template, {
-              message: `Your booking for ${booking.serviceId.name} is scheduled for ${booking.bookingDate.toLocaleString()}.`,
+              message: `Your reservation for ${booking.serviceId.name} is scheduled for ${booking.bookingDate.toLocaleString()}.`,
               metadata: {
                 bookingId: booking._id,
                 serviceId: booking.serviceId._id,

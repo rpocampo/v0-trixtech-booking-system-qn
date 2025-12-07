@@ -60,11 +60,11 @@ export default function NotificationsPage() {
       }, 1000);
     };
 
-    // Listen for booking-related events that should trigger notifications
+    // Listen for reservation-related events that should trigger notifications
     socket.on('booking-created', (data) => {
       handleNewNotification({
-        title: 'Booking Confirmed',
-        message: `Your booking for ${data.serviceName} has been confirmed.`,
+        title: 'Reservation Confirmed',
+        message: `Your reservation for ${data.serviceName} has been confirmed.`,
         type: 'booking',
         priority: 'medium',
         metadata: {
@@ -76,8 +76,8 @@ export default function NotificationsPage() {
 
     socket.on('booking-updated', (data) => {
       handleNewNotification({
-        title: 'Booking Updated',
-        message: `Your booking status has been updated.`,
+        title: 'Reservation Updated',
+        message: `Your reservation status has been updated.`,
         type: 'booking',
         priority: 'medium',
         metadata: {
@@ -263,7 +263,7 @@ export default function NotificationsPage() {
             <p className="text-[var(--muted)]">
               {filter === 'unread'
                 ? 'You\'re all caught up!'
-                : 'Notifications about your bookings and account will appear here.'
+                : 'Notifications about your reservations and account will appear here.'
               }
             </p>
           </div>
@@ -364,7 +364,7 @@ export default function NotificationsPage() {
               <div className="text-2xl font-bold text-[var(--warning)]">
                 {(notifications || []).filter(n => n.type === 'booking').length}
               </div>
-              <div className="text-sm text-[var(--muted)]">Bookings</div>
+              <div className="text-sm text-[var(--muted)]">Reservations</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-[var(--accent)]">

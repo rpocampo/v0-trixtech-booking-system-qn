@@ -51,7 +51,6 @@ export default function CustomerDashboard() {
   const [locationRestricted, setLocationRestricted] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [bookedDates, setBookedDates] = useState<Set<string>>(new Set());
-  const [currentSlide, setCurrentSlide] = useState(0);
 
   // Location-based access control
   useEffect(() => {
@@ -73,7 +72,7 @@ export default function CustomerDashboard() {
           const businessLng = 120.9842;
 
           const distance = calculateDistance(latitude, longitude, businessLat, businessLng);
-          const maxDistance = 100; // 100km radius
+          const maxDistance = 30; // 30km radius
 
           if (distance > maxDistance) {
             setLocationRestricted(true);
@@ -327,19 +326,6 @@ export default function CustomerDashboard() {
     };
   }, [socket]);
 
-  // Auto-rotate carousel every 10 seconds
-  useEffect(() => {
-    if (featuredServices.length === 0) return;
-
-    const itemsPerSlide = 3;
-    const totalSlides = Math.ceil(featuredServices.length / itemsPerSlide);
-
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % totalSlides);
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, [featuredServices.length]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -444,123 +430,6 @@ export default function CustomerDashboard() {
   return (
     <div className="animate-fade-in space-y-3">
 
-      {/* Equipment Carousel */}
-      {featuredServices.length > 0 && (
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-[var(--foreground)]">Featured Equipment</h2>
-            <Link href="/customer/services" className="text-sm text-[var(--primary)] hover:text-[var(--primary)]/80 font-medium">
-              View all →
-            </Link>
-          </div>
-
-          <div className="relative overflow-hidden">
-            <div
-              className="flex transition-transform duration-700 ease-in-out"
-              style={{ transform: `translateX(-${currentSlide * 100}%)` }}
-            >
-              {(() => {
-                const itemsPerSlide = 3;
-
-                // Define category priority order (equipment first, then events)
-                const categoryOrder = ['equipment', 'wedding', 'corporate', 'funeral', 'birthday'];
-
-                // Sort services by category priority
-                const sortedServices = [...featuredServices].sort((a, b) => {
-                  const aIndex = categoryOrder.indexOf(a.category);
-                  const bIndex = categoryOrder.indexOf(b.category);
-                  const aPriority = aIndex === -1 ? categoryOrder.length : aIndex;
-                  const bPriority = bIndex === -1 ? categoryOrder.length : bIndex;
-                  return aPriority - bPriority;
-                });
-
-                // Group services into slides
-                const slides = [];
-                for (let i = 0; i < sortedServices.length; i += itemsPerSlide) {
-                  slides.push(sortedServices.slice(i, i + itemsPerSlide));
-                }
-
-                return slides.map((slide, slideIndex) => (
-                  <div key={slideIndex} className="w-full flex-shrink-0">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {slide.map((service) => (
-                        <div
-                          key={service._id}
-                          className="bg-[var(--surface-secondary)] rounded-lg border border-[var(--border)] hover:shadow-lg transition-all duration-300 overflow-hidden"
-                        >
-                          <div className="aspect-video bg-[var(--surface)] overflow-hidden">
-                            {service.image ? (
-                              <img
-                                src={service.image.startsWith('/uploads/') ? `http://localhost:5000${service.image}` : service.image}
-                                alt={service.name}
-                                className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-                                onError={(e) => {
-                                  e.currentTarget.src = 'https://via.placeholder.com/400x225?text=Equipment';
-                                }}
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <div className="text-4xl">
-                                  {service.category === 'party' ? '🎉' :
-                                   service.category === 'wedding' ? '💒' :
-                                   service.category === 'corporate' ? '🏢' :
-                                   service.category === 'equipment' ? '🎪' :
-                                   service.category === 'birthday' ? '🎂' :
-                                   service.category === 'funeral' ? '⚰️' : '⚙️'}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="p-4">
-                            <h3 className="font-semibold text-[var(--foreground)] mb-2 line-clamp-1">{service.name}</h3>
-                            <p className="text-sm text-[var(--muted)] mb-3 line-clamp-2">{service.description}</p>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm text-[var(--muted)]">₱</span>
-                                <span className="text-lg font-bold text-[var(--primary)]">{service.price.toLocaleString()}</span>
-                                <span className="text-xs text-[var(--muted)]">/day</span>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <span className="text-sm text-[var(--muted)]">Available:</span>
-                                <span className={`text-sm font-bold ${(service.availableQuantity ?? service.quantity ?? 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                  {service.availableQuantity ?? service.quantity ?? 0}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-
-            {/* Indicators */}
-            {(() => {
-              const itemsPerSlide = 3;
-              const totalSlides = Math.ceil(featuredServices.length / itemsPerSlide);
-              return totalSlides > 1 && (
-                <div className="flex justify-center mt-6 space-x-2">
-                  {Array.from({ length: totalSlides }, (_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentSlide(i)}
-                      className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                        i === currentSlide
-                          ? 'bg-[var(--primary)] scale-125'
-                          : 'bg-[var(--border)] hover:bg-[var(--primary)]/50'
-                      }`}
-                      aria-label={`Go to slide ${i + 1}`}
-                    />
-                  ))}
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-      )}
 
       {/* Welcome Header */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 mb-6">
