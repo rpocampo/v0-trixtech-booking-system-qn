@@ -35,6 +35,18 @@ const deliverySchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    deliveryLatitude: {
+      type: Number,
+      required: true,
+      min: -90,
+      max: 90,
+    },
+    deliveryLongitude: {
+      type: Number,
+      required: true,
+      min: -180,
+      max: 180,
+    },
     deliveryNotes: {
       type: String,
     },

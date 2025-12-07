@@ -62,11 +62,8 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  Manila, Philippines
+                  Balayan, Batangas, Calabarzon, Philippines
                 </a>
-              </div>
-              <div className="flex items-center space-x-4">
-                <Link href="#" className="text-gray-600 hover:text-blue-600 transition-colors duration-200">Terms & Conditions</Link>
               </div>
             </div>
           </div>
@@ -84,6 +81,7 @@ export default function Home() {
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 4v10m0 0l-2-2m2 2l2-2m6-6v6m0 0l2 2m-2-2l-2 2" />
                 </svg>
+                <span className="hidden sm:inline">Reserve Here</span>
               </Link>
             </div>
 
@@ -572,7 +570,7 @@ export default function Home() {
       </section>
 
       {/* About TRIXTECH Section */}
-      <section className="py-20 bg-white">
+      <section id="about" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -612,42 +610,36 @@ export default function Home() {
             </div>
 
             <div className="lg:pl-8">
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-6">Our Services Include:</h3>
-                <ul className="space-y-4">
-                  <li className="flex items-start">
-                    <svg className="w-6 h-6 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-gray-700">Complete event packages for all occasions</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-6 h-6 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-gray-700">Premium equipment rental (sound, lighting, furniture)</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-6 h-6 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-gray-700">Professional setup and decoration services</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-6 h-6 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-gray-700">Catering coordination and event management</span>
-                  </li>
-                  <li className="flex items-start">
-                    <svg className="w-6 h-6 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    <span className="text-gray-700">24/7 customer support and consultation</span>
-                  </li>
-                </ul>
-              </div>
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-8">
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">Our Services Include:</h3>
+              <ul className="space-y-4">
+                <li className="flex items-start">
+                  <svg className="w-6 h-6 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-gray-700">event packages for birthdays, wedding and corporate occasions</span>
+                </li>
+                <li className="flex items-start">
+                  <svg className="w-6 h-6 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-gray-700">Premium equipment rental (chairs, table, tents, table clothes)</span>
+                </li>
+                <li className="flex items-start">
+                  <svg className="w-6 h-6 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-gray-700">Professional setup and decoration services</span>
+                </li>
+                <li className="flex items-start">
+                  <svg className="w-6 h-6 text-blue-600 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-gray-700">24/7 booking and reservation</span>
+                </li>
+              </ul>
             </div>
+          </div>
           </div>
       {/* Final Call to Action Section */}
       <section className="py-20 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 relative overflow-hidden">
@@ -755,7 +747,7 @@ export default function Home() {
               </ul>
             </div>
 
-            <div>
+            <div id="contact">
               <h4 className="font-bold mb-6 text-white text-lg">Contact Info</h4>
               <ul className="space-y-3 text-gray-300">
                 <li className="flex items-start">
@@ -775,7 +767,7 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  <span>Manila, Philippines</span>
+                  <span>Balayan, Batangas, Calabarzon, Philippines</span>
                 </li>
               </ul>
             </div>

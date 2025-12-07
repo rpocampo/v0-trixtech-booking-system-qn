@@ -2,6 +2,7 @@ const express = require('express');
 const Delivery = require('../models/Delivery');
 const Booking = require('../models/Booking');
 const { authMiddleware, adminMiddleware } = require('../middleware/auth');
+const { validateDeliveryCoordinates } = require('../utils/locationService');
 
 const router = express.Router();
 
@@ -73,6 +74,8 @@ router.post('/', adminMiddleware, async (req, res, next) => {
       bookingId,
       scheduledDate,
       deliveryAddress,
+      deliveryLatitude,
+      deliveryLongitude,
       deliveryNotes,
       contactPerson,
       estimatedDuration = 60
@@ -82,6 +85,31 @@ router.post('/', adminMiddleware, async (req, res, next) => {
       return res.status(400).json({
         success: false,
         message: 'Booking ID, scheduled date, and delivery address are required'
+      });
+    }
+
+    if (deliveryLatitude === undefined || deliveryLongitude === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Delivery coordinates (latitude and longitude) are required'
+      });
+    }
+
+    // Validate delivery location is within 30km radius
+    try {
+      const locationValidation = validateDeliveryCoordinates(deliveryLatitude, deliveryLongitude);
+      if (!locationValidation.isWithinRadius) {
+        return res.status(400).json({
+          success: false,
+          message: locationValidation.message,
+          distance: locationValidation.distance,
+          maxRadius: locationValidation.maxRadius
+        });
+      }
+    } catch (validationError) {
+      return res.status(400).json({
+        success: false,
+        message: validationError.message
       });
     }
 
@@ -118,6 +146,8 @@ router.post('/', adminMiddleware, async (req, res, next) => {
       customerId: booking.customerId._id,
       scheduledDate: new Date(scheduledDate),
       deliveryAddress,
+      deliveryLatitude,
+      deliveryLongitude,
       deliveryNotes,
       contactPerson,
       estimatedDuration,
@@ -213,8 +243,8 @@ router.put('/:id', adminMiddleware, async (req, res, next) => {
   try {
     const updates = req.body;
     const allowedUpdates = [
-      'scheduledDate', 'deliveryAddress', 'deliveryNotes',
-      'contactPerson', 'estimatedDuration', 'priority'
+      'scheduledDate', 'deliveryAddress', 'deliveryLatitude', 'deliveryLongitude',
+      'deliveryNotes', 'contactPerson', 'estimatedDuration', 'priority'
     ];
 
     // Filter out disallowed updates
@@ -242,6 +272,34 @@ router.put('/:id', adminMiddleware, async (req, res, next) => {
           success: false,
           message: 'New delivery time conflicts with existing deliveries',
           availability
+        });
+      }
+    }
+
+    // If updating coordinates, validate delivery radius
+    if (filteredUpdates.deliveryLatitude !== undefined || filteredUpdates.deliveryLongitude !== undefined) {
+      const delivery = await Delivery.findById(req.params.id);
+      if (!delivery) {
+        return res.status(404).json({ success: false, message: 'Delivery not found' });
+      }
+
+      const newLat = filteredUpdates.deliveryLatitude !== undefined ? filteredUpdates.deliveryLatitude : delivery.deliveryLatitude;
+      const newLng = filteredUpdates.deliveryLongitude !== undefined ? filteredUpdates.deliveryLongitude : delivery.deliveryLongitude;
+
+      try {
+        const locationValidation = validateDeliveryCoordinates(newLat, newLng);
+        if (!locationValidation.isWithinRadius) {
+          return res.status(400).json({
+            success: false,
+            message: locationValidation.message,
+            distance: locationValidation.distance,
+            maxRadius: locationValidation.maxRadius
+          });
+        }
+      } catch (validationError) {
+        return res.status(400).json({
+          success: false,
+          message: validationError.message
         });
       }
     }

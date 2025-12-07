@@ -358,15 +358,20 @@ export default function Services() {
   };
 
   const checkLocationProximity = (lat: number, lng: number) => {
-    // Example business location (Manila, Philippines - adjust as needed)
-    const businessLat = 14.5995;
-    const businessLng = 120.9842;
+    // Business location (Balayan, Batangas, Philippines)
+    const businessLat = 13.9371;
+    const businessLng = 120.7330;
 
     const distance = calculateDistance(lat, lng, businessLat, businessLng);
 
-    // Allow bookings within 30km of business location
-    if (distance > 30) {
-      alert(`You are ${distance.toFixed(1)}km away from our service area. Equipment delivery may not be available in your location. Please contact us for special arrangements.`);
+    // Allow bookings within 100km of business location
+    if (distance > 100) {
+      setLocationAllowed(false);
+      setLocationError(`Delivery is only available within 100km from Balayan, Batangas. Distance: ${distance.toFixed(1)}km`);
+      alert(`You are ${distance.toFixed(1)}km away from our service area in Balayan, Batangas. Delivery is only available within 100km from our location. Please contact us for special arrangements.`);
+    } else {
+      setLocationAllowed(true);
+      setLocationError('');
     }
   };
 
@@ -444,27 +449,27 @@ export default function Services() {
       <div className="space-y-4 mb-6 px-2 sm:px-4 lg:px-6">
         {/* Location Status */}
         <div className={`border rounded-lg p-4 flex items-center justify-between ${
-          locationAllowed ? 'bg-green-50 border-green-200' : 'bg-yellow-50 border-yellow-200'
+          locationAllowed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
         }`}>
           <div className="flex items-center gap-3">
-            <span className="text-2xl">{locationAllowed ? '📍' : '⚠️'}</span>
+            <span className="text-2xl">{locationAllowed ? '📍' : '🚫'}</span>
             <div>
-              <p className={`text-sm font-medium ${locationAllowed ? 'text-green-600' : 'text-yellow-600'}`}>
-                {locationAllowed ? 'Location Access Granted' : 'Location Access Limited'}
+              <p className={`text-sm font-medium ${locationAllowed ? 'text-green-600' : 'text-red-900'}`}>
+                {locationAllowed ? 'Location Access Granted' : 'Service Unavailable'}
               </p>
-              <p className={`text-sm ${locationAllowed ? 'text-green-700' : 'text-yellow-700'}`}>
+              <p className={`text-sm ${locationAllowed ? 'text-green-700' : 'text-red-700'}`}>
                 {locationAllowed
                   ? 'Delivery availability verified for your area'
-                  : locationError || 'Location services not enabled - delivery availability cannot be guaranteed'
+                  : locationError || 'Service not available in your area'
                 }
               </p>
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            {!locationAllowed && (
+            {!locationAllowed && !locationError.includes('Distance:') && (
               <button
                 onClick={() => setShowLocationModal(true)}
-                className="text-yellow-600 hover:text-yellow-800 underline text-sm"
+                className="text-red-600 hover:text-red-800 underline text-sm"
               >
                 Enable Location
               </button>
@@ -474,6 +479,7 @@ export default function Services() {
                 localStorage.removeItem('locationPermissionDecision');
                 localStorage.removeItem('locationPermissionGranted');
                 setLocationAllowed(false);
+                setLocationError('');
                 setShowLocationModal(true);
               }}
               className="text-gray-600 hover:text-gray-800 underline text-xs"

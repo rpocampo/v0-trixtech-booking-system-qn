@@ -66,17 +66,17 @@ export default function CustomerDashboard() {
           const { latitude, longitude } = position.coords;
           setUserLocation({ lat: latitude, lng: longitude });
 
-          // Check if user is within serviceable area (example: within 50km of business location)
-          // Business location coordinates (example: Manila, Philippines)
-          const businessLat = 14.5995;
-          const businessLng = 120.9842;
+          // Check if user is within serviceable area (within 30km of Balayan, Batangas)
+          // Business location coordinates (Balayan, Batangas, Philippines)
+          const businessLat = 13.9371;
+          const businessLng = 120.7330;
 
           const distance = calculateDistance(latitude, longitude, businessLat, businessLng);
-          const maxDistance = 30; // 30km radius
+          const maxDistance = 100; // 100km radius
 
           if (distance > maxDistance) {
             setLocationRestricted(true);
-            setLocationError(`Service not available in your area. Distance: ${distance.toFixed(1)}km`);
+            setLocationError(`Delivery is only available within 100km from Balayan, Batangas. Distance: ${distance.toFixed(1)}km`);
           } else {
             setLocationRestricted(false);
             setLocationError('');
