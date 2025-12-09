@@ -212,48 +212,82 @@ export default function Profile() {
 
       <div className="card p-8">
         {message && (
-          <div className={`mb-4 px-4 py-2 rounded border ${message.includes('successfully') ? 'bg-green-100 border-green-400 text-green-700' : 'bg-red-100 border-red-400 text-red-700'}`}>
-            {message}
+          <div className={`mb-6 px-6 py-4 rounded-2xl border shadow-lg animate-slide-in ${
+            message.includes('successfully')
+              ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200 text-green-800'
+              : 'bg-gradient-to-r from-red-50 to-pink-50 border-red-200 text-red-800'
+          }`}>
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                message.includes('successfully') ? 'bg-green-100' : 'bg-red-100'
+              }`}>
+                {message.includes('successfully') ? (
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                )}
+              </div>
+              <span className="font-medium">{message}</span>
+            </div>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium mb-2">Name</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="input-field"
-            />
+        <form onSubmit={handleSubmit} className="space-y-8">
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Full Name</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-4 py-4 text-base border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/70 backdrop-blur-sm transition-all duration-300 hover:shadow-md"
+                placeholder="Enter your full name"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Email Address</label>
+              <input
+                type="email"
+                value={user?.email || ''}
+                disabled
+                className="w-full px-4 py-4 text-base border border-gray-200 rounded-2xl bg-gray-50/80 backdrop-blur-sm text-gray-500 cursor-not-allowed"
+              />
+              <p className="text-xs text-gray-500 mt-2 flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Email cannot be changed for security reasons
+              </p>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Email</label>
-            <input type="email" value={user?.email || ''} disabled className="input-field bg-gray-100" />
-            <p className="text-xs text-[var(--muted)] mt-1">Email cannot be changed</p>
-          </div>
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Phone Number</label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="w-full px-4 py-4 text-base border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/70 backdrop-blur-sm transition-all duration-300 hover:shadow-md"
+                placeholder="+63 (555) 000-0000"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Phone</label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              className="input-field"
-              placeholder="+63 (555) 000-0000"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Address</label>
-            <textarea
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="input-field"
-              rows={3}
-              placeholder="Your address"
-            />
+            <div className="space-y-2 md:col-span-1">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Address</label>
+              <textarea
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="w-full px-4 py-4 text-base border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/70 backdrop-blur-sm transition-all duration-300 hover:shadow-md resize-none"
+                rows={4}
+                placeholder="Enter your complete address"
+              />
+            </div>
           </div>
 
           {/* GCash QR Code Section */}

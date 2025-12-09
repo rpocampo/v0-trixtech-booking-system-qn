@@ -184,31 +184,31 @@ export default function CustomerDashboard() {
     }
 
     return (
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6">
+      <div className="bg-white/90 backdrop-blur-sm border border-gray-200/50 rounded-3xl p-8 shadow-xl">
         {/* Calendar Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-xl font-semibold">
+        <div className="flex items-center justify-between mb-8">
+          <div className="animate-fade-in">
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
               Select Reservation Date
             </h2>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-gray-600 mt-2 text-lg">
               {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
               onClick={() => navigateMonth('prev')}
-              className="btn-secondary px-3 py-1"
+              className="bg-white hover:bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2 font-semibold text-gray-700 hover:text-blue-600 transition-all duration-200 hover:shadow-md active:scale-95"
               aria-label="Previous month"
             >
-              ←
+              ← Previous
             </button>
             <button
               onClick={() => navigateMonth('next')}
-              className="btn-secondary px-3 py-1"
+              className="bg-white hover:bg-gray-50 border border-gray-200 rounded-2xl px-4 py-2 font-semibold text-gray-700 hover:text-blue-600 transition-all duration-200 hover:shadow-md active:scale-95"
               aria-label="Next month"
             >
-              →
+              Next →
             </button>
           </div>
         </div>
@@ -265,22 +265,25 @@ export default function CustomerDashboard() {
         </div>
 
         {/* Legend */}
-        <div className="mt-6 flex flex-wrap justify-center gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
-            <span className="text-gray-600">Available</span>
+        <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm">
+          <div className="flex items-center gap-3 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200 shadow-sm">
+            <div className="w-3 h-3 bg-gradient-to-r from-green-100 to-green-50 border border-green-200 rounded-full"></div>
+            <span className="text-gray-700 font-medium">Available</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-red-100 border border-red-200 rounded"></div>
-            <span className="text-gray-600">Busy</span>
+          <div className="flex items-center gap-3 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200 shadow-sm">
+            <div className="w-3 h-3 bg-gradient-to-r from-red-100 to-red-50 border border-red-200 rounded-full"></div>
+            <span className="text-gray-700 font-medium">Busy</span>
           </div>
         </div>
 
         {/* Instructions */}
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800 text-center">
-            📅 Click on an available date to browse equipment for that day
-          </p>
+        <div className="mt-6 p-6 bg-gradient-to-r from-blue-50 to-cyan-50 border border-blue-200/50 rounded-2xl shadow-sm">
+          <div className="flex items-center justify-center gap-3">
+            <div className="text-2xl">📅</div>
+            <p className="text-blue-800 text-center font-medium">
+              Click on an available date to browse equipment for that day
+            </p>
+          </div>
         </div>
 
       </div>
@@ -449,22 +452,23 @@ export default function CustomerDashboard() {
         </div>
       </div>
 
-      {/* Recent Bookings */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 mb-6">
-
+      {/* Calendar Section */}
+      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 mb-8 overflow-hidden">
         {renderCalendar()}
       </div>
 
       {/* Location Restriction Warning */}
       {locationRestricted && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center gap-3">
-            <svg className="w-5 h-5 text-red-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
+        <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200/50 rounded-2xl p-6 mb-8 shadow-lg animate-fade-in">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
             <div>
-              <h3 className="font-semibold text-red-900 mb-1">Service Unavailable</h3>
-              <p className="text-sm text-red-700">{locationError}</p>
+              <h3 className="font-bold text-red-900 mb-2 text-lg">Service Unavailable</h3>
+              <p className="text-red-700 font-medium">{locationError}</p>
             </div>
           </div>
         </div>
@@ -474,61 +478,61 @@ export default function CustomerDashboard() {
 
 
       {/* Quick Actions */}
-      <div className="grid md:grid-cols-3 gap-4 mb-6">
+      <div className="grid md:grid-cols-3 gap-6 mb-8">
         {locationRestricted ? (
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 opacity-60 cursor-not-allowed">
+          <div className="bg-white/60 backdrop-blur-sm border border-gray-200 rounded-2xl p-6 opacity-60 cursor-not-allowed shadow-lg">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-[var(--surface-secondary)] rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-[var(--muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-14 h-14 bg-gray-100 rounded-2xl flex items-center justify-center">
+                <svg className="w-7 h-7 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--muted)]">Browse Equipment</h3>
-                <p className="text-[var(--muted)] text-sm">Service not available in your area</p>
+                <h3 className="font-semibold text-gray-400">Browse Equipment</h3>
+                <p className="text-gray-400 text-sm">Service not available in your area</p>
               </div>
             </div>
           </div>
         ) : (
-          <Link href="/customer/services" className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 hover:shadow-md hover:border-[var(--primary)] transition-all duration-200">
+          <Link href="/customer/services" className="group bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-6 hover:shadow-xl hover:border-blue-300 transition-all duration-300 hover:-translate-y-1">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-[var(--primary-50)] rounded-lg flex items-center justify-center">
-                <svg className="w-6 h-6 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold text-[var(--foreground)]">Browse Equipment</h3>
-                <p className="text-[var(--muted)] text-sm">Find and rent equipment for your events</p>
+                <h3 className="font-bold text-gray-900 group-hover:text-blue-600 transition-colors">Browse Equipment</h3>
+                <p className="text-gray-600 text-sm">Find and rent premium equipment for your events</p>
               </div>
             </div>
           </Link>
         )}
 
-        <Link href="/customer/bookings" className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 hover:shadow-md hover:border-[var(--secondary)] transition-all duration-200">
+        <Link href="/customer/bookings" className="group bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-6 hover:shadow-xl hover:border-cyan-300 transition-all duration-300 hover:-translate-y-1">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-[var(--secondary)]/10 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-[var(--secondary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-14 h-14 bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <svg className="w-7 h-7 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
             <div>
-              <h3 className="font-semibold text-[var(--foreground)]">My Reservations</h3>
-              <p className="text-[var(--muted)] text-sm">View and manage your reservations</p>
+              <h3 className="font-bold text-gray-900 group-hover:text-cyan-600 transition-colors">My Reservations</h3>
+              <p className="text-gray-600 text-sm">View and manage your bookings</p>
             </div>
           </div>
         </Link>
 
-        <Link href="/customer/profile" className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 hover:shadow-md hover:border-[var(--accent)] transition-all duration-200">
+        <Link href="/customer/profile" className="group bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-6 hover:shadow-xl hover:border-purple-300 transition-all duration-300 hover:-translate-y-1">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-14 h-14 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+              <svg className="w-7 h-7 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
             <div>
-              <h3 className="font-semibold text-[var(--foreground)]">Profile</h3>
-              <p className="text-[var(--muted)] text-sm">Update your account information</p>
+              <h3 className="font-bold text-gray-900 group-hover:text-purple-600 transition-colors">Profile</h3>
+              <p className="text-gray-600 text-sm">Update your account information</p>
             </div>
           </div>
         </Link>

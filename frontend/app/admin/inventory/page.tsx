@@ -183,7 +183,9 @@ export default function InventoryManagement() {
     if (!token) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/inventory/stock-history?startDate=${historyDateRange.startDate}&endDate=${historyDateRange.endDate}`, {
+      // Use endDate only, set startDate to 30 days before endDate
+      const startDate = new Date(new Date(historyDateRange.endDate).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const response = await fetch(`http://localhost:5000/api/inventory/stock-history?startDate=${startDate}&endDate=${historyDateRange.endDate}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -342,15 +344,6 @@ export default function InventoryManagement() {
           </div>
           <div className="stat-value text-blue-600">
             {(lowStockAlerts?.critical || 0) + (lowStockAlerts?.warning || 0) + (lowStockAlerts?.info || 0)}
-          </div>
-        </div>
-        <div className="stat-box hover:shadow-lg transition-shadow duration-300 cursor-pointer" onClick={() => fetchStockHistory()}>
-          <div className="stat-label flex items-center gap-2">
-            <span className="text-lg">📊</span>
-            Stock History
-          </div>
-          <div className="stat-value text-purple-600">
-            Monitor
           </div>
         </div>
       </div>
@@ -815,30 +808,16 @@ export default function InventoryManagement() {
                 <div>
                   <h3 className="text-2xl font-bold text-gray-100">Date-to-Date Stock Monitoring</h3>
                   <p className="text-gray-400 mt-1">
-                    {new Date(historyDateRange.startDate).toLocaleDateString()} - {new Date(historyDateRange.endDate).toLocaleDateString()}
+                    {new Date(new Date(historyDateRange.endDate).getTime() - 30 * 24 * 60 * 60 * 1000).toLocaleDateString()} - {new Date(historyDateRange.endDate).toLocaleDateString()}
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2">
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input
-                      type="date"
-                      value={historyDateRange.startDate}
-                      onChange={(e) => setHistoryDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-                      className="input-field text-sm"
-                    />
-                    <input
-                      type="date"
-                      value={historyDateRange.endDate}
-                      onChange={(e) => setHistoryDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-                      className="input-field text-sm"
-                    />
-                    <button
-                      onClick={fetchStockHistory}
-                      className="btn-primary text-sm min-w-[80px] flex justify-center items-center"
-                    >
-                      Update
-                    </button>
-                  </div>
+                  <button
+                    onClick={fetchStockHistory}
+                    className="btn-primary text-sm min-w-[80px] flex justify-center items-center"
+                  >
+                    Refresh
+                  </button>
                   <button
                     onClick={() => {
                       setShowStockHistory(false);
@@ -970,7 +949,7 @@ export default function InventoryManagement() {
                       const url = window.URL.createObjectURL(blob);
                       const a = document.createElement('a');
                       a.href = url;
-                      a.download = `stock-history-${historyDateRange.startDate}-to-${historyDateRange.endDate}.csv`;
+                      a.download = `stock-history-${new Date(new Date(historyDateRange.endDate).getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}-to-${historyDateRange.endDate}.csv`;
                       a.click();
                       window.URL.revokeObjectURL(url);
                     }

@@ -157,9 +157,6 @@ export default function AdminBookings() {
       filtered = filtered.filter(booking => new Date(booking.bookingDate) >= new Date(filters.dateFrom));
     }
 
-    if (filters.dateTo) {
-      filtered = filtered.filter(booking => new Date(booking.bookingDate) <= new Date(filters.dateTo));
-    }
 
     setFilteredBookings(filtered);
   }, [bookings, filters]);
@@ -745,7 +742,7 @@ export default function AdminBookings() {
 
                      return (
                        <div key={booking._id} className="border rounded-lg p-4 bg-indigo-50 border-indigo-200">
-                         <div className="grid md:grid-cols-4 gap-4">
+                         <div className="grid md:grid-cols-3 gap-4">
                            <div>
                              <span className="text-sm text-gray-600">Equipment:</span>
                              <p className="font-medium">{booking.serviceId?.name || 'Unknown'}</p>
@@ -935,7 +932,7 @@ export default function AdminBookings() {
           {/* Filters */}
           <div className="card p-6 mb-6">
             <h2 className="text-xl font-semibold mb-4">Filter Reservations</h2>
-            <div className="grid md:grid-cols-4 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Status</label>
                 <select
@@ -968,15 +965,6 @@ export default function AdminBookings() {
                   type="date"
                   value={filters.dateFrom}
                   onChange={(e) => setFilters({ ...filters, dateFrom: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Date To</label>
-                <input
-                  type="date"
-                  value={filters.dateTo}
-                  onChange={(e) => setFilters({ ...filters, dateTo: e.target.value })}
                   className="input-field"
                 />
               </div>

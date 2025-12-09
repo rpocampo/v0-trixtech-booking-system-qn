@@ -295,6 +295,18 @@ if (process.env.NODE_ENV !== 'test') {
       console.error('Error auto-completing rentals:', error);
     }
   }, 2 * 60 * 60 * 1000); // 2 hours
+
+  // Auto-complete all bookings every hour
+  setInterval(async () => {
+    try {
+      const result = await AutoBookingCompletionService.runAutoCompletionCheck();
+      if (result.completed > 0) {
+        console.log(`Auto-completed ${result.completed}/${result.processed} bookings, restored ${result.inventoryRestored} inventory items, sent ${result.notificationsSent} notifications, credited ${result.paymentsCredited} payments`);
+      }
+    } catch (error) {
+      console.error('Error auto-completing bookings:', error);
+    }
+  }, 60 * 60 * 1000); // 1 hour
 }
 
 // Function to send automated follow-up communications

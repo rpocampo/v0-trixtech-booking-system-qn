@@ -1,275 +1,220 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSocket } from '../../../components/SocketProvider';
-
-interface InventoryReport {
-  serviceId: string;
-  name: string;
-  totalStock: number;
-  bookedQuantity: number;
-  availableQuantity: number;
-  utilizationRate: string;
-}
-
-interface DeliverySchedule {
-  id: string;
-  serviceName: string;
-  serviceCategory: string;
-  customerName: string;
-  customerEmail: string;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  status: string;
-  quantity: number;
-  totalPrice: number;
-  notes?: string;
-}
-
 
 export default function Reports() {
-  const { socket } = useSocket();
-  const [inventoryReport, setInventoryReport] = useState<InventoryReport[]>([]);
-  const [deliverySchedules, setDeliverySchedules] = useState<DeliverySchedule[]>([]);
+  const [stockHistory, setStockHistory] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
-  const [dateRange, setDateRange] = useState({
-    startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days ago
-    endDate: new Date().toISOString().split('T')[0] // Today
-  });
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Today
 
-  const fetchReports = async () => {
+  const fetchStockHistory = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
     try {
-      const token = localStorage.getItem('token');
-
-      // Fetch inventory reports with date range filter
-      const inventoryResponse = await fetch(`http://localhost:5000/api/analytics/inventory?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`, {
+      setLoading(true);
+      const response = await fetch(`http://localhost:5000/api/inventory/stock-history?startDate=${selectedDate}&endDate=${selectedDate}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const inventoryData = await inventoryResponse.json();
-      if (inventoryData.success) {
-        setInventoryReport(inventoryData.data);
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setStockHistory(data);
+        }
       }
-
-      // Fetch delivery schedules
-      await fetchDeliverySchedules();
-
     } catch (error) {
-      console.error('Failed to fetch reports:', error);
+      console.error('Failed to fetch stock history:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchDeliverySchedules = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/bookings/admin/delivery-schedules?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
-      if (data.success) {
-        setDeliverySchedules(data.schedules);
-      }
-    } catch (error) {
-      console.error('Failed to fetch delivery schedules:', error);
-    }
-  };
-
-
   useEffect(() => {
-    fetchReports();
+    fetchStockHistory();
   }, []);
 
-  // Refetch reports when dateRange changes
   useEffect(() => {
-    if (dateRange.startDate && dateRange.endDate) {
-      fetchReports();
-      fetchDeliverySchedules();
+    if (selectedDate) {
+      fetchStockHistory();
     }
-  }, [dateRange]);
+  }, [selectedDate]);
 
-  // Real-time updates
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleInventoryUpdate = (data: any) => {
-      console.log('Inventory updated for reports:', data);
-      setUpdating(true);
-
-      // Refresh the reports data
-      fetchReports();
-
-      setTimeout(() => setUpdating(false), 2000);
-    };
-
-    const handleServiceUpdate = (data: any) => {
-      console.log('Service updated for reports:', data);
-      setUpdating(true);
-
-      // Refresh the reports data
-      fetchReports();
-
-      setTimeout(() => setUpdating(false), 2000);
-    };
-
-    socket.on('inventory-updated', handleInventoryUpdate);
-    socket.on('service-updated', handleServiceUpdate);
-
-    return () => {
-      socket.off('inventory-updated', handleInventoryUpdate);
-      socket.off('service-updated', handleServiceUpdate);
-    };
-  }, [socket]);
-
-  if (loading) return <div>Loading reports...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[var(--primary)]"></div>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      {/* Real-time Update Indicator */}
-      {updating && (
-        <div className="fixed top-4 right-4 z-50 bg-[var(--primary)] text-white px-4 py-2 rounded-lg shadow-lg animate-slide-in flex items-center gap-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-          <span className="text-sm font-medium">Reports updated!</span>
-        </div>
-      )}
-
-      <h1 className="text-4xl font-bold mb-2">Admin Reports & Delivery Management</h1>
-      <p className="text-[var(--muted)] mb-8">Track inventory, delivery schedules, and truck availability</p>
-
-      <div className="card p-6">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="section-title">Equipment Inventory Status</h2>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">From:</label>
-              <input
-                className="input-field"
-                type="date"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, startDate: e.target.value }))}
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">To:</label>
-              <input
-                className="input-field"
-                type="date"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange(prev => ({ ...prev, endDate: e.target.value }))}
-              />
-            </div>
-          </div>
-        </div>
-        {inventoryReport.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border)]">
-                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Equipment</th>
-                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Total Stock</th>
-                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Reserved</th>
-                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Available</th>
-                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Utilization</th>
-                </tr>
-              </thead>
-              <tbody>
-                {inventoryReport.map((item) => (
-                  <tr key={item.serviceId} className="border-b border-[var(--border)] hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-4 font-semibold">{item.name}</td>
-                    <td className="py-3 px-4">{item.totalStock}</td>
-                    <td className="py-3 px-4">{item.bookedQuantity}</td>
-                    <td className="py-3 px-4">
-                      <span className={item.availableQuantity === 0 ? 'text-red-600 font-semibold' : ''}>
-                        {item.availableQuantity}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 bg-gray-200 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full ${parseFloat(item.utilizationRate) > 80 ? 'bg-red-500' : parseFloat(item.utilizationRate) > 50 ? 'bg-yellow-500' : 'bg-green-500'}`}
-                            style={{ width: `${Math.min(parseFloat(item.utilizationRate), 100)}%` }}
-                          ></div>
-                        </div>
-                        <span className="text-sm">{item.utilizationRate}%</span>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-[var(--muted)] text-center py-8">No equipment data available</p>
-        )}
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-4xl font-bold text-[var(--foreground)]">Reports</h1>
+        <p className="text-[var(--muted)] mt-2">Monitor and analyze your inventory data</p>
       </div>
 
-
-      {/* Delivery Schedules */}
-      <div className="card p-6 mt-8">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="section-title">📅 Delivery Schedules</h2>
-          <div className="text-sm text-[var(--muted)]">
-            {new Date(dateRange.startDate).toLocaleDateString()} - {new Date(dateRange.endDate).toLocaleDateString()}
+      {/* Stock History Content */}
+      <div className="card p-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6 gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-[var(--foreground)] flex items-center gap-2">
+              <span className="text-lg">📊</span>
+              Stock History
+            </h2>
+            <p className="text-[var(--muted)] mt-1">
+              Stock history for {new Date(selectedDate).toLocaleDateString()}
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="input-field text-sm"
+              />
+              <button
+                onClick={fetchStockHistory}
+                className="btn-primary text-sm min-w-[80px] flex justify-center items-center"
+              >
+                Update
+              </button>
+            </div>
           </div>
         </div>
 
-        {deliverySchedules.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[var(--border)]">
-                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Time</th>
-                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Service</th>
-                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Customer</th>
-                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Duration</th>
-                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Status</th>
-                  <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                {deliverySchedules.map((schedule) => (
-                  <tr key={schedule.id} className="border-b border-[var(--border)] hover:bg-gray-50 transition-colors">
-                    <td className="py-3 px-4">
-                      <div className="font-semibold">
-                        {new Date(schedule.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -
-                        {new Date(schedule.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold">{schedule.serviceName}</div>
-                      <div className="text-xs text-[var(--muted)] capitalize">{schedule.serviceCategory}</div>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold">{schedule.customerName}</div>
-                      <div className="text-xs text-[var(--muted)]">{schedule.customerEmail}</div>
-                    </td>
-                    <td className="py-3 px-4">{schedule.duration} minutes</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        schedule.status === 'confirmed'
-                          ? 'bg-green-100 text-green-800'
-                          : schedule.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {schedule.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="font-semibold">₱{schedule.totalPrice}</div>
-                      <div className="text-xs text-[var(--muted)]">Qty: {schedule.quantity}</div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Stock History Summary */}
+        <div className="grid md:grid-cols-4 gap-4 mb-6">
+          <div className="stat-box">
+            <div className="stat-label">Total Transactions</div>
+            <div className="stat-value text-[var(--primary)]">{stockHistory?.summary?.totalTransactions || 0}</div>
           </div>
-        ) : (
-          <p className="text-[var(--muted)] text-center py-8">No delivery schedules for selected date</p>
-        )}
+          <div className="stat-box">
+            <div className="stat-label">Stock Added</div>
+            <div className="stat-value text-green-600">{stockHistory?.summary?.totalStockAdded || 0}</div>
+          </div>
+          <div className="stat-box">
+            <div className="stat-label">Stock Reduced</div>
+            <div className="stat-value text-red-600">{stockHistory?.summary?.totalStockReduced || 0}</div>
+          </div>
+          <div className="stat-box">
+            <div className="stat-label">Net Change</div>
+            <div className={`stat-value ${(stockHistory?.summary?.netChange || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {(stockHistory?.summary?.netChange || 0) >= 0 ? '+' : ''}{stockHistory?.summary?.netChange || 0}
+            </div>
+          </div>
+        </div>
+
+        {/* Stock History Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--border)]">
+                <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Date</th>
+                <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Item</th>
+                <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">Type</th>
+                <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">Previous Stock</th>
+                <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">Change</th>
+                <th className="text-center py-3 px-4 font-semibold text-[var(--muted)]">New Stock</th>
+                <th className="text-left py-3 px-4 font-semibold text-[var(--muted)]">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {stockHistory?.transactions?.map((transaction: any, index: number) => (
+                <tr key={index} className="border-b border-[var(--border)] hover:bg-[var(--surface-hover)] transition-colors">
+                  <td className="py-3 px-4 text-[var(--foreground)]">
+                    {new Date(transaction.date).toLocaleDateString()}
+                  </td>
+                  <td className="py-3 px-4">
+                    <div className="flex items-center gap-2">
+                      {transaction.itemImage ? (
+                        <img
+                          src={transaction.itemImage.startsWith('/uploads/') ? `http://localhost:5000${transaction.itemImage}` : transaction.itemImage}
+                          alt={transaction.itemName}
+                          className="w-6 h-6 rounded object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://via.placeholder.com/24x24?text=I';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-6 h-6 rounded bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 flex items-center justify-center text-xs">📦</div>
+                      )}
+                      <span className="font-medium text-[var(--foreground)]">{transaction.itemName}</span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      transaction.type === 'addition' ? 'bg-green-100 text-green-800' :
+                      transaction.type === 'reduction' ? 'bg-red-100 text-red-800' :
+                      'bg-blue-100 text-blue-800'
+                    }`}>
+                      {transaction.type}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-center font-medium text-[var(--foreground)]">
+                    {transaction.previousStock}
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    <span className={`font-semibold ${
+                      transaction.change > 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {transaction.change > 0 ? '+' : ''}{transaction.change}
+                    </span>
+                  </td>
+                  <td className="py-3 px-4 text-center font-medium text-[var(--foreground)]">
+                    {transaction.newStock}
+                  </td>
+                  <td className="py-3 px-4 text-sm text-[var(--muted)]">
+                    {transaction.reason || 'Manual update'}
+                  </td>
+                </tr>
+              )) || (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
+                    No stock transactions found for the selected date range.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Export Button */}
+        <div className="flex justify-end mt-6">
+          <button
+            onClick={() => {
+              // Simple CSV export
+              if (stockHistory?.transactions) {
+                const csvContent = [
+                  ['Date', 'Item', 'Type', 'Previous Stock', 'Change', 'New Stock', 'Reason'],
+                  ...stockHistory.transactions.map((t: any) => [
+                    new Date(t.date).toLocaleDateString(),
+                    t.itemName,
+                    t.type,
+                    t.previousStock,
+                    t.change,
+                    t.newStock,
+                    t.reason || 'Manual update'
+                  ])
+                ].map(row => row.join(',')).join('\n');
+
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `stock-history-${selectedDate}.csv`;
+                a.click();
+                window.URL.revokeObjectURL(url);
+              }
+            }}
+            className="btn-secondary"
+          >
+            Export CSV
+          </button>
+        </div>
       </div>
     </div>
   );

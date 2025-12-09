@@ -257,31 +257,34 @@ export default function AdminLayout({
         </div>
       )}
 
-      {/* Desktop Sidebar */}
-      <aside className={`hidden md:block bg-[var(--sidebar-bg)] text-[var(--sidebar-text)] sticky top-0 h-screen overflow-y-auto transition-all duration-300 shadow-2xl border-r border-[var(--sidebar-border)] ${isSidebarCollapsed ? 'w-16' : 'w-80'}`}>
+      {/* Modern Desktop Sidebar */}
+      <aside className={`hidden md:block bg-gradient-to-b from-white via-white to-blue-50/30 text-[var(--sidebar-text)] sticky top-0 h-screen overflow-y-auto transition-all duration-300 shadow-2xl border-r border-blue-200/50 backdrop-blur-sm ${isSidebarCollapsed ? 'w-20' : 'w-80'}`}>
         <div className="p-6">
           <div className="flex items-center justify-between mb-12">
             {!isSidebarCollapsed && (
               <Link href="/" className="flex items-center group">
                 <div className="relative">
-                  <img
-                    src="/logo.png"
-                    alt="TRIXTECH"
-                    className="h-10 w-auto transition-transform group-hover:scale-105"
-                  />
-                  <div className="absolute -inset-2 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] rounded-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
+                  <div className="p-3 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl group-hover:scale-110 transition-all duration-300 shadow-lg">
+                    <img
+                      src="/logo.png"
+                      alt="TRIXTECH"
+                      className="h-8 w-auto"
+                    />
+                  </div>
+                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-blue-600 rounded-2xl opacity-0 group-hover:opacity-20 transition-opacity blur-lg"></div>
                 </div>
                 <div className="ml-4">
-                  <span className="text-3xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent">TRIXTECH</span>
-                  <div className="text-xs text-[var(--sidebar-text-secondary)] font-medium tracking-widest uppercase">Admin Control</div>
+                  <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">TRIXTECH</span>
+                  <div className="text-xs text-blue-600/70 font-semibold tracking-widest uppercase">Admin Control</div>
                 </div>
               </Link>
             )}
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="p-3 rounded-xl hover:bg-[var(--sidebar-hover)] transition-all duration-200 hover:scale-105"
+              className="p-3 rounded-2xl hover:bg-blue-100 transition-all duration-300 hover:scale-110 hover:shadow-lg"
+              aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isSidebarCollapsed ? "M13 5l7 7-7 7M5 5l7 7-7 7" : "M11 19l-7-7 7-7m8 14l-7-7 7-7"} />
               </svg>
             </button>
@@ -298,30 +301,30 @@ export default function AdminLayout({
                 </div>
                 {!isSidebarCollapsed && <span className="font-semibold tracking-wide text-lg">Analytics Dashboard</span>}
               </Link>
-              <Link href="/admin/bookings" className={`group flex items-center gap-4 px-5 py-5 rounded-2xl hover:bg-[var(--sidebar-hover)] transition-all duration-200 hover:scale-[1.02] ${isSidebarCollapsed ? 'justify-center' : ''} ${pathname === '/admin/bookings' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-xl shadow-[var(--primary)]/25' : 'text-[var(--sidebar-text-secondary)] hover:text-[var(--sidebar-text)]'}`}>
-                <div className={`p-3 rounded-xl ${pathname === '/admin/bookings' ? 'bg-white/20' : 'bg-[var(--sidebar-hover)] group-hover:bg-[var(--sidebar-active)]'} transition-all duration-200`}>
+              <Link href="/admin/bookings" className={`group flex items-center gap-4 px-6 py-5 rounded-2xl hover:shadow-lg transition-all duration-300 hover:scale-[1.02] ${isSidebarCollapsed ? 'justify-center px-4' : ''} ${pathname === '/admin/bookings' ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-xl shadow-blue-500/25' : 'text-blue-700 hover:text-blue-900 hover:bg-blue-50'}`}>
+                <div className={`p-3 rounded-2xl transition-all duration-300 ${pathname === '/admin/bookings' ? 'bg-white/20 shadow-lg' : 'bg-blue-100 group-hover:bg-blue-200'}`}>
                   <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
-                {!isSidebarCollapsed && <span className="font-semibold tracking-wide text-lg">Reservation Management</span>}
+                {!isSidebarCollapsed && <span className="font-bold tracking-wide text-lg">Reservation Management</span>}
               </Link>
-              <Link href="/admin/inventory" className={`group flex items-center gap-4 px-5 py-5 rounded-2xl hover:bg-[var(--sidebar-hover)] transition-all duration-200 hover:scale-[1.02] ${isSidebarCollapsed ? 'justify-center' : ''} ${pathname === '/admin/inventory' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-xl shadow-[var(--primary)]/25' : 'text-[var(--sidebar-text-secondary)] hover:text-[var(--sidebar-text)]'}`}>
-                <div className={`p-3 rounded-xl ${pathname === '/admin/inventory' ? 'bg-white/20' : 'bg-[var(--sidebar-hover)] group-hover:bg-[var(--sidebar-active)]'} transition-all duration-200`}>
+              <Link href="/admin/inventory" className={`group flex items-center gap-4 px-6 py-5 rounded-2xl hover:shadow-lg transition-all duration-300 hover:scale-[1.02] ${isSidebarCollapsed ? 'justify-center px-4' : ''} ${pathname === '/admin/inventory' ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-xl shadow-blue-500/25' : 'text-blue-700 hover:text-blue-900 hover:bg-blue-50'}`}>
+                <div className={`p-3 rounded-2xl transition-all duration-300 ${pathname === '/admin/inventory' ? 'bg-white/20 shadow-lg' : 'bg-blue-100 group-hover:bg-blue-200'}`}>
                   <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                   </svg>
                 </div>
-                {!isSidebarCollapsed && <span className="font-semibold tracking-wide text-lg">Inventory Control</span>}
+                {!isSidebarCollapsed && <span className="font-bold tracking-wide text-lg">Inventory Control</span>}
               </Link>
-              <Link href="/admin/services" className={`group flex items-center gap-4 px-5 py-5 rounded-2xl hover:bg-[var(--sidebar-hover)] transition-all duration-200 hover:scale-[1.02] ${isSidebarCollapsed ? 'justify-center' : ''} ${pathname === '/admin/services' ? 'bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white shadow-xl shadow-[var(--primary)]/25' : 'text-[var(--sidebar-text-secondary)] hover:text-[var(--sidebar-text)]'}`}>
-                <div className={`p-3 rounded-xl ${pathname === '/admin/services' ? 'bg-white/20' : 'bg-[var(--sidebar-hover)] group-hover:bg-[var(--sidebar-active)]'} transition-all duration-200`}>
+              <Link href="/admin/services" className={`group flex items-center gap-4 px-6 py-5 rounded-2xl hover:shadow-lg transition-all duration-300 hover:scale-[1.02] ${isSidebarCollapsed ? 'justify-center px-4' : ''} ${pathname === '/admin/services' ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-xl shadow-blue-500/25' : 'text-blue-700 hover:text-blue-900 hover:bg-blue-50'}`}>
+                <div className={`p-3 rounded-2xl transition-all duration-300 ${pathname === '/admin/services' ? 'bg-white/20 shadow-lg' : 'bg-blue-100 group-hover:bg-blue-200'}`}>
                   <svg className="w-6 h-6 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </div>
-                {!isSidebarCollapsed && <span className="font-semibold tracking-wide text-lg">Equipment Settings</span>}
+                {!isSidebarCollapsed && <span className="font-bold tracking-wide text-lg">Equipment Settings</span>}
               </Link>
             </div>
 

@@ -120,20 +120,20 @@ export default function CustomerLayout({
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-[var(--background)] to-[var(--surface-secondary)]" data-theme="customer">
         {/* Navigation */}
-        <nav className="bg-gradient-to-r from-[var(--nav-bg)] via-[var(--surface)] to-[var(--nav-bg)] border-b border-[var(--nav-border)] sticky top-0 z-50 shadow-xl backdrop-blur-md">
+        <nav className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 sticky top-0 z-50 shadow-lg">
           <div className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6 flex items-center">
             <Link href="/" className="flex items-center group hover:scale-105 transition-all duration-300">
               <div className="relative">
                 <img
                   src="/logo.png"
                   alt="TRIXTECH"
-                  className="h-8 sm:h-10 w-auto transition-transform group-hover:scale-110"
+                  className="h-8 sm:h-10 w-auto transition-transform group-hover:scale-110 drop-shadow-sm"
                 />
-                <div className="absolute -inset-2 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                <div className="absolute -inset-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-sm"></div>
               </div>
               <div className="ml-2 sm:ml-3">
-                <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent">TRIXTECH</span>
-                <div className="text-xs text-[var(--nav-text-secondary)] font-medium -mt-1 hidden sm:block">Event Equipment Rental</div>
+                <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">TRIXTECH</span>
+                <div className="text-xs text-gray-600 font-medium -mt-1 hidden sm:block">Event Equipment Rental</div>
               </div>
             </Link>
 
@@ -199,14 +199,14 @@ export default function CustomerLayout({
               <div className="relative">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center gap-3 px-4 py-2 rounded-xl border border-[var(--nav-border)] text-[var(--nav-text)] hover:bg-[var(--nav-hover)] transition-all duration-200 hover:shadow-md"
+                  className="flex items-center gap-3 px-4 py-2 rounded-2xl border border-gray-200/50 text-gray-700 hover:bg-gray-50/80 transition-all duration-200 hover:shadow-md backdrop-blur-sm"
                 >
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white text-sm font-semibold shadow-sm">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white text-sm font-semibold shadow-lg">
                     {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                   </div>
                   <div className="hidden xl:block text-left">
-                    <div className="text-sm font-semibold text-[var(--nav-text)]">{user?.name?.split(' ')[0] || 'User'}</div>
-                    <div className="text-xs text-[var(--nav-text-secondary)]">Customer</div>
+                    <div className="text-sm font-semibold text-gray-900">{user?.name?.split(' ')[0] || 'User'}</div>
+                    <div className="text-xs text-gray-600">Customer</div>
                   </div>
                   <svg className={`w-4 h-4 transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -214,18 +214,18 @@ export default function CustomerLayout({
                 </button>
 
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-3 w-72 bg-[var(--surface)] rounded-2xl shadow-2xl border border-[var(--border)] z-50 backdrop-blur-md">
-                    <div className="p-5 border-b border-[var(--border)]">
+                  <div className="absolute right-0 mt-3 w-80 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-200/50 z-50">
+                    <div className="p-6 border-b border-gray-100">
                       <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-lg">
+                        <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-semibold flex-shrink-0 shadow-lg">
                           {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="font-bold text-[var(--foreground)] truncate text-lg">{user?.name}</p>
-                          <p className="text-sm text-[var(--muted)] truncate">{user?.email}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <div className="w-2 h-2 bg-[var(--success)] rounded-full"></div>
-                            <span className="text-xs text-[var(--success)] font-medium">Active Customer</span>
+                          <p className="font-bold text-gray-900 truncate text-lg">{user?.name}</p>
+                          <p className="text-sm text-gray-600 truncate">{user?.email}</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span className="text-xs text-green-600 font-medium">Active Customer</span>
                           </div>
                         </div>
                       </div>
@@ -233,7 +233,7 @@ export default function CustomerLayout({
                     <div className="py-3">
                       <Link
                         href="/customer/profile"
-                        className="flex items-center gap-4 px-5 py-4 text-[var(--foreground)] hover:bg-[var(--surface-hover)] hover:text-[var(--primary)] transition-all duration-200 rounded-lg mx-2"
+                        className="flex items-center gap-4 px-6 py-4 text-gray-700 hover:bg-blue-50/80 hover:text-blue-600 transition-all duration-200 rounded-2xl mx-3 hover:scale-105"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
                         <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,7 +247,7 @@ export default function CustomerLayout({
                           router.push('/');
                           setIsUserMenuOpen(false);
                         }}
-                        className="w-full flex items-center gap-4 px-5 py-4 text-red-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200 rounded-lg mx-2"
+                        className="w-full flex items-center gap-4 px-6 py-4 text-red-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200 rounded-2xl mx-3 hover:scale-105"
                       >
                         <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -299,7 +299,7 @@ export default function CustomerLayout({
               {/* Navigation Links */}
               <Link
                 href="/customer/dashboard"
-                className={`flex items-center gap-4 px-4 py-5 min-h-[48px] text-[var(--nav-text)] hover:text-[var(--primary)] hover:bg-[var(--nav-hover)] rounded-xl transition-all duration-200 font-medium active:scale-95 ${pathname === '/customer/dashboard' ? 'bg-[var(--nav-active)] text-[var(--primary)] border-l-4 border-[var(--primary)]' : ''}`}
+                className={`flex items-center gap-4 px-4 py-5 min-h-[48px] text-gray-700 hover:text-blue-600 hover:bg-blue-50/80 rounded-2xl transition-all duration-200 font-medium active:scale-95 backdrop-blur-sm ${pathname === '/customer/dashboard' ? 'bg-blue-50/80 text-blue-600 border-l-4 border-blue-500 shadow-sm' : ''}`}
                 onClick={() => setIsMenuOpen(false)}
               >
                 <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -375,7 +375,7 @@ export default function CustomerLayout({
       </nav>
 
       {/* Main Content */}
-      <main className="flex-1 w-full bg-gradient-to-br from-[var(--background)] via-[var(--surface-secondary)] to-[var(--background)] min-h-screen">
+      <main className="flex-1 w-full bg-gradient-to-br from-gray-50 via-white to-gray-50 min-h-screen">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           {children}
         </div>

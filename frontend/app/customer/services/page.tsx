@@ -492,13 +492,29 @@ export default function Services() {
       </div>
 
       {/* Hero Section */}
-      <header className="text-center mb-4 sm:mb-6 px-2 sm:px-4 lg:px-6" role="banner">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] bg-clip-text text-transparent leading-tight">
-          Available Equipments
-        </h1>
-        <p className="text-base sm:text-lg md:text-xl text-[var(--muted)] max-w-2xl mx-auto leading-relaxed px-2">
-          Discover our comprehensive range of equipment rentals designed to make your special occasions unforgettable
-        </p>
+      <header className="text-center mb-8 sm:mb-12 px-2 sm:px-4 lg:px-6 animate-fade-in" role="banner">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-700 bg-clip-text text-transparent leading-tight">
+            Available Equipment
+          </h1>
+          <p className="text-lg sm:text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed px-2 mb-8">
+            Discover our premium collection of equipment rentals designed to elevate your special occasions to unforgettable experiences
+          </p>
+          <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200 shadow-sm">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span>Premium Quality</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200 shadow-sm">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <span>Fast Delivery</span>
+            </div>
+            <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full border border-gray-200 shadow-sm">
+              <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+              <span>Expert Support</span>
+            </div>
+          </div>
+        </div>
       </header>
 
       {/* Search/Filter Bar */}
@@ -640,18 +656,26 @@ export default function Services() {
       ) : (
         <>
           {/* Category Filter */}
-          <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-3 sm:mb-4 px-2 sm:px-4 lg:px-6">
-            {['all', 'equipment', 'corporate', 'wedding', 'birthday', 'funeral'].map((category) => (
+          <div className="flex flex-wrap justify-center gap-3 mb-8 px-2 sm:px-4 lg:px-6 animate-fade-in">
+            {[
+              { key: 'all', label: 'All Equipment', icon: '🎪' },
+              { key: 'equipment', label: 'Equipment', icon: '⚙️' },
+              { key: 'corporate', label: 'Corporate', icon: '🏢' },
+              { key: 'wedding', label: 'Wedding', icon: '💒' },
+              { key: 'birthday', label: 'Birthday', icon: '🎂' },
+              { key: 'funeral', label: 'Funeral', icon: '⚰️' }
+            ].map(({ key, label, icon }) => (
               <button
-                key={category}
-                onClick={() => setSelectedCategory(category)}
-                className={`px-3 sm:px-4 py-2 rounded-full transition-all duration-200 capitalize text-sm sm:text-base font-medium ${
-                  selectedCategory === category
-                    ? 'bg-[var(--primary)] text-white shadow-md'
-                    : 'bg-[var(--surface-secondary)] text-[var(--muted)] hover:bg-[var(--primary)] hover:text-white hover:shadow-sm'
+                key={key}
+                onClick={() => setSelectedCategory(key)}
+                className={`group flex items-center gap-2 px-6 py-3 rounded-full transition-all duration-300 capitalize text-sm sm:text-base font-semibold hover:scale-105 active:scale-95 ${
+                  selectedCategory === key
+                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-xl shadow-blue-500/25'
+                    : 'bg-white/80 backdrop-blur-sm text-gray-700 hover:bg-white hover:text-blue-600 hover:shadow-lg border border-gray-200'
                 }`}
               >
-                {category}
+                <span className="text-lg group-hover:scale-110 transition-transform duration-200">{icon}</span>
+                <span>{label}</span>
               </button>
             ))}
           </div>
@@ -670,12 +694,12 @@ export default function Services() {
                   aria-describedby={`service-${service._id}-description`}
                 >
                 {/* Service Image */}
-                <div className="relative overflow-hidden aspect-[4/3] sm:aspect-[16/9]">
+                <div className="relative overflow-hidden aspect-[4/3] sm:aspect-[16/9] bg-gradient-to-br from-gray-50 to-gray-100">
                   {service.image ? (
                     <img
                       src={service.image.startsWith('/uploads/') ? `http://localhost:5000${service.image}` : service.image}
                       alt={service.name}
-                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                      className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 group-hover:brightness-110"
                       loading="lazy"
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                       onError={(e) => {
@@ -683,8 +707,8 @@ export default function Services() {
                       }}
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                      <div className="text-3xl sm:text-4xl text-gray-400">
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-cyan-50 group-hover:from-blue-100 group-hover:to-cyan-100 transition-all duration-300">
+                      <div className="text-5xl sm:text-6xl group-hover:scale-110 transition-transform duration-300">
                         {service.category === 'party' ? '🎉' :
                          service.category === 'wedding' ? '💒' :
                          service.category === 'corporate' ? '🏢' :
@@ -694,6 +718,9 @@ export default function Services() {
                       </div>
                     </div>
                   )}
+
+                  {/* Overlay gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
                   {/* Service Type Badge */}
                   <div className="absolute top-3 left-3 flex flex-col gap-1">
@@ -711,14 +738,14 @@ export default function Services() {
 
                   {/* Availability Badge */}
                   {(service.serviceType === 'equipment' || service.serviceType === 'supply') && (service.availableQuantity !== undefined || service.quantity !== undefined) && (
-                    <div className="absolute top-3 right-3">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full shadow-sm ${
-                        (service.availableQuantity ?? service.quantity ?? 0) > 5 ? 'bg-green-500 text-white' :
-                        (service.availableQuantity ?? service.quantity ?? 0) > 0 ? 'bg-yellow-500 text-white' :
-                        'bg-red-500 text-white'
+                    <div className="absolute top-4 right-4">
+                      <span className={`px-3 py-1.5 text-xs font-bold rounded-full shadow-lg backdrop-blur-sm border border-white/20 ${
+                        (service.availableQuantity ?? service.quantity ?? 0) > 5 ? 'bg-green-500/90 text-white' :
+                        (service.availableQuantity ?? service.quantity ?? 0) > 0 ? 'bg-yellow-500/90 text-white' :
+                        'bg-red-500/90 text-white'
                       }`}>
                         {(service.availableQuantity ?? service.quantity ?? 0) > 0
-                          ? `${service.availableQuantity ?? service.quantity ?? 0} remaining`
+                          ? `${service.availableQuantity ?? service.quantity ?? 0} available`
                           : 'Unavailable'
                         }
                       </span>
@@ -753,7 +780,7 @@ export default function Services() {
                         <span>💰</span>
                         <span>Price</span>
                       </span>
-                      <span className="text-xl font-bold text-blue-600">₱{isNaN(service.price) ? '0.00' : service.price.toFixed(2)}</span>
+                      <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">₱{isNaN(service.price) ? '0.00' : service.price.toFixed(2)}</span>
                     </div>
 
                     {service.location && (
@@ -811,17 +838,19 @@ export default function Services() {
           </div>
 
           {/* Call to Action */}
-          <div className="mt-6 sm:mt-8 text-center px-2 sm:px-4 lg:px-6">
-            <div className="card-gradient p-6 sm:p-8 max-w-2xl mx-auto">
-              <h3 className="text-xl sm:text-2xl font-bold text-[var(--foreground)] mb-3 sm:mb-4">
-                Need Something Custom?
-              </h3>
-              <p className="text-[var(--muted)] mb-4 sm:mb-6 text-sm sm:text-base leading-relaxed">
-                Can't find exactly what you're looking for? Contact us for custom event planning services.
-              </p>
-              <button className="btn-secondary text-sm sm:text-base px-6 py-3">
-                Contact Us
-              </button>
+          <div className="mt-12 sm:mt-16 text-center px-2 sm:px-4 lg:px-6 animate-fade-in">
+            <div className="bg-gradient-to-r from-blue-50 via-white to-cyan-50 backdrop-blur-sm border border-blue-200/50 rounded-3xl p-8 sm:p-12 max-w-4xl mx-auto shadow-xl">
+              <div className="max-w-2xl mx-auto">
+                <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-4">
+                  Need Something Custom?
+                </h3>
+                <p className="text-gray-600 mb-8 text-lg leading-relaxed">
+                  Can't find exactly what you're looking for? Contact us for custom event planning services tailored to your unique needs.
+                </p>
+                <button className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold px-8 py-4 rounded-2xl hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl">
+                  Contact Our Team
+                </button>
+              </div>
             </div>
           </div>
         </>
