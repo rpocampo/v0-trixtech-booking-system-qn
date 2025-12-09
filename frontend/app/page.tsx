@@ -57,13 +57,13 @@ export default function Home() {
                   </svg>
                   (+63) 917-607-860
                 </a>
-                <a href="#" className="flex items-center text-gray-600 hover:text-blue-600 transition-colors duration-200">
+                <span className="flex items-center text-gray-600">
                   <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                   Balayan, Batangas, Calabarzon, Philippines
-                </a>
+                </span>
               </div>
             </div>
           </div>
@@ -112,33 +112,8 @@ export default function Home() {
             <div className="hidden lg:flex items-center space-x-8">
               <Link href="/" className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200">Home</Link>
 
-              {/* Services Dropdown */}
-              <div className="relative group">
-                <button className="flex items-center text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200">
-                  Services
-                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                  <Link href="/customer/services" className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200">Browse Equipment</Link>
-                  <Link href="/customer/packages" className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200">Event Packages</Link>
-                </div>
-              </div>
 
-              {/* About Dropdown */}
-              <div className="relative group">
-                <button className="flex items-center text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200">
-                  About
-                  <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                  <Link href="#about" className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200">About TRIXTECH</Link>
-                  <Link href="#testimonials" className="block px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200">Testimonials</Link>
-                </div>
-              </div>
+              <Link href="#about" className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200">About</Link>
 
               <Link href="#contact" className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200">Contact</Link>
             </div>
