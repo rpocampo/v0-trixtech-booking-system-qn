@@ -109,6 +109,15 @@ export default function AdminBookings() {
     fetchBookings();
   }, []);
 
+  // Auto-refresh bookings every 30 seconds to show status updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchBookings();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   // Real-time booking updates
   useEffect(() => {
     if (!socket) return;
