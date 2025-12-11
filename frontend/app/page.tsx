@@ -15,6 +15,54 @@ export default function Home() {
     'Wedding.jpg'
   ];
 
+  const events = [
+    {
+      type: 'Wedding',
+      title: 'Wedding Event',
+      description: 'A Wedding Event is a beautiful and meaningful ceremony celebrating the union of two people in marriage. It brings together family and friends to witness vows, share joy, and start a new chapter of life filled with love and commitment.',
+      price: '₱3,200',
+      location: 'Balayan, Batangas',
+      image: '/Wedding.jpg',
+      badgeColor: 'bg-pink-500',
+      inclusions: [
+        '100 Uratex Monoblock Chair with covers',
+        '2 6ft Lifetime Tables with covers',
+        '2 4ft Lifetime Tables with covers',
+        '2 3x3 Retractable Tent'
+      ]
+    },
+    {
+      type: 'Corporate',
+      title: 'Corporate Event',
+      description: 'A Corporate Event is a professional gathering organized by a company to achieve specific business goals. It may include meetings, conferences, trainings, product launches, or team-building activities designed to strengthen relationships, improve skills, and support the organization\'s growth and success.',
+      price: '₱3,500',
+      location: 'Balayan, Batangas',
+      image: '/Corporate.jpg',
+      badgeColor: 'bg-blue-500',
+      inclusions: [
+        '100pcs Uratex Monoblock Chair with covers',
+        '4pcs 6ft Lifetime Tables with covers',
+        '4pcs 4ft Lifetime Tables with covers'
+      ]
+    },
+    {
+      type: 'Birthday',
+      title: 'Birthday Party',
+      description: 'A Birthday Party Event is a joyful celebration honoring someone\'s birthday, filled with fun activities, delicious food, decorations, and memorable moments shared with family and friends. It\'s a special occasion to create lasting memories and celebrate another year of life.',
+      price: '₱1,750',
+      location: 'Balayan, Batangas',
+      image: '/Birthday.jpg',
+      badgeColor: 'bg-purple-500',
+      inclusions: [
+        '50 Uratex Monoblock Chair with covers',
+        '2 6ft Lifetime Tables with covers',
+        '2 4ft Lifetime Tables with covers'
+      ]
+    }
+  ];
+
+  const [currentEventSlide, setCurrentEventSlide] = useState(0);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     const role = localStorage.getItem('role');
@@ -34,12 +82,29 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [heroImages.length]);
 
+  // Auto-play event carousel
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentEventSlide((prev) => (prev + 1) % events.length);
+    }, 6000); // Change slide every 6 seconds
+
+    return () => clearInterval(timer);
+  }, [events.length]);
+
   const goToPrevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + heroImages.length) % heroImages.length);
   };
 
   const goToNextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+  };
+
+  const goToPrevEventSlide = () => {
+    setCurrentEventSlide((prev) => (prev - 1 + events.length) % events.length);
+  };
+
+  const goToNextEventSlide = () => {
+    setCurrentEventSlide((prev) => (prev + 1) % events.length);
   };
 
   return (
@@ -308,6 +373,134 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Event Carousel Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-4xl mx-auto mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
+              Our Event Suggestions
+            </h2>
+            <p className="text-lg text-gray-600 leading-relaxed">
+              Discover our comprehensive range of event solutions designed to make your special occasions unforgettable.
+            </p>
+          </div>
+
+          {/* Carousel */}
+          <div className="relative max-w-4xl mx-auto">
+            <div className="overflow-hidden rounded-2xl">
+              <div
+                className="flex transition-transform duration-1000"
+                style={{ transform: `translateX(-${currentEventSlide * 100}%)` }}
+              >
+                {events.map((event, index) => (
+                  <article key={index} className="w-full flex-shrink-0">
+                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-500 border border-gray-100">
+                      <div className="relative h-64 overflow-hidden">
+                        <img
+                          src={event.image}
+                          alt={`${event.type} Event`}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-4 left-4">
+                          <span className={`text-white px-3 py-1 rounded-full text-sm font-medium ${event.badgeColor}`}>
+                            {event.type}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-8">
+                        <h3 className="text-2xl font-bold text-gray-900 mb-3">{event.title}</h3>
+                        <p className="text-gray-600 mb-4 leading-relaxed">{event.description}</p>
+
+                        {/* What's Included */}
+                        <div className="mb-4">
+                          <h4 className="text-sm font-semibold text-gray-800 mb-2">What's Included:</h4>
+                          <ul className="text-sm text-gray-600 space-y-1">
+                            {event.inclusions.slice(0, 4).map((item, index) => (
+                              <li key={index} className="flex items-start">
+                                <span className="text-blue-500 mr-2 mt-1">•</span>
+                                <span className="leading-tight">{item}</span>
+                              </li>
+                            ))}
+                            {event.inclusions.length > 4 && (
+                              <li className="text-blue-600 font-medium">+{event.inclusions.length - 4} more items</li>
+                            )}
+                          </ul>
+                        </div>
+
+                        <div className="flex items-center justify-between mb-6">
+                          <span className="text-3xl font-bold text-blue-600">{event.price}</span>
+                          <span className="text-gray-500 text-sm flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            {event.location}
+                          </span>
+                        </div>
+                        <div className="flex gap-4">
+                          <Link
+                            href={`/customer/services?eventType=${event.type}`}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-xl hover:shadow-lg transition-all duration-300 text-center"
+                          >
+                            View Details
+                          </Link>
+                          <button
+                            onClick={() => {
+                              if (!isLoggedIn) {
+                                router.push('/login');
+                              } else {
+                                router.push('/customer/services');
+                              }
+                            }}
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-xl hover:shadow-lg transition-all duration-300"
+                          >
+                            Add to Reservation
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+
+            {/* Navigation Arrows */}
+            <button
+              onClick={goToPrevEventSlide}
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-white/90 hover:bg-white rounded-full p-3 transition-all duration-300 shadow-lg hover:shadow-xl"
+              aria-label="Previous event slide"
+            >
+              <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            <button
+              onClick={goToNextEventSlide}
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-white/90 hover:bg-white rounded-full p-3 transition-all duration-300 shadow-lg hover:shadow-xl"
+              aria-label="Next event slide"
+            >
+              <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            {/* Dots Indicator */}
+            <div className="flex justify-center mt-8 space-x-2">
+              {events.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentEventSlide(index)}
+                  className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                    index === currentEventSlide ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Featured Offerings */}
       <section className="py-20 bg-gradient-to-b from-gray-50 to-white">
