@@ -694,68 +694,6 @@ export default function Home() {
             </div>
           </div>
           </div>
-      {/* Final Call to Action Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-800 relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-10 left-10 w-72 h-72 bg-white/5 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-10 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-white/5 rounded-full blur-3xl animate-pulse delay-500"></div>
-        </div>
-
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-          <div className="mb-8">
-            <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
-              Ready to Create Unforgettable Moments?
-            </h2>
-            <p className="text-xl text-blue-100 leading-relaxed max-w-2xl mx-auto">
-              Join thousands of satisfied customers who trust TRIXTECH for their event planning needs.
-              Start your journey today and experience the difference.
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12">
-            <button
-              onClick={() => router.push(isLoggedIn ? '/customer/services' : '/register')}
-              className="group relative bg-white text-blue-600 hover:bg-blue-50 font-bold px-10 py-4 text-xl shadow-2xl hover:shadow-white/25 transform hover:-translate-y-1 hover:scale-105 transition-all duration-300 rounded-2xl overflow-hidden"
-            >
-              <span className="relative z-10 flex items-center">
-                <svg className="w-6 h-6 mr-3 group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Get Started Now
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
-            </button>
-
-            <Link
-              href="#about"
-              className="text-white/90 hover:text-white transition-all duration-300 font-semibold text-lg border-2 border-white/30 hover:border-white/60 px-8 py-4 rounded-xl hover:bg-white/10 backdrop-blur-sm"
-            >
-              Learn More About Us →
-            </Link>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto">
-            <div className="text-center">
-              <div className="text-3xl lg:text-4xl font-bold text-white mb-2">1000+</div>
-              <div className="text-blue-100 text-sm font-medium">Happy Customers</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl lg:text-4xl font-bold text-white mb-2">5000+</div>
-              <div className="text-blue-100 text-sm font-medium">Events Served</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl lg:text-4xl font-bold text-white mb-2">99%</div>
-              <div className="text-blue-100 text-sm font-medium">Satisfaction Rate</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl lg:text-4xl font-bold text-white mb-2">24/7</div>
-              <div className="text-blue-100 text-sm font-medium">Support Available</div>
-            </div>
-          </div>
-        </div>
-      </section>
         </div>
       </section>
 

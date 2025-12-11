@@ -837,22 +837,6 @@ export default function Services() {
             </div>
           </div>
 
-          {/* Call to Action */}
-          <div className="mt-12 sm:mt-16 text-center px-2 sm:px-4 lg:px-6 animate-fade-in">
-            <div className="bg-gradient-to-r from-blue-50 via-white to-cyan-50 backdrop-blur-sm border border-blue-200/50 rounded-3xl p-8 sm:p-12 max-w-4xl mx-auto shadow-xl">
-              <div className="max-w-2xl mx-auto">
-                <h3 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-4">
-                  Need Something Custom?
-                </h3>
-                <p className="text-gray-600 mb-8 text-lg leading-relaxed">
-                  Can't find exactly what you're looking for? Contact us for custom event planning services tailored to your unique needs.
-                </p>
-                <button className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-bold px-8 py-4 rounded-2xl hover:from-blue-600 hover:to-cyan-600 transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl">
-                  Contact Our Team
-                </button>
-              </div>
-            </div>
-          </div>
         </>
       )}
 
