@@ -102,9 +102,9 @@ export default function ForgotPassword() {
       <div className="bg-white/95 backdrop-blur-lg w-full max-w-md p-8 relative z-10 shadow-2xl rounded-2xl border border-white/20">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-block p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 rounded-2xl mb-4 shadow-lg transform hover:scale-105 transition-transform duration-300">
+          <Link href="/" className="inline-block p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 rounded-2xl mb-4 shadow-lg transform hover:scale-105 transition-transform duration-300">
             <div className="text-white text-3xl font-bold animate-pulse">TT</div>
-          </div>
+          </Link>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Reset Password</h1>
           <p className="text-gray-600 mt-2 font-medium">Enter your email to receive reset instructions</p>
         </div>
