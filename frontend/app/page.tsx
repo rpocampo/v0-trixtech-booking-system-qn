@@ -107,20 +107,20 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Navigation */}
-      <nav className="bg-white/95 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 shadow-lg">
+      <nav className="bg-white/95 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50 shadow-lg animate-slide-down">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Top Header - Hidden on mobile, shown on larger screens */}
-          <div className="hidden lg:block py-2 border-b border-gray-100">
+          <div className="hidden lg:block py-3 border-b border-gray-100">
             <div className="flex justify-between items-center text-sm">
-              <div className="flex items-center space-x-6">
-                <span className="flex items-center text-gray-600">
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex items-center space-x-8">
+                <span className="flex items-center text-[var(--muted)] hover:text-[var(--primary)] transition-colors cursor-pointer">
+                  <svg className="w-4 h-4 mr-2 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                   </svg>
                   (+63) 917-607-860
                 </span>
-                <span className="flex items-center text-gray-600">
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <span className="flex items-center text-[var(--muted)] hover:text-[var(--primary)] transition-colors cursor-pointer">
+                  <svg className="w-4 h-4 mr-2 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
@@ -133,38 +133,38 @@ export default function Home() {
           {/* Main Navigation */}
           <div className="flex justify-between items-center h-20">
             {/* Mobile Menu Buttons */}
-            <div className="flex items-center space-x-2 lg:hidden">
-              <button className="p-2 text-gray-600 hover:text-blue-600 transition-colors duration-200">
+            <div className="flex items-center space-x-3 lg:hidden">
+              <button className="p-3 text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--surface-hover)] rounded-lg transition-all duration-200 interactive-scale">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </button>
-              <Link href={isLoggedIn ? '/customer/services' : '/register'} className="p-2 text-gray-600 hover:text-blue-600 transition-colors duration-200">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <Link href={isLoggedIn ? '/customer/services' : '/register'} className="p-3 text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--surface-hover)] rounded-lg transition-all duration-200 interactive-scale flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 4v10m0 0l-2-2m2 2l2-2m6-6v6m0 0l2 2m-2-2l-2 2" />
                 </svg>
-                <span className="hidden sm:inline">Reserve Here</span>
+                <span className="hidden sm:inline font-medium">Reserve Here</span>
               </Link>
             </div>
 
             {/* Logo */}
             <Link
               href={isLoggedIn ? (localStorage.getItem('role') === 'admin' ? '/admin/dashboard' : '/customer/dashboard') : '/'}
-              className="flex items-center group hover:scale-105 transition-all duration-300"
+              className="flex items-center group hover-lift"
             >
               <div className="relative">
                 <img
                   src="/TrixtechLOGO.png"
                   alt="TRIXTECH"
                   style={{ width: '150px', height: 'auto' }}
-                  className="rounded-lg shadow-md group-hover:shadow-lg transition-shadow duration-300"
+                  className="rounded-lg shadow-md group-hover:shadow-xl transition-all duration-300"
                 />
-                <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-purple-500 rounded-lg opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+                <div className="absolute -inset-2 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] rounded-lg opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-xl"></div>
               </div>
             </Link>
 
             {/* Mobile Navigation Toggle */}
-            <button className="lg:hidden p-2 text-gray-600 hover:text-blue-600 transition-colors duration-200">
+            <button className="lg:hidden p-3 text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--surface-hover)] rounded-lg transition-all duration-200 interactive-scale">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
@@ -172,28 +172,25 @@ export default function Home() {
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center space-x-8">
-              <Link href="/" className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200">Home</Link>
-
-
-              <Link href="#about" className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200">About</Link>
-
-              <Link href="#contact" className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200">Contact</Link>
+              <Link href="/" className="text-[var(--foreground)] hover:text-[var(--primary)] font-medium transition-all duration-200 hover-lift px-3 py-2 rounded-lg">Home</Link>
+              <Link href="#about" className="text-[var(--foreground)] hover:text-[var(--primary)] font-medium transition-all duration-200 hover-lift px-3 py-2 rounded-lg">About</Link>
+              <Link href="#contact" className="text-[var(--foreground)] hover:text-[var(--primary)] font-medium transition-all duration-200 hover-lift px-3 py-2 rounded-lg">Contact</Link>
             </div>
 
             {/* Desktop User Actions */}
             <div className="hidden lg:flex items-center space-x-4">
               {!isLoggedIn ? (
                 <>
-                  <Link href="/login" className="p-2 text-gray-600 hover:text-blue-600 transition-colors duration-200">
+                  <Link href="/login" className="p-3 text-[var(--muted)] hover:text-[var(--primary)] hover:bg-[var(--surface-hover)] rounded-lg transition-all duration-200 interactive-scale">
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </Link>
                   <Link
                     href="/register"
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:from-purple-600 hover:to-blue-600 hover:shadow-lg hover:scale-105 transition-all duration-300 flex items-center"
+                    className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white px-6 py-3 rounded-xl font-semibold hover:shadow-lg hover-lift transition-all duration-300 flex items-center gap-2"
                   >
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 4v10m0 0l-2-2m2 2l2-2m6-6v6m0 0l2 2m-2-2l-2 2" />
                     </svg>
                     Reserve Now
@@ -203,7 +200,7 @@ export default function Home() {
                 <>
                   <Link
                     href="/customer/dashboard"
-                    className="text-gray-700 hover:text-blue-600 font-medium transition-colors duration-200"
+                    className="text-[var(--foreground)] hover:text-[var(--primary)] font-medium transition-all duration-200 hover-lift px-3 py-2 rounded-lg"
                   >
                     Dashboard
                   </Link>
@@ -213,7 +210,7 @@ export default function Home() {
                       setIsLoggedIn(false);
                       router.push('/');
                     }}
-                    className="text-gray-700 hover:text-red-600 font-medium transition-colors duration-200"
+                    className="text-[var(--muted)] hover:text-red-500 font-medium transition-all duration-200 hover-lift px-3 py-2 rounded-lg"
                   >
                     Logout
                   </button>
@@ -225,15 +222,17 @@ export default function Home() {
       </nav>
 
       {/* Hero Section with Carousel */}
-      <section className="relative text-white overflow-hidden h-[700px] w-full max-w-[1920px] mx-auto">
+      <section className="relative text-white overflow-hidden h-[700px] w-full max-w-[1920px] mx-auto animate-fade-in">
         {/* Background Pattern */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-[var(--primary)] via-purple-900 to-indigo-900"></div>
 
         {/* Animated Background Elements */}
         <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+          <div className="absolute top-20 left-10 w-72 h-72 bg-[var(--primary)]/20 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-[var(--accent)]/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }}></div>
+          <div className="absolute top-10 right-20 w-32 h-32 bg-yellow-400/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '0.5s' }}></div>
+          <div className="absolute bottom-10 left-20 w-24 h-24 bg-pink-400/15 rounded-full blur-xl animate-pulse" style={{ animationDelay: '1.5s' }}></div>
         </div>
 
         {/* Carousel */}
@@ -271,76 +270,77 @@ export default function Home() {
         {/* Content Overlay */}
         <div className="absolute inset-0 flex items-center justify-center z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <div className="max-w-4xl mx-auto animate-fade-in-up">
-              <div className="flex justify-center mb-6">
+            <div className="max-w-5xl mx-auto">
+              <div className="flex justify-center mb-8 animate-bounce-in">
                 <button
                   onClick={() => router.push('/')}
-                  className="inline-block p-4 bg-gradient-to-br from-purple-500 via-pink-500 to-red-500 rounded-2xl shadow-lg transform hover:scale-105 transition-transform duration-300 cursor-pointer"
+                  className="inline-block p-4 bg-gradient-to-br from-[var(--primary)] via-[var(--accent)] to-purple-500 rounded-2xl shadow-2xl hover-lift cursor-pointer group"
                   aria-label="Go to TRIXTECH homepage"
                 >
-                  <div className="text-white text-3xl font-bold animate-pulse">TT</div>
+                  <div className="text-white text-3xl font-bold animate-pulse group-hover:animate-glow">TT</div>
                 </button>
               </div>
-              <div className="inline-block mb-4">
-                <span className="bg-white/10 backdrop-blur-sm text-white px-4 py-2 rounded-full text-sm font-medium border border-white/20">
+              <div className="inline-block mb-6 animate-scale-in">
+                <span className="bg-white/10 backdrop-blur-md text-white px-6 py-3 rounded-full text-sm font-semibold border border-white/20 shadow-lg">
                   ✨ Professional Event Management
                 </span>
               </div>
 
-              <h1 className="text-4xl sm:text-5xl lg:text-7xl font-bold mb-6 leading-tight text-white drop-shadow-2xl animate-slide-up">
-                <span className="bg-gradient-to-r from-white via-blue-100 to-purple-100 bg-clip-text text-transparent">
-                  TRIXTECH:
-                </span>
+              <h1 className="text-4xl sm:text-6xl lg:text-8xl font-bold mb-8 leading-tight text-white drop-shadow-2xl animate-slide-up text-gradient-primary">
+                TRIXTECH:
                 <br />
                 <span className="text-white">Complete Event Solutions</span>
               </h1>
 
-              <p className="text-xl lg:text-2xl text-white/95 mb-10 leading-relaxed max-w-3xl mx-auto drop-shadow-lg animate-slide-up delay-200">
+              <p className="text-xl lg:text-2xl text-white/95 mb-12 leading-relaxed max-w-4xl mx-auto drop-shadow-lg animate-slide-up" style={{ animationDelay: '0.2s' }}>
                 Seamless booking for events, premium supplies, and professional services.
                 Transform your vision into reality with our comprehensive event management platform.
               </p>
 
               {/* CTA Buttons */}
-              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-slide-up delay-400">
+              <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-slide-up" style={{ animationDelay: '0.4s' }}>
                 <button
                   onClick={() => router.push(isLoggedIn ? '/customer/services' : '/register')}
-                  className="group relative bg-gradient-to-r from-white to-blue-50 text-blue-600 hover:from-blue-50 hover:to-white font-bold px-10 py-5 text-xl shadow-2xl hover:shadow-white/25 transform hover:-translate-y-1 hover:scale-105 transition-all duration-300 rounded-2xl overflow-hidden"
+                  className="group relative bg-gradient-to-r from-white to-blue-50 text-[var(--primary)] hover:from-blue-50 hover:to-white font-bold px-12 py-6 text-xl shadow-2xl hover:shadow-white/25 hover-lift rounded-2xl overflow-hidden"
                 >
-                  <span className="relative z-10">Reserve Now</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-purple-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+                  <span className="relative z-10 flex items-center gap-3">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 4v10m0 0l-2-2m2 2l2-2m6-6v6m0 0l2 2m-2-2l-2 2" />
+                    </svg>
+                    Reserve Now
+                  </span>
+                  <div className="absolute inset-0 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
                 </button>
 
                 {!isLoggedIn && (
                   <Link
                     href="/login"
-                    className="group text-white/90 hover:text-white transition-all duration-300 font-semibold text-lg drop-shadow-lg border-2 border-white/30 hover:border-white/60 px-8 py-4 rounded-xl hover:bg-white/10 backdrop-blur-sm"
+                    className="group text-white/90 hover:text-white transition-all duration-300 font-semibold text-lg drop-shadow-lg border-2 border-white/30 hover:border-white/60 px-8 py-4 rounded-xl hover:bg-white/10 backdrop-blur-md hover-lift flex items-center gap-2"
                   >
-                    <span className="flex items-center">
-                      Already have an account?
-                      <svg className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </span>
+                    Already have an account?
+                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </Link>
                 )}
               </div>
 
               {/* Trust Indicators */}
-              <div className="mt-12 flex flex-wrap justify-center items-center gap-8 text-white/80 animate-fade-in delay-600">
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="mt-16 flex flex-wrap justify-center items-center gap-8 text-white/80 animate-fade-in" style={{ animationDelay: '0.6s' }}>
+                <div className="flex items-center bg-white/5 backdrop-blur-sm px-4 py-2 rounded-full border border-white/10 hover-lift">
+                  <svg className="w-5 h-5 mr-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <span className="text-sm font-medium">Verified Services</span>
                 </div>
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center bg-white/5 backdrop-blur-sm px-4 py-2 rounded-full border border-white/10 hover-lift">
+                  <svg className="w-5 h-5 mr-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                   <span className="text-sm font-medium">Lightning Fast</span>
                 </div>
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center bg-white/5 backdrop-blur-sm px-4 py-2 rounded-full border border-white/10 hover-lift">
+                  <svg className="w-5 h-5 mr-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                   </svg>
                   <span className="text-sm font-medium">Trusted by 1000+</span>
@@ -380,75 +380,91 @@ export default function Home() {
       </section>
 
       {/* Event Carousel Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-24 bg-gradient-to-br from-gray-50 to-blue-50/30 animate-fade-in">
         <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-4xl mx-auto mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
+          <div className="text-center max-w-4xl mx-auto mb-20 animate-slide-up">
+            <div className="inline-block mb-6">
+              <span className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
+                🎉 Event Packages
+              </span>
+            </div>
+            <h2 className="text-4xl lg:text-5xl font-bold text-[var(--foreground)] mb-6 text-gradient-primary">
               Our Event Suggestions
             </h2>
-            <p className="text-lg text-gray-600 leading-relaxed">
+            <p className="text-xl text-[var(--muted)] leading-relaxed max-w-3xl mx-auto">
               Discover our comprehensive range of event solutions designed to make your special occasions unforgettable.
             </p>
+            <div className="w-24 h-1 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] mx-auto mt-8 rounded-full"></div>
           </div>
 
           {/* Event Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full stagger-children">
             {events.map((event, index) => (
-              <article key={index} className="w-full">
-                <div className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-all duration-500 border border-gray-100">
+              <article key={index} className="w-full animate-fade-in hover-lift" style={{ animationDelay: `${index * 0.1}s` }}>
+                <div className="card overflow-hidden group">
                   <div className="relative h-64 overflow-hidden">
                     <img
                       src={event.image}
                       alt={`${event.type} Event`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                       onError={(e) => {
                         const img = e.currentTarget as HTMLImageElement;
                         img.src = 'https://via.placeholder.com/400x256/6B7280/FFFFFF?text=Image+Not+Found';
                       }}
                     />
                     <div className="absolute top-4 left-4">
-                      <span className={`text-white px-3 py-1 rounded-full text-sm font-medium ${event.badgeColor}`}>
+                      <span className={`text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg ${event.badgeColor} backdrop-blur-sm`}>
                         {event.type}
                       </span>
                     </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </div>
                   <div className="p-8">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">{event.title}</h3>
-                    <p className="text-gray-600 mb-4 leading-relaxed">{event.description}</p>
+                    <h3 className="text-2xl font-bold text-[var(--foreground)] mb-3 group-hover:text-[var(--primary)] transition-colors">{event.title}</h3>
+                    <p className="text-[var(--muted)] mb-6 leading-relaxed">{event.description}</p>
 
                     {/* What's Included */}
                     {event.inclusions.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="text-sm font-semibold text-gray-800 mb-2">What's Included:</h4>
-                        <ul className="text-sm text-gray-600 space-y-1">
-                          {event.inclusions.slice(0, 4).map((item, index) => (
-                            <li key={index} className="flex items-start">
-                              <span className="text-blue-500 mr-2 mt-1">•</span>
+                      <div className="mb-6">
+                        <h4 className="text-sm font-semibold text-[var(--foreground)] mb-3 flex items-center gap-2">
+                          <svg className="w-4 h-4 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          What's Included:
+                        </h4>
+                        <ul className="text-sm text-[var(--muted)] space-y-2">
+                          {event.inclusions.slice(0, 4).map((item, idx) => (
+                            <li key={idx} className="flex items-start">
+                              <span className="text-[var(--primary)] mr-3 mt-1 flex-shrink-0">✓</span>
                               <span className="leading-tight">{item}</span>
                             </li>
                           ))}
                           {event.inclusions.length > 4 && (
-                            <li className="text-blue-600 font-medium">+{event.inclusions.length - 4} more items</li>
+                            <li className="text-[var(--primary)] font-medium">+{event.inclusions.length - 4} more items</li>
                           )}
                         </ul>
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between mb-6">
-                      <span className="text-3xl font-bold text-blue-600">{event.price}</span>
-                      <span className="text-gray-500 text-sm flex items-center">
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex items-center justify-between mb-8">
+                      <span className="text-3xl font-bold text-[var(--primary)]">{event.price}</span>
+                      <span className="text-[var(--muted)] text-sm flex items-center gap-1">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                         {event.location}
                       </span>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="flex flex-col sm:flex-row gap-4">
                       <Link
                         href={`/customer/services?eventType=${event.type}`}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl hover:shadow-lg transition-all duration-300 text-center text-sm sm:text-base"
+                        className="flex-1 btn-secondary hover-lift text-center flex items-center justify-center gap-2"
                       >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
                         View Details
                       </Link>
                       <button
@@ -459,8 +475,11 @@ export default function Home() {
                             router.push('/customer/services');
                           }
                         }}
-                        className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl hover:shadow-lg transition-all duration-300 text-sm sm:text-base"
+                        className="flex-1 btn-primary hover-lift flex items-center justify-center gap-2"
                       >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
                         Add to Reservation
                       </button>
                     </div>
@@ -475,45 +494,51 @@ export default function Home() {
 
 
       {/* Testimonials / Customer Reviews Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-24 bg-gradient-to-br from-white to-blue-50/50 animate-fade-in">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-4xl mx-auto mb-16">
-            <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
+          <div className="text-center max-w-4xl mx-auto mb-20 animate-slide-up">
+            <div className="inline-block mb-6">
+              <span className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
+                💬 Customer Reviews
+              </span>
+            </div>
+            <h2 className="text-4xl lg:text-5xl font-bold text-[var(--foreground)] mb-6 text-gradient-primary">
               What Our Customers Say
             </h2>
-            <p className="text-lg text-gray-600 leading-relaxed">
+            <p className="text-xl text-[var(--muted)] leading-relaxed max-w-3xl mx-auto">
               Don't just take our word for it. Here's what our satisfied customers have to say about their TRIXTECH experience.
             </p>
+            <div className="w-24 h-1 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] mx-auto mt-8 rounded-full"></div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="group bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-gray-100 relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-400/10 to-transparent rounded-bl-3xl"></div>
-              <div className="relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 stagger-children">
+            <div className="card hover-lift animate-fade-in group">
+              <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[var(--primary)]/10 to-transparent rounded-bl-3xl"></div>
+              <div className="relative z-10 p-8">
                 <div className="flex items-center mb-6">
                   <div className="relative">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <div className="w-16 h-16 bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] rounded-2xl flex items-center justify-center text-white font-bold text-xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                       S
                     </div>
-                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center animate-pulse">
                       <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900 text-lg">Sarah Johnson</h4>
+                    <h4 className="font-bold text-[var(--foreground)] text-lg">Sarah Johnson</h4>
                     <div className="flex text-yellow-400 mb-1">
                       ★★★★★
                     </div>
-                    <span className="text-sm text-gray-500">Wedding Planner</span>
+                    <span className="text-sm text-[var(--muted)]">Wedding Planner</span>
                   </div>
                 </div>
                 <div className="relative">
-                  <svg className="absolute -top-2 -left-2 w-8 h-8 text-blue-200 transform -rotate-12" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="absolute -top-2 -left-2 w-8 h-8 text-[var(--primary)]/20 transform -rotate-12" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
                   </svg>
-                  <p className="text-gray-600 italic leading-relaxed pl-6 relative z-10">
+                  <p className="text-[var(--muted)] italic leading-relaxed pl-6 relative z-10">
                     "TRIXTECH made planning my wedding so much easier! The equipment was top-notch and the service was exceptional.
                     Highly recommend for any event."
                   </p>
@@ -521,33 +546,33 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="group bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-gray-100 relative overflow-hidden">
+            <div className="card hover-lift animate-fade-in group" style={{ animationDelay: '0.1s' }}>
               <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-green-400/10 to-transparent rounded-bl-3xl"></div>
-              <div className="relative z-10">
+              <div className="relative z-10 p-8">
                 <div className="flex items-center mb-6">
                   <div className="relative">
                     <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                       M
                     </div>
-                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center animate-pulse">
                       <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900 text-lg">Michael Chen</h4>
+                    <h4 className="font-bold text-[var(--foreground)] text-lg">Michael Chen</h4>
                     <div className="flex text-yellow-400 mb-1">
                       ★★★★★
                     </div>
-                    <span className="text-sm text-gray-500">Corporate Event Manager</span>
+                    <span className="text-sm text-[var(--muted)]">Corporate Event Manager</span>
                   </div>
                 </div>
                 <div className="relative">
                   <svg className="absolute -top-2 -left-2 w-8 h-8 text-green-200 transform -rotate-12" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
                   </svg>
-                  <p className="text-gray-600 italic leading-relaxed pl-6 relative z-10">
+                  <p className="text-[var(--muted)] italic leading-relaxed pl-6 relative z-10">
                     "Professional service from start to finish. The corporate event we organized was a huge success thanks to TRIXTECH's
                     reliable equipment and support team."
                   </p>
@@ -555,33 +580,33 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="group bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 border border-gray-100 relative overflow-hidden md:col-span-2 lg:col-span-1">
+            <div className="card hover-lift animate-fade-in md:col-span-2 lg:col-span-1 group" style={{ animationDelay: '0.2s' }}>
               <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-400/10 to-transparent rounded-bl-3xl"></div>
-              <div className="relative z-10">
+              <div className="relative z-10 p-8">
                 <div className="flex items-center mb-6">
                   <div className="relative">
                     <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center text-white font-bold text-xl mr-4 shadow-lg group-hover:scale-110 transition-transform duration-300">
                       A
                     </div>
-                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                    <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center animate-pulse">
                       <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     </div>
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-900 text-lg">Anna Rodriguez</h4>
+                    <h4 className="font-bold text-[var(--foreground)] text-lg">Anna Rodriguez</h4>
                     <div className="flex text-yellow-400 mb-1">
                       ★★★★★
                     </div>
-                    <span className="text-sm text-gray-500">Party Organizer</span>
+                    <span className="text-sm text-[var(--muted)]">Party Organizer</span>
                   </div>
                 </div>
                 <div className="relative">
                   <svg className="absolute -top-2 -left-2 w-8 h-8 text-purple-200 transform -rotate-12" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
                   </svg>
-                  <p className="text-gray-600 italic leading-relaxed pl-6 relative z-10">
+                  <p className="text-[var(--muted)] italic leading-relaxed pl-6 relative z-10">
                     "Amazing experience! The birthday party setup was perfect and everything arrived on time.
                     Will definitely use TRIXTECH again for future events."
                   </p>

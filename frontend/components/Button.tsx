@@ -26,68 +26,80 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ...props
   }, ref) => {
     const baseClasses = [
-      'relative inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-200',
-      'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white',
-      'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none',
-      'active:scale-95 transform',
+      'relative inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-300 ease-out',
+      'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-opacity-60',
+      'disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none disabled:transform-none',
+      'active:scale-[0.98] transform',
       'overflow-hidden',
       'select-none',
+      'group',
+      'backdrop-blur-sm',
     ];
 
     const variantClasses = {
       primary: [
-        'bg-gradient-to-r from-[var(--primary)] to-[var(--primary-dark)] text-white',
-        'hover:from-[var(--primary-dark)] hover:to-[var(--primary)]',
-        'hover:shadow-xl hover:shadow-[var(--primary)]/25',
+        'bg-gradient-to-r from-[var(--primary)] via-[var(--primary)] to-[var(--primary-dark)] text-white',
+        'hover:from-[var(--primary-dark)] hover:via-[var(--primary)] hover:to-[var(--primary)]',
+        'hover:shadow-2xl hover:shadow-[var(--primary)]/30 hover:-translate-y-0.5',
         'focus:ring-[var(--primary)]',
-        'border border-[var(--primary)]',
-        'before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent',
+        'border border-[var(--primary)]/80',
+        'before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent',
         'before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700',
+        'after:absolute after:inset-0 after:bg-gradient-to-r after:from-[var(--primary-light)]/20 after:to-transparent after:opacity-0 hover:after:opacity-100 after:transition-opacity after:duration-300',
       ],
       secondary: [
-        'bg-white text-[var(--primary)] border-2 border-[var(--primary)]',
-        'hover:bg-[var(--primary)] hover:text-white',
-        'hover:shadow-lg hover:shadow-[var(--primary)]/20',
+        'bg-white/90 text-[var(--primary)] border-2 border-[var(--primary)]/80',
+        'hover:bg-[var(--primary)] hover:text-white hover:border-[var(--primary)]',
+        'hover:shadow-xl hover:shadow-[var(--primary)]/25 hover:-translate-y-0.5',
         'focus:ring-[var(--primary)]',
+        'backdrop-blur-md',
       ],
       success: [
-        'bg-gradient-to-r from-[var(--success)] to-[var(--success-dark)] text-white',
-        'hover:from-[var(--success-dark)] hover:to-[var(--success)]',
-        'hover:shadow-xl hover:shadow-[var(--success)]/25',
+        'bg-gradient-to-r from-[var(--success)] via-[var(--success)] to-[var(--success-dark)] text-white',
+        'hover:from-[var(--success-dark)] hover:via-[var(--success)] hover:to-[var(--success)]',
+        'hover:shadow-2xl hover:shadow-[var(--success)]/30 hover:-translate-y-0.5',
         'focus:ring-[var(--success)]',
-        'border border-[var(--success)]',
+        'border border-[var(--success)]/80',
+        'before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent',
+        'before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700',
       ],
       warning: [
-        'bg-gradient-to-r from-[var(--warning)] to-[var(--warning-dark)] text-white',
-        'hover:from-[var(--warning-dark)] hover:to-[var(--warning)]',
-        'hover:shadow-xl hover:shadow-[var(--warning)]/25',
+        'bg-gradient-to-r from-[var(--warning)] via-[var(--warning)] to-[var(--warning-dark)] text-white',
+        'hover:from-[var(--warning-dark)] hover:via-[var(--warning)] hover:to-[var(--warning)]',
+        'hover:shadow-2xl hover:shadow-[var(--warning)]/30 hover:-translate-y-0.5',
         'focus:ring-[var(--warning)]',
-        'border border-[var(--warning)]',
+        'border border-[var(--warning)]/80',
+        'before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent',
+        'before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700',
       ],
       danger: [
-        'bg-gradient-to-r from-[var(--danger)] to-[var(--danger-dark)] text-white',
-        'hover:from-[var(--danger-dark)] hover:to-[var(--danger)]',
-        'hover:shadow-xl hover:shadow-[var(--danger)]/25',
+        'bg-gradient-to-r from-[var(--danger)] via-[var(--danger)] to-[var(--danger-dark)] text-white',
+        'hover:from-[var(--danger-dark)] hover:via-[var(--danger)] hover:to-[var(--danger)]',
+        'hover:shadow-2xl hover:shadow-[var(--danger)]/30 hover:-translate-y-0.5',
         'focus:ring-[var(--danger)]',
-        'border border-[var(--danger)]',
+        'border border-[var(--danger)]/80',
+        'before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/25 before:to-transparent',
+        'before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700',
       ],
       ghost: [
-        'bg-transparent text-[var(--primary)] border border-[var(--border)]',
-        'hover:bg-[var(--primary-50)] hover:text-[var(--primary-dark)]',
+        'bg-transparent/50 text-[var(--primary)] border border-[var(--border)]/60',
+        'hover:bg-[var(--primary)]/10 hover:text-[var(--primary)] hover:border-[var(--primary)]/40 hover:shadow-lg',
         'focus:ring-[var(--primary)]',
+        'backdrop-blur-sm',
       ],
       outline: [
-        'bg-white text-[var(--foreground)] border border-[var(--border)]',
-        'hover:bg-[var(--surface-hover)] hover:border-[var(--primary)] hover:text-[var(--primary)]',
+        'bg-white/80 text-[var(--foreground)] border border-[var(--border)]/60',
+        'hover:bg-[var(--surface-hover)] hover:border-[var(--primary)]/60 hover:text-[var(--primary)] hover:shadow-lg',
         'focus:ring-[var(--primary)]',
+        'backdrop-blur-md',
       ],
     };
 
     const sizeClasses = {
-      sm: ['px-3 py-1.5 text-sm gap-1.5 min-h-[32px]'],
-      md: ['px-4 py-2.5 text-sm gap-2 min-h-[40px]'],
-      lg: ['px-6 py-3 text-base gap-2.5 min-h-[48px]'],
-      xl: ['px-8 py-4 text-lg gap-3 min-h-[56px]'],
+      sm: ['px-3 py-1.5 text-sm gap-1.5 min-h-[36px]'],
+      md: ['px-4 py-2.5 text-sm gap-2 min-h-[44px]'],
+      lg: ['px-6 py-3 text-base gap-2.5 min-h-[52px]'],
+      xl: ['px-8 py-4 text-lg gap-3 min-h-[60px]'],
     };
 
     const widthClass = fullWidth ? 'w-full' : '';
@@ -109,15 +121,18 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={isDisabled}
         {...props}
       >
-        {/* Ripple effect container */}
+        {/* Enhanced ripple effect */}
         <span className="absolute inset-0 overflow-hidden rounded-xl">
-          <span className="absolute inset-0 bg-white/20 scale-0 rounded-full transition-transform duration-500 button-ripple"></span>
+          <span className="absolute inset-0 bg-white/30 scale-0 rounded-full transition-all duration-500 ease-out opacity-0 group-active:scale-150 group-active:opacity-100"></span>
         </span>
+
+        {/* Subtle glow effect */}
+        <span className="absolute inset-0 rounded-xl bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
 
         {/* Loading spinner */}
         {loading && (
           <svg
-            className="animate-spin -ml-1 mr-2 h-4 w-4"
+            className="animate-spin -ml-1 mr-3 h-5 w-5"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -140,13 +155,13 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         )}
 
         {/* Icon and content */}
-        <span className="relative z-10 flex items-center gap-2">
+        <span className="relative z-10 flex items-center gap-2 transition-transform duration-200 group-active:scale-95">
           {icon && iconPosition === 'left' && !loading && (
-            <span className="flex-shrink-0">{icon}</span>
+            <span className="flex-shrink-0 transition-transform duration-200 group-hover:scale-110">{icon}</span>
           )}
-          <span className={loading ? 'opacity-70' : ''}>{children}</span>
+          <span className={`transition-opacity duration-200 ${loading ? 'opacity-70' : ''}`}>{children}</span>
           {icon && iconPosition === 'right' && !loading && (
-            <span className="flex-shrink-0">{icon}</span>
+            <span className="flex-shrink-0 transition-transform duration-200 group-hover:scale-110">{icon}</span>
           )}
         </span>
       </button>

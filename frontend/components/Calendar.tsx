@@ -96,48 +96,50 @@ export default function Calendar({
   }
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg p-4 ${className}`}>
+    <div className={`card p-6 ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-6">
         <button
           onClick={handlePrevMonth}
-          className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+          className="p-2 hover:bg-[var(--primary)]/10 text-[var(--foreground)] hover:text-[var(--primary)] rounded-xl transition-all duration-300 interactive-scale focus-ring"
           type="button"
+          aria-label="Previous month"
         >
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
 
-        <h3 className="text-lg font-semibold text-gray-900">
+        <h3 className="text-xl font-bold text-[var(--foreground)] text-gradient-primary">
           {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
         </h3>
 
         <button
           onClick={handleNextMonth}
-          className="p-1 hover:bg-gray-100 rounded-md transition-colors"
+          className="p-2 hover:bg-[var(--primary)]/10 text-[var(--foreground)] hover:text-[var(--primary)] rounded-xl transition-all duration-300 interactive-scale focus-ring"
           type="button"
+          aria-label="Next month"
         >
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
       </div>
 
       {/* Day headers */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-2 mb-4">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+          <div key={day} className="text-center text-sm font-semibold text-[var(--muted)] py-3 uppercase tracking-wide">
             {day}
           </div>
         ))}
       </div>
 
       {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-2">
         {calendarDays.map((day, index) => {
           if (day === null) {
-            return <div key={index} className="h-10"></div>;
+            return <div key={index} className="h-12"></div>;
           }
 
           const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
@@ -151,40 +153,44 @@ export default function Calendar({
               onClick={() => handleDateClick(day)}
               disabled={disabled}
               className={`
-                h-10 w-10 text-sm font-medium rounded-md transition-colors relative
+                h-12 w-12 text-sm font-semibold rounded-xl transition-all duration-300 relative group focus-ring
                 ${disabled
-                  ? 'text-gray-300 cursor-not-allowed'
+                  ? 'text-[var(--muted)] cursor-not-allowed bg-transparent'
                   : selected
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    ? 'bg-gradient-to-br from-[var(--primary)] to-[var(--primary-dark)] text-white shadow-lg shadow-[var(--primary)]/30 hover:shadow-xl hover:shadow-[var(--primary)]/40 hover:-translate-y-0.5'
                     : isTodayDate
-                      ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                      : 'text-gray-900 hover:bg-gray-100'
+                      ? 'bg-[var(--primary)]/10 text-[var(--primary)] border-2 border-[var(--primary)]/30 hover:bg-[var(--primary)]/20 hover:border-[var(--primary)]/50'
+                      : 'text-[var(--foreground)] hover:bg-[var(--primary)]/10 hover:text-[var(--primary)] hover:shadow-md'
                 }
               `}
               type="button"
+              aria-label={`Select ${date.toLocaleDateString()}`}
             >
-              {day}
+              <span className="relative z-10">{day}</span>
               {isTodayDate && !selected && (
-                <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-blue-600 rounded-full"></div>
+                <div className="absolute bottom-1.5 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-[var(--primary)] rounded-full animate-pulse"></div>
+              )}
+              {selected && (
+                <div className="absolute inset-0 bg-white/20 rounded-xl animate-pulse"></div>
               )}
             </button>
           );
         })}
       </div>
 
-      {/* Legend */}
-      <div className="mt-4 flex items-center justify-center gap-4 text-xs text-gray-500">
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-blue-600 rounded"></div>
-          <span>Selected</span>
+      {/* Enhanced Legend */}
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs">
+        <div className="flex items-center gap-2 px-3 py-2 bg-[var(--primary)]/10 rounded-lg">
+          <div className="w-3 h-3 bg-gradient-to-br from-[var(--primary)] to-[var(--primary-dark)] rounded-md"></div>
+          <span className="text-[var(--foreground)] font-medium">Selected</span>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-blue-100 rounded"></div>
-          <span>Today</span>
+        <div className="flex items-center gap-2 px-3 py-2 bg-[var(--primary)]/5 rounded-lg">
+          <div className="w-3 h-3 bg-[var(--primary)]/20 border border-[var(--primary)]/40 rounded-md"></div>
+          <span className="text-[var(--foreground)] font-medium">Today</span>
         </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-3 bg-gray-100 rounded"></div>
-          <span>Available</span>
+        <div className="flex items-center gap-2 px-3 py-2 bg-[var(--surface-hover)] rounded-lg">
+          <div className="w-3 h-3 bg-transparent border border-[var(--border)] rounded-md"></div>
+          <span className="text-[var(--muted)] font-medium">Available</span>
         </div>
       </div>
     </div>

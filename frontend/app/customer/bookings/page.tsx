@@ -245,17 +245,27 @@ export default function Bookings() {
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <div>
+    <div className="relative min-h-screen">
+      {/* Subtle Theme Background */}
+      <div
+        className="fixed inset-0 opacity-15 pointer-events-none z-0"
+        style={{
+          backgroundImage: 'url(/theme-background.svg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      />
       {/* Real-time Update Indicator */}
       {updating && (
-        <div className="fixed top-4 right-4 z-50 bg-[var(--primary)] text-white px-4 py-2 rounded-lg shadow-lg animate-slide-in flex items-center gap-2">
+        <div className="fixed top-4 right-4 z-50 bg-[var(--primary)] text-white px-4 py-2 rounded-lg shadow-lg animate-slide-in flex items-center gap-2 relative z-50">
           <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
           <span className="text-sm font-medium">New reservation added!</span>
         </div>
       )}
 
       {/* Welcome Header */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 mb-6">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 mb-6 relative z-10">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[var(--foreground)] mb-1">Welcome back, Mikki Mamaradlo! 👋</h1>
@@ -270,7 +280,7 @@ export default function Bookings() {
 
       {/* Payment Status Message */}
       {paymentMessage && (
-        <div className={`mb-6 p-4 rounded-lg border ${
+        <div className={`mb-6 p-4 rounded-lg border relative z-10 ${
           paymentMessage.type === 'success'
             ? 'bg-green-50 border-green-200 text-green-800'
             : paymentMessage.type === 'error'
@@ -294,7 +304,7 @@ export default function Bookings() {
       )}
 
       {/* Calendar */}
-      <div className="card p-6">
+      <div className="card p-6 relative z-10">
         {/* Calendar Header */}
         <div className="flex items-center justify-between mb-6">
           <button

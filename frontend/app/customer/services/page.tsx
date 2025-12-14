@@ -436,17 +436,27 @@ export default function Services() {
 
 
   return (
-    <div className="animate-fade-in w-full min-h-screen flex flex-col">
+    <div className="animate-fade-in w-full min-h-screen flex flex-col relative">
+      {/* Subtle Theme Background */}
+      <div
+        className="fixed inset-0 opacity-15 pointer-events-none z-0"
+        style={{
+          backgroundImage: 'url(/theme-background.svg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      />
       {/* Real-time Update Indicator */}
       {updating && (
-        <div className="fixed top-4 right-4 z-50 bg-[var(--primary)] text-white px-4 py-2 rounded-lg shadow-lg animate-slide-in flex items-center gap-2">
+        <div className="fixed top-4 right-4 z-50 bg-[var(--primary)] text-white px-4 py-2 rounded-lg shadow-lg animate-slide-in flex items-center gap-2 relative z-50">
           <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
           <span className="text-sm font-medium">Inventory updated!</span>
         </div>
       )}
 
       {/* Location and Date Status */}
-      <div className="space-y-4 mb-6 px-2 sm:px-4 lg:px-6">
+      <div className="space-y-4 mb-6 px-2 sm:px-4 lg:px-6 relative z-10">
         {/* Location Status */}
         <div className={`border rounded-lg p-4 flex items-center justify-between ${
           locationAllowed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
@@ -492,7 +502,7 @@ export default function Services() {
       </div>
 
       {/* Hero Section */}
-      <header className="text-center mb-8 sm:mb-12 px-2 sm:px-4 lg:px-6 animate-fade-in" role="banner">
+      <header className="text-center mb-8 sm:mb-12 px-2 sm:px-4 lg:px-6 animate-fade-in relative z-10" role="banner">
         <div className="max-w-4xl mx-auto">
           <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-700 bg-clip-text text-transparent leading-tight">
             Available Equipment
@@ -518,7 +528,7 @@ export default function Services() {
       </header>
 
       {/* Search/Filter Bar */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 mx-2 sm:mx-4 lg:mx-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 mx-2 sm:mx-4 lg:mx-6 relative z-10">
         {/* Selected Date Display */}
         <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <div className="flex items-center gap-2 text-sm text-blue-800">
@@ -648,7 +658,7 @@ export default function Services() {
       </div>
 
       {services.length === 0 ? (
-        <div className="card p-12 text-center animate-fade-in">
+        <div className="card p-12 text-center animate-fade-in relative z-10">
           <div className="text-6xl mb-4">🎪</div>
           <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">No Equipments Available</h3>
           <p className="text-[var(--muted)]">We're currently updating our equipments. Please check back soon!</p>
@@ -656,7 +666,7 @@ export default function Services() {
       ) : (
         <>
           {/* Category Filter */}
-          <div className="flex flex-wrap justify-center gap-3 mb-8 px-2 sm:px-4 lg:px-6 animate-fade-in">
+          <div className="flex flex-wrap justify-center gap-3 mb-8 px-2 sm:px-4 lg:px-6 animate-fade-in relative z-10">
             {[
               { key: 'all', label: 'All Equipment', icon: '🎪' },
               { key: 'equipment', label: 'Equipment', icon: '⚙️' },
@@ -681,7 +691,7 @@ export default function Services() {
           </div>
 
           {/* Services Grid - Maximized Screen Usage */}
-          <div className="w-full min-h-screen flex-1">
+          <div className="w-full min-h-screen flex-1 relative z-10">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 w-full" role="main" aria-label="Equipment listings">
               {filteredServices.map((service, index) => (
                 <article
@@ -797,7 +807,11 @@ export default function Services() {
                   {/* Action Buttons */}
                   <div className="flex flex-col gap-3">
                     <button
-                      onClick={() => viewServiceDetails(service)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        viewServiceDetails(service);
+                      }}
                       className="w-full border border-gray-300 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-50 transition-colors duration-200"
                     >
                       View Details
@@ -843,13 +857,13 @@ export default function Services() {
       {/* Service Details Modal */}
       {showServiceModal && selectedService && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-2 sm:p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="service-modal-title"
           aria-describedby="service-modal-description"
         >
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto relative z-[101]">
             <div className="p-4 sm:p-6">
               <div className="flex justify-between items-start mb-4 sm:mb-6">
                 <h3 id="service-modal-title" className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--foreground)] pr-4 line-clamp-2">{selectedService.name}</h3>

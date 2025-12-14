@@ -167,10 +167,19 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 relative min-h-screen">
+      {/* Subtle Background Pattern */}
+      <div
+        className="fixed inset-0 opacity-30 pointer-events-none z-0"
+        style={{
+          backgroundImage: 'url(/background-pattern.svg)',
+          backgroundSize: '200px 200px',
+          backgroundRepeat: 'repeat',
+        }}
+      />
 
       {/* Header */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 mb-6">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 mb-6 relative z-10">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[var(--foreground)] mb-1">
@@ -196,7 +205,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Modern Key Metrics */}
-      <div className="grid md:grid-cols-3 gap-8 mb-8">
+      <div className="grid md:grid-cols-3 gap-8 mb-8 relative z-10">
         <div className="bg-gradient-to-br from-white to-blue-50/30 border border-blue-200/50 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
           <div className="flex items-center justify-between mb-6">
             <div>
@@ -257,7 +266,7 @@ export default function AdminDashboard() {
 
       {/* Modern Alerts Section */}
       {lowStockItems.length > 0 && (
-        <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200/50 rounded-2xl p-8 shadow-lg">
+        <div className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200/50 rounded-2xl p-8 shadow-lg relative z-10">
           <div className="flex items-center gap-4 mb-6">
             <div className="p-3 bg-red-100 rounded-2xl">
               <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -308,7 +317,7 @@ export default function AdminDashboard() {
       )}
 
       {/* Modern Quick Actions */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 relative z-10">
         <Link href="/admin/bookings" className="group bg-gradient-to-br from-white to-blue-50/30 border border-blue-200/50 rounded-2xl p-6 hover:shadow-xl hover:border-blue-300 transition-all duration-300 hover:-translate-y-2">
           <div className="flex items-center gap-4 mb-4">
             <div className="p-3 bg-blue-100 rounded-2xl group-hover:bg-blue-200 transition-colors">
@@ -392,7 +401,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Recent Bookings */}
-      <div className="bg-white border border-slate-200 rounded-lg p-6">
+      <div className="bg-white border border-slate-200 rounded-lg p-6 relative z-10">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-slate-900">Recent Reservation</h2>
           <Link href="/admin/bookings" className="text-sm text-blue-600 hover:text-blue-800 font-medium">

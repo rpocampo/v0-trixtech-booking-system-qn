@@ -197,14 +197,17 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center max-w-md w-full">
-          <div className="text-6xl sm:text-8xl mb-6 opacity-50">🛒</div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)] mb-4">Your Reservation is Empty</h1>
-          <p className="text-[var(--muted)] mb-8 text-sm sm:text-base">
+      <div className="min-h-screen flex items-center justify-center p-4 animate-fade-in">
+        <div className="text-center max-w-md w-full animate-scale-in">
+          <div className="text-6xl sm:text-8xl mb-6 animate-float opacity-50">🛒</div>
+          <h1 className="text-3xl sm:text-4xl font-bold text-[var(--foreground)] mb-4 text-gradient-primary">Your Reservation is Empty</h1>
+          <p className="text-[var(--muted)] mb-8 text-lg leading-relaxed">
             Add some equipments to your reservation to get started.
           </p>
-          <Link href="/customer/services" className="btn-primary w-full sm:w-auto">
+          <Link href="/customer/services" className="btn-primary w-full sm:w-auto hover-lift animate-bounce-in">
+            <svg className="w-5 h-5 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
             Browse Equipments
           </Link>
         </div>
@@ -213,36 +216,46 @@ export default function CartPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 animate-fade-in">
       {/* Real-time Stock Update Indicator */}
       {lastStockUpdate && (
-        <div className="fixed top-4 right-4 z-50 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg animate-slide-in flex items-center gap-2">
-          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+        <div className="fixed top-4 right-4 z-50 card p-3 animate-slide-in flex items-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-glow">
+          <div className="animate-pulse">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
           <span className="text-sm font-medium">Stock updated!</span>
         </div>
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6 sm:mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 sm:mb-10 animate-slide-up">
         <div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[var(--foreground)] mb-2 leading-tight">Reservation Cart</h1>
-          <p className="text-sm sm:text-base text-[var(--muted)]">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[var(--foreground)] mb-3 leading-tight text-gradient-primary">Reservation Cart</h1>
+          <p className="text-lg text-[var(--muted)] flex items-center gap-2">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
             {totalItems} {totalItems === 1 ? 'item' : 'items'} in your reservation
           </p>
         </div>
         <button
           onClick={handleClearCart}
-          className="btn-secondary text-red-600 hover:text-red-700 hover:bg-red-50 self-start sm:self-auto"
+          className="btn-secondary text-red-600 hover:text-red-700 hover:bg-red-50 self-start sm:self-auto hover-lift interactive-scale"
         >
+          <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
           Clear Reservation
         </button>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6 lg:gap-8">
         {/* Cart Items */}
-        <div className="lg:col-span-2 space-y-4">
-          {items.map((item) => (
-            <div key={item.id} className="card p-4 sm:p-6">
+        <div className="lg:col-span-2 space-y-6 stagger-children">
+          {items.map((item, index) => (
+            <div key={item.id} className="card p-4 sm:p-6 hover-lift animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
               <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 {/* Item Image */}
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-gradient-to-br from-[var(--primary-100)] to-[var(--accent)]/20 flex items-center justify-center text-lg sm:text-xl md:text-2xl self-center sm:self-auto flex-shrink-0">
@@ -301,11 +314,13 @@ export default function CartPage() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                          className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-semibold active:scale-95 transition-transform"
+                          className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-gray-200 hover:bg-[var(--primary)] hover:text-white flex items-center justify-center text-sm font-semibold interactive-scale transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={item.quantity <= 1}
                           aria-label="Decrease quantity"
                         >
-                          -
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                          </svg>
                         </button>
                         <input
                           type="number"
@@ -313,26 +328,28 @@ export default function CartPage() {
                           max={item.maxOrder || 999}
                           value={item.quantity}
                           onChange={(e) => handleQuantityChange(item.id, parseInt(e.target.value) || 1)}
-                          className="w-16 text-center border rounded px-2 py-2 min-h-[40px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="input-field w-16 text-center"
                           aria-label="Quantity"
                         />
                         <button
                           onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                          className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center text-sm font-semibold active:scale-95 transition-transform"
+                          className="w-10 h-10 sm:w-8 sm:h-8 rounded-full bg-gray-200 hover:bg-[var(--primary)] hover:text-white flex items-center justify-center text-sm font-semibold interactive-scale transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                           disabled={item.maxOrder ? item.quantity >= item.maxOrder : false}
                           aria-label="Increase quantity"
                         >
-                          +
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                          </svg>
                         </button>
                         {item.maxOrder && (
-                          <span className="text-xs text-[var(--muted)]">
+                          <span className="text-xs text-[var(--muted)] bg-gray-100 px-2 py-1 rounded-full">
                             Max: {item.maxOrder}
                           </span>
                         )}
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-[var(--muted)]">Qty: {item.quantity}</span>
+                        <span className="badge badge-primary">Qty: {item.quantity}</span>
                       </div>
                     )}
                   </div>
@@ -360,9 +377,14 @@ export default function CartPage() {
         </div>
 
         {/* Cart Summary */}
-        <div className="lg:col-span-1 order-first lg:order-last">
-          <div className="card p-4 sm:p-6 sticky top-6">
-            <h2 className="text-2xl font-bold text-[var(--foreground)] mb-6">Cart Summary</h2>
+        <div className="lg:col-span-1 order-first lg:order-last animate-slide-in-right">
+          <div className="card p-4 sm:p-6 sticky top-6 hover-lift">
+            <h2 className="text-2xl font-bold text-[var(--foreground)] mb-6 flex items-center gap-2">
+              <svg className="w-6 h-6 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              Cart Summary
+            </h2>
 
             {/* Stock Validation Errors */}
             {stockValidationIssues.length > 0 && (
@@ -407,26 +429,46 @@ export default function CartPage() {
              </div>
 
 
-            <div className="space-y-3">
+            <div className="space-y-4 animate-slide-up">
               <button
                 onClick={handleCheckout}
                 disabled={isProcessing || isValidatingStock || stockValidationIssues.length > 0 || !canCheckout()}
-                className="w-full btn-primary py-3 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full btn-primary py-4 text-lg font-semibold hover-lift disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
               >
-                {isValidatingStock
-                  ? 'Validating Stock...'
-                  : isProcessing
-                    ? 'Processing...'
-                    : stockValidationIssues.length > 0
-                        ? 'Issues Detected - Cannot Reserve'
-                        : 'Proceed to Reserved'
-                }
+                {isValidatingStock ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                    Validating Stock...
+                  </>
+                ) : isProcessing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                    Processing...
+                  </>
+                ) : stockValidationIssues.length > 0 ? (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    Issues Detected - Cannot Reserve
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                    Proceed to Reserved
+                  </>
+                )}
               </button>
 
               <Link
                 href="/customer/services"
-                className="w-full btn-secondary py-3 text-center block"
+                className="w-full btn-secondary py-4 text-center block hover-lift flex items-center justify-center gap-2"
               >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
                 Continue Browsing
               </Link>
             </div>
@@ -446,13 +488,18 @@ export default function CartPage() {
 
       {/* Equipment Recommendations */}
       {equipmentRecommendations.length > 0 && (
-        <div className="mt-8">
-          <div className="card p-6">
-            <h2 className="text-2xl font-bold text-[var(--foreground)] mb-4 flex items-center gap-2">
-              <span>🔧</span>
+        <div className="mt-12 animate-slide-up">
+          <div className="card p-6 hover-lift">
+            <h2 className="text-3xl font-bold text-[var(--foreground)] mb-4 flex items-center gap-3 text-gradient-primary">
+              <div className="p-2 bg-gradient-to-br from-[var(--primary)] to-[var(--accent)] rounded-xl">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
               Recommended Equipment
             </h2>
-            <p className="text-[var(--muted)] mb-6">
+            <p className="text-[var(--muted)] mb-8 text-lg leading-relaxed">
               Enhance your event with these recommended equipment rentals that complement your selected services.
             </p>
 
@@ -535,16 +582,25 @@ export default function CartPage() {
       )}
 
       {/* Continue Browsing Banner */}
-      <div className="mt-12 card-gradient p-8 text-center">
-        <h3 className="text-2xl font-bold text-[var(--foreground)] mb-4">
-          Need More Equipments?
-        </h3>
-        <p className="text-[var(--muted)] mb-6 max-w-2xl mx-auto">
-          Browse our complete catalog of equipment rentals and professional services to make your event unforgettable.
-        </p>
-        <Link href="/customer/services" className="btn-primary">
-          Browse All Equipments →
-        </Link>
+      <div className="mt-16 card-gradient p-8 sm:p-12 text-center animate-scale-in hover-lift">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-6xl mb-6 animate-float">🎪</div>
+          <h3 className="text-3xl sm:text-4xl font-bold text-[var(--foreground)] mb-6 text-gradient-primary">
+            Need More Equipment?
+          </h3>
+          <p className="text-[var(--muted)] mb-8 max-w-2xl mx-auto text-lg leading-relaxed">
+            Browse our complete catalog of equipment rentals and professional services to make your event unforgettable.
+          </p>
+          <Link href="/customer/services" className="btn-primary hover-lift inline-flex items-center gap-2 text-lg px-8 py-4">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            Browse All Equipment
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        </div>
       </div>
     </div>
   );

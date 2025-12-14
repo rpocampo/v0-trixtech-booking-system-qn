@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useState } from 'react';
 import OTPInput from '../../components/OTPInput';
+import Button from '../../components/Button';
 
 export default function Register() {
   const router = useRouter();
@@ -183,125 +184,150 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-600 via-teal-600 to-blue-800 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background decoration */}
+    <div className="min-h-screen bg-gradient-to-br from-[var(--primary)] via-[var(--accent)] to-[var(--secondary)] flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden">
+      {/* Enhanced Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-cyan-400/30 to-blue-600/30 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-green-400/30 to-teal-600/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-br from-yellow-400/20 to-orange-500/20 rounded-full blur-2xl animate-bounce"></div>
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-[var(--primary)]/20 to-[var(--accent)]/20 rounded-full blur-3xl animate-float"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-[var(--success)]/20 to-[var(--primary)]/20 rounded-full blur-3xl animate-float" style={{animationDelay: '2s'}}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-gradient-to-br from-[var(--warning)]/15 to-[var(--accent)]/15 rounded-full blur-2xl animate-glow"></div>
       </div>
-      <div className="bg-white/80 backdrop-blur-2xl w-full max-w-md p-8 relative z-10 shadow-2xl rounded-2xl border border-white/30">
-        <h1 className="text-3xl font-bold text-center mb-2 text-[var(--primary)]">TRIXTECH</h1>
-        <p className="text-center text-[var(--muted)] mb-6">
-          {currentStep === 'register' ? 'Create your account' : 'Verify your email'}
-        </p>
+
+      <div className="card w-full max-w-md sm:max-w-lg lg:max-w-md relative z-10 animate-fade-in">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl lg:text-4xl font-bold mb-3 text-gradient-primary">TRIXTECH</h1>
+          <p className="text-[var(--muted)] text-lg">
+            {currentStep === 'register' ? 'Create your account' : 'Verify your email'}
+          </p>
+        </div>
 
         {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">{error}</div>}
 
         {currentStep === 'register' ? (
-          <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Full Name</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              className="input-field"
-              placeholder="Full Name"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="input-field"
-              placeholder="@example.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">Password</label>
-            <div className="relative">
+          <form onSubmit={handleSubmit} className="space-y-6 stagger-children">
+            <div className="form-group">
+              <label className="form-label">Full Name</label>
               <input
-                type={showPassword ? 'text' : 'password'}
-                name="password"
-                value={formData.password}
+                type="text"
+                name="name"
+                value={formData.name}
                 onChange={handleChange}
                 required
-                className="input-field pr-10"
-                placeholder="••••••••"
+                className="input-field"
+                placeholder="Enter your full name"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
-              >
-                {showPassword ? '🙈' : '👁️'}
-              </button>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-2">Confirm Password</label>
-            <div className="relative">
+            <div className="form-group">
+              <label className="form-label">Email Address</label>
               <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                name="confirmPassword"
-                value={formData.confirmPassword}
+                type="email"
+                name="email"
+                value={formData.email}
                 onChange={handleChange}
                 required
-                className="input-field pr-10"
-                placeholder="••••••••"
+                className="input-field"
+                placeholder="your@email.com"
               />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--muted)] hover:text-[var(--foreground)] transition-colors"
-              >
-                {showConfirmPassword ? '🙈' : '👁️'}
-              </button>
             </div>
-          </div>
 
-            <div className="mt-6">
-              <button
+            <div className="form-group">
+              <label className="form-label">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  required
+                  className="input-field pr-12"
+                  placeholder="Create a strong password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--muted)] hover:text-[var(--primary)] transition-all duration-200 p-1 rounded-md hover:bg-[var(--primary)]/10"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Confirm Password</label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  required
+                  className="input-field pr-12"
+                  placeholder="Confirm your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[var(--muted)] hover:text-[var(--primary)] transition-all duration-200 p-1 rounded-md hover:bg-[var(--primary)]/10"
+                  aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirmPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-4">
+              <Button
                 type="submit"
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white font-semibold py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                loading={loading}
+                fullWidth
+                size="lg"
+                icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>}
               >
-                {loading ? (
-                  <div className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-                    Sending verification code...
-                  </div>
-                ) : (
-                  'Send Verification Code 📧'
-                )}
-              </button>
+                {loading ? 'Sending verification code...' : 'Send Verification Code'}
+              </Button>
             </div>
 
-            <div className="mt-4 text-center">
+            <div className="text-center pt-4">
               <p className="text-[var(--muted)]">
                 Already have an account?{' '}
-                <Link href="/login" className="text-[var(--primary)] hover:text-[var(--primary)]/80 font-medium transition-colors">
+                <Link href="/login" className="text-[var(--primary)] hover:text-[var(--primary-dark)] font-semibold transition-all duration-200 hover:underline">
                   Sign in here
                 </Link>
               </p>
             </div>
           </form>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 animate-fade-in">
             <div className="text-center">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <p className="text-blue-800 text-sm">
-                  We've sent a 6-digit verification code to <strong>{formData.email}</strong>.
+              <div className="bg-[var(--primary)]/5 border border-[var(--primary)]/20 rounded-2xl p-6 mb-8">
+                <div className="flex items-center justify-center mb-3">
+                  <svg className="w-8 h-8 text-[var(--primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <p className="text-[var(--foreground)] text-sm leading-relaxed">
+                  We've sent a 6-digit verification code to <strong className="text-[var(--primary)]">{formData.email}</strong>.
                   Please check your email and enter the code below.
                 </p>
               </div>
@@ -312,25 +338,34 @@ export default function Register() {
                 loading={otpLoading}
               />
 
-              <div className="mt-6 space-y-3">
-                <button
+              <div className="mt-8 space-y-4">
+                <Button
                   onClick={handleResendOTP}
                   disabled={resendDisabled || otpLoading}
-                  className="w-full bg-gray-100 hover:bg-gray-200 disabled:bg-gray-50 disabled:cursor-not-allowed text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                  fullWidth
+                  variant="outline"
+                  icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>}
                 >
                   {resendDisabled
                     ? `Resend code in ${resendCountdown}s`
                     : 'Resend verification code'
                   }
-                </button>
+                </Button>
 
-                <button
+                <Button
                   onClick={() => setCurrentStep('register')}
                   disabled={otpLoading}
-                  className="w-full bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  fullWidth
+                  variant="ghost"
+                  icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>}
+                  iconPosition="left"
                 >
-                  ← Back to registration
-                </button>
+                  Back to registration
+                </Button>
               </div>
             </div>
           </div>

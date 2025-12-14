@@ -505,7 +505,6 @@ export default function BookingPage() {
               fetchCalendarAvailability(date.getMonth(), date.getFullYear());
             }}
             minDate={new Date()}
-            availabilityData={calendarAvailability}
             className="w-full"
           />
         </div>

@@ -431,11 +431,20 @@ export default function CustomerDashboard() {
   }
 
   return (
-    <div className="animate-fade-in space-y-3">
-
+    <div className="animate-fade-in space-y-3 relative min-h-screen">
+      {/* Subtle Theme Background */}
+      <div
+        className="fixed inset-0 opacity-20 pointer-events-none z-0"
+        style={{
+          backgroundImage: 'url(/theme-background.svg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
+      />
 
       {/* Welcome Header */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 mb-6">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 mb-6 relative z-10">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[var(--foreground)] mb-1">
@@ -453,13 +462,13 @@ export default function CustomerDashboard() {
       </div>
 
       {/* Calendar Section */}
-      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 mb-8 overflow-hidden">
+      <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 mb-8 overflow-hidden relative z-10">
         {renderCalendar()}
       </div>
 
       {/* Location Restriction Warning */}
       {locationRestricted && (
-        <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200/50 rounded-2xl p-6 mb-8 shadow-lg animate-fade-in">
+        <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200/50 rounded-2xl p-6 mb-8 shadow-lg animate-fade-in relative z-10">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
               <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -478,7 +487,7 @@ export default function CustomerDashboard() {
 
 
       {/* Quick Actions */}
-      <div className="grid md:grid-cols-3 gap-6 mb-8">
+      <div className="grid md:grid-cols-3 gap-6 mb-8 relative z-10">
         {locationRestricted ? (
           <div className="bg-white/60 backdrop-blur-sm border border-gray-200 rounded-2xl p-6 opacity-60 cursor-not-allowed shadow-lg">
             <div className="flex items-center gap-4">
