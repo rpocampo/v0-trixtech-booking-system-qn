@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import AvailabilityCalendar from '../components/AvailabilityCalendar';
 
 export default function Home() {
   const router = useRouter();
@@ -382,19 +383,30 @@ export default function Home() {
       {/* Event Carousel Section */}
       <section className="py-24 bg-gradient-to-br from-gray-50 to-blue-50/30 animate-fade-in">
         <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-4xl mx-auto mb-20 animate-slide-up">
-            <div className="inline-block mb-6">
-              <span className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
-                🎉 Event Packages
-              </span>
+          {/* Header and Calendar Side by Side */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-12 mb-20 items-center">
+            {/* Event Packages Header - Takes 1 column on xl screens */}
+            <div className="text-center xl:text-center order-2 xl:order-1">
+              <div className="inline-block mb-6">
+                <span className="bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] text-white px-6 py-3 rounded-full text-sm font-semibold shadow-lg">
+                  🎉 Event Packages
+                </span>
+              </div>
+              <h2 className="text-4xl lg:text-5xl font-bold text-[var(--foreground)] mb-6 text-gradient-primary">
+                Our Event Suggestions
+              </h2>
+              <p className="text-xl text-[var(--muted)] leading-relaxed max-w-2xl mx-auto">
+                Discover our comprehensive range of event solutions designed to make your special occasions unforgettable.
+              </p>
+              <div className="w-24 h-1 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] mx-auto mt-8 rounded-full"></div>
             </div>
-            <h2 className="text-4xl lg:text-5xl font-bold text-[var(--foreground)] mb-6 text-gradient-primary">
-              Our Event Suggestions
-            </h2>
-            <p className="text-xl text-[var(--muted)] leading-relaxed max-w-3xl mx-auto">
-              Discover our comprehensive range of event solutions designed to make your special occasions unforgettable.
-            </p>
-            <div className="w-24 h-1 bg-gradient-to-r from-[var(--primary)] to-[var(--accent)] mx-auto mt-8 rounded-full"></div>
+
+            {/* Availability Calendar - Takes 1 column on xl screens */}
+            <div className="order-1 xl:order-2">
+              <div className="animate-fade-in" style={{ animationDelay: '0.3s' }}>
+                <AvailabilityCalendar />
+              </div>
+            </div>
           </div>
 
           {/* Event Grid */}
