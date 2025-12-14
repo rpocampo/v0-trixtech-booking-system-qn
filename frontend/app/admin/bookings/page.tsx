@@ -192,6 +192,7 @@ export default function AdminBookings() {
   };
 
   const viewBooking = async (booking: Booking) => {
+    console.log('viewBooking called with booking:', booking._id);
     setShowBookingModal(true);
     setIsEditingBooking(false);
     setUpdateMessage('');
@@ -1001,7 +1002,6 @@ export default function AdminBookings() {
                   <th className="px-6 py-3 text-left text-sm font-semibold">Price</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold">Status</th>
                   <th className="px-6 py-3 text-left text-sm font-semibold">Payment</th>
-                  <th className="px-6 py-3 text-left text-sm font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1037,14 +1037,6 @@ export default function AdminBookings() {
                       }`}>
                         {booking.paymentStatus} <span className="text-xs opacity-75">(Auto-managed)</span>
                       </span>
-                    </td>
-                    <td className="px-6 py-3">
-                      <button
-                        onClick={() => viewBooking(booking)}
-                        className="text-[var(--primary)] hover:underline text-sm"
-                      >
-                        View
-                      </button>
                     </td>
                   </tr>
                 ))}

@@ -9,6 +9,8 @@ export default function Home() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [selectedEvent, setSelectedEvent] = useState<typeof events[0] | null>(null);
+  const [showEventModal, setShowEventModal] = useState(false);
 
   const heroImages = [
     'Birthday.jpg',
@@ -102,6 +104,11 @@ export default function Home() {
 
   const goToNextSlide = () => {
     setCurrentSlide((prev) => (prev + 1) % heroImages.length);
+  };
+
+  const viewEventDetails = (event: typeof events[0]) => {
+    setSelectedEvent(event);
+    setShowEventModal(true);
   };
 
 
@@ -469,8 +476,8 @@ export default function Home() {
                       </span>
                     </div>
                     <div className="flex flex-col sm:flex-row gap-4">
-                      <Link
-                        href={`/customer/services?eventType=${event.type}`}
+                      <button
+                        onClick={() => viewEventDetails(event)}
                         className="flex-1 btn-secondary hover-lift text-center flex items-center justify-center gap-2"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -478,7 +485,7 @@ export default function Home() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
                         View Details
-                      </Link>
+                      </button>
                       <button
                         onClick={() => {
                           if (!isLoggedIn) {
@@ -785,6 +792,118 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Event Details Modal */}
+      {showEventModal && selectedEvent && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-2 sm:p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="event-modal-title"
+          aria-describedby="event-modal-description"
+        >
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-y-auto relative z-[101]">
+            <div className="p-4 sm:p-6">
+              <div className="flex justify-between items-start mb-4 sm:mb-6">
+                <h3 id="event-modal-title" className="text-xl sm:text-2xl lg:text-3xl font-bold text-[var(--foreground)] pr-4 line-clamp-2">{selectedEvent.title}</h3>
+                <button
+                  onClick={() => setShowEventModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-2xl sm:text-3xl flex-shrink-0"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="grid lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+                {/* Event Image */}
+                <div className="space-y-3 sm:space-y-4">
+                  <img
+                    src={selectedEvent.image}
+                    alt={selectedEvent.title}
+                    className="w-full h-48 sm:h-56 lg:h-64 object-cover rounded-lg"
+                    onError={(e) => {
+                      e.currentTarget.src = 'https://via.placeholder.com/600x400?text=Event+Image';
+                    }}
+                  />
+
+                  {/* Event Type Badge */}
+                  <div className="flex justify-center">
+                    <span className={`px-6 py-3 text-sm font-semibold rounded-full ${selectedEvent.badgeColor} text-white shadow-lg`}>
+                      {selectedEvent.type} Event Package
+                    </span>
+                  </div>
+                </div>
+
+                {/* Event Details */}
+                <div className="space-y-6">
+                  {/* Basic Information */}
+                  <div className="card p-6">
+                    <h4 className="text-xl font-semibold mb-4">Event Package Information</h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-[var(--muted)]">Event Type:</span>
+                        <span className="font-medium capitalize">{selectedEvent.type}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[var(--muted)]">Location:</span>
+                        <span className="font-medium">{selectedEvent.location}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[var(--muted)]">Starting Price:</span>
+                        <span className="text-3xl font-bold text-[var(--primary)]">{selectedEvent.price}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div id="event-modal-description" className="card p-6">
+                    <h4 className="text-xl font-semibold mb-4">Description</h4>
+                    <p className="text-[var(--muted)] leading-relaxed">{selectedEvent.description}</p>
+                  </div>
+
+                  {/* What's Included */}
+                  {selectedEvent.inclusions.length > 0 && (
+                    <div className="card p-6">
+                      <h4 className="text-xl font-semibold mb-4">What's Included</h4>
+                      <ul className="space-y-2">
+                        {selectedEvent.inclusions.map((item, index) => (
+                          <li key={index} className="flex items-start">
+                            <span className="text-[var(--primary)] mr-3 mt-1 flex-shrink-0">✓</span>
+                            <span className="text-[var(--muted)] leading-tight">{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
+                <button
+                  onClick={() => setShowEventModal(false)}
+                  className="btn-secondary flex-1 order-2 sm:order-1 text-sm sm:text-base py-3"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    if (!isLoggedIn) {
+                      router.push('/login');
+                    } else {
+                      router.push('/customer/services');
+                    }
+                    setShowEventModal(false);
+                  }}
+                  className="btn-primary flex-1 text-center order-1 sm:order-2 text-sm sm:text-base py-3"
+                >
+                  Start Booking Process
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
