@@ -163,10 +163,10 @@
   --gray-800: #333333;
   --gray-900: #222222;
 
-  /* CLEAN BACKGROUND COLORS */
+  /* ENHANCED VIBRANT BACKGROUND COLORS */
   --bg-celebration-light: #ffffff;
-  --bg-celebration-secondary: #f7f7f7;
-  --bg-celebration-tertiary: #f0f0f0;
+  --bg-celebration-secondary: #f8fbff;
+  --bg-celebration-tertiary: #f0f7ff;
 }
 
 /* ADMIN THEME - Modern Clean Dashboard */
@@ -431,7 +431,7 @@ body {
   position: relative;
 }
 
-/* MODERN CLEAN BACKGROUND - BASE */
+/* ENHANCED VIBRANT BACKGROUND - BASE */
 body::before {
   content: '';
   position: fixed;
@@ -439,12 +439,12 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #fafbfc 0%, #f1f3f4 100%);
+  background: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 20%, #bae6fd 40%, #7dd3fc 60%, #38bdf8 80%, #0ea5e9 100%);
   z-index: -2;
   pointer-events: none;
 }
 
-/* Subtle geometric pattern overlay - BASE */
+/* Enhanced geometric pattern overlay - BASE */
 body::after {
   content: '';
   position: fixed;
@@ -453,32 +453,39 @@ body::after {
   width: 100%;
   height: 100%;
   background:
-    radial-gradient(circle at 25% 25%, rgba(37, 99, 235, 0.02) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(6, 182, 212, 0.02) 0%, transparent 50%);
+    radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.15) 0%, transparent 45%),
+    radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 60% 40%, rgba(139, 92, 246, 0.10) 0%, transparent 40%),
+    radial-gradient(circle at 40% 70%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+    radial-gradient(circle at 70% 20%, rgba(236, 72, 153, 0.06) 0%, transparent 35%);
   pointer-events: none;
   z-index: -1;
 }
 
-/* ADMIN THEME BACKGROUND */
+/* ENHANCED ADMIN THEME BACKGROUND */
 [data-theme="admin"] body::before {
-  background: linear-gradient(135deg, #0a0f1c 0%, #111827 100%);
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 20%, #334155 40%, #475569 60%, #0f172a 80%, #1e293b 100%);
 }
 
 [data-theme="admin"] body::after {
   background:
-    radial-gradient(circle at 25% 25%, rgba(13, 148, 136, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(59, 130, 246, 0.03) 0%, transparent 50%);
+    radial-gradient(circle at 25% 25%, rgba(13, 148, 136, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(59, 130, 246, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 10% 80%, rgba(245, 158, 11, 0.10) 0%, transparent 40%);
 }
 
-/* CUSTOMER THEME BACKGROUND */
+/* ENHANCED CUSTOMER THEME BACKGROUND */
 [data-theme="customer"] body::before {
-  background: linear-gradient(135deg, #fefcfb 0%, #f7f6f4 100%);
+  background: linear-gradient(135deg, #fefcfb 0%, #fef3c7 20%, #fce7f3 40%, #fefcfb 60%, #f0f7ff 80%, #e6f3ff 100%);
 }
 
 [data-theme="customer"] body::after {
   background:
-    radial-gradient(circle at 25% 25%, rgba(99, 102, 241, 0.02) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(236, 72, 153, 0.02) 0%, transparent 50%);
+    radial-gradient(circle at 25% 25%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(236, 72, 153, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 50% 30%, rgba(16, 185, 129, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 80% 20%, rgba(245, 158, 11, 0.10) 0%, transparent 40%);
 }
 
 @keyframes celebration-float {

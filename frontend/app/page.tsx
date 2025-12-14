@@ -151,7 +151,7 @@ export default function Home() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 4v10m0 0l-2-2m2 2l2-2m6-6v6m0 0l2 2m-2-2l-2 2" />
                 </svg>
-                <span className="hidden sm:inline font-medium">Reserve Here</span>
+                <span className="hidden sm:inline font-medium">Make a Reservation</span>
               </Link>
             </div>
 
@@ -388,7 +388,7 @@ export default function Home() {
       </section>
 
       {/* Event Carousel Section */}
-      <section className="py-24 bg-gradient-to-br from-gray-50 to-blue-50/30 animate-fade-in">
+      <section className="py-24 bg-gradient-to-br from-blue-50/20 via-indigo-50/30 to-cyan-50/20 animate-fade-in">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           {/* Header and Calendar Side by Side */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-12 mb-20 items-center">
@@ -513,7 +513,7 @@ export default function Home() {
 
 
       {/* Testimonials / Customer Reviews Section */}
-      <section className="py-24 bg-gradient-to-br from-white to-blue-50/50 animate-fade-in">
+      <section className="py-24 bg-gradient-to-br from-white via-blue-50/40 to-indigo-50/30 animate-fade-in">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-4xl mx-auto mb-20 animate-slide-up">
             <div className="inline-block mb-6">
@@ -637,7 +637,7 @@ export default function Home() {
       </section>
 
       {/* About TRIXTECH Section */}
-      <section id="about" className="py-20 bg-white">
+      <section id="about" className="py-20 bg-gradient-to-br from-white via-gray-50/30 to-blue-50/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -712,7 +712,7 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-16">
+      <footer className="bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
             <div className="lg:col-span-2">
